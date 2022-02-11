@@ -10,7 +10,7 @@ This repository is devoted to the segmentation of optical coherence tomography (
 
 ![Source image](media/source_img.png "Source image") ![Pre-processed image](media/gray_img.png "Pre-processed image")
 
-[//]: # (<p float="center">)
-[//]: # (  <img src="media/source_img.png" width="350" />)
-[//]: # (  <img src="media/gray_img.png" width="350" />)
-[//]: # (</p>)
+<p float="center">
+  <img src="media/source_img.png" width="350" />
+  <img src="media/gray_img.png" width="350" />
+</p>
