@@ -7,6 +7,7 @@ from functools import partial
 from typing import Tuple, List
 
 import cv2
+import imutils
 import pydicom
 from tqdm import tqdm
 from tqdm.contrib.concurrent import process_map
@@ -59,7 +60,7 @@ def convert_single_study(
 
         img_size = img.shape[:-1] if len(img.shape) == 3 else img.shape
         if img_size != output_size:
-            img = cv2.resize(img, output_size)
+            img = imutils.resize(img, height=output_size[0], inter=cv2.INTER_LINEAR)
 
         if output_type == 'images':
             img_name = '{:s}_{:04d}.png'.format(study_name, slice+1)
