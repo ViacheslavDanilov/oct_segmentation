@@ -114,7 +114,7 @@ if __name__ == '__main__':
     parser.add_argument('--study_dir', required=True, type=str, help='directory with studies')
     parser.add_argument('--include_dirs', nargs='+', default=None, type=str)
     parser.add_argument('--exclude_dirs', nargs='+', default=None, type=str)
-    parser.add_argument('--output_size', nargs='+', default=[1000, 1000])
+    parser.add_argument('--output_size', nargs='+', default=[1000, 1000], type=int)
     parser.add_argument('--to_gray', action='store_true')
     parser.add_argument('--output_type', default='images', type=str, help='images or video')
     parser.add_argument('--fps', default=15, type=int)
