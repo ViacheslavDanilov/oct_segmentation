@@ -11,14 +11,14 @@ from glob import glob
 def get_file_list(
     src_dirs: Union[List[str], str],
     ext_list: Union[List[str], str],
-    dir_name_template: str = '',
+    dirname_template: str = '',
     filename_template: str = '',
 ) -> List[str]:
     """
     Args:
         src_dirs: directory(s) with files inside
         ext_list: extension(s) used for a search
-        dir_name_template: include directories with this template
+        dirname_template: include directories with this template
         filename_template: include files with this template
     Returns:
         all_files: a list of file paths
@@ -34,7 +34,7 @@ def get_file_list(
                 dir_name = os.path.basename(root)
                 if (
                         file_ext in ext_list
-                        and dir_name_template in dir_name
+                        and dirname_template in dir_name
                         and filename_template in file
 
                 ):
