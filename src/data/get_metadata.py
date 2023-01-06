@@ -1,20 +1,21 @@
-import os
 import logging
-import argparse
-from pathlib import Path
+import os
 from datetime import datetime
 
+import hydra
 import pandas as pd
 import pydicom
+from omegaconf import DictConfig, OmegaConf
 from tqdm import tqdm
 
-from tools.utils import get_file_list
+from src.data.utils import get_file_list
 
-logger = logging.getLogger(__name__)
+log = logging.getLogger(__name__)
+log.setLevel(logging.INFO)
 
 
 def extract_metadata(
-        dcm_path: str,
+    dcm_path: str,
 ) -> dict:
 
     dcm = pydicom.dcmread(dcm_path)
@@ -41,7 +42,6 @@ def extract_metadata(
         'WW',
     ]
     meta = {key: float('nan') for key in keys}
-    meta['Path'] = dcm_path
     meta['Study UID'] = str(dcm.StudyInstanceUID)
     meta['Series UID'] = str(dcm.SeriesInstanceUID)
 
@@ -99,30 +99,17 @@ def extract_metadata(
     if hasattr(dcm, 'WindowWidth'):
         meta['WW'] = int(float(dcm.WindowWidth))
 
-    logger.info('Processed DICOM: {:s}'.format(dcm_path))
+    log.info(f'Processed DICOM: {dcm_path}')
 
     return meta
 
 
-if __name__ == '__main__':
+@hydra.main(config_path=os.path.join(os.getcwd(), 'config'), config_name='data', version_base=None)
+def main(cfg: DictConfig) -> None:
+    log.info(f'Config:\n\n{OmegaConf.to_yaml(cfg)}')
 
-    os.makedirs('logs', exist_ok=True)
-    logging.basicConfig(
-        format='%(asctime)s - %(levelname)s - %(message)s',
-        datefmt='%d.%m.%Y %I:%M:%S',
-        filename='logs/{:s}.log'.format(Path(__file__).stem),
-        filemode='w',
-        level=logging.INFO,
-    )
-
-    parser = argparse.ArgumentParser(description='Retrieve and save DICOM metadata')
-    parser.add_argument('--study_dir', required=True, type=str, help='directory with studies')
-    parser.add_argument('--save_dir', required=True, type=str, help='directory where to save CSV file')
-    args = parser.parse_args()
-
-    # Include or exclude specific directories
     dcm_list = get_file_list(
-        src_dirs=args.study_dir,
+        src_dirs=cfg.meta.study_dir,
         ext_list='',
         filename_template='IMG',
     )
@@ -130,13 +117,18 @@ if __name__ == '__main__':
     meta = []
     for dcm_path in tqdm(dcm_list, desc='Extract metadata', unit=' dicoms'):
         dcm_meta = extract_metadata(
-            dcm_path=dcm_path
+            dcm_path=dcm_path,
         )
         meta.append(dcm_meta)
 
     df = pd.DataFrame(meta)
     df.sort_values(by='Path')
-    save_path = os.path.join(args.save_dir, 'meta.xlsx')
+    os.makedirs(cfg.meta.save_dir)
+    save_path = os.path.join(cfg.meta.save_dir, 'meta.xlsx')
     df.to_excel(save_path, sheet_name='Meta', index=False, startrow=0, startcol=0)
 
-    logger.info('Metadata saved: {:s}'.format(save_path))
+    log.info(f'Metadata saved: {save_path}')
+
+
+if __name__ == '__main__':
+    main()

@@ -1,11 +1,11 @@
-import os
 import logging
+import os
+from glob import glob
 from pathlib import Path
 from typing import List, Union
 
 import cv2
 import numpy as np
-from glob import glob
 
 
 def get_file_list(
@@ -14,7 +14,8 @@ def get_file_list(
     dirname_template: str = '',
     filename_template: str = '',
 ) -> List[str]:
-    """
+    """Get the list of files in src_dirs.
+
     Args:
         src_dirs: directory(s) with files inside
         ext_list: extension(s) used for a search
@@ -24,8 +25,8 @@ def get_file_list(
         all_files: a list of file paths
     """
     all_files = []
-    src_dirs = [src_dirs, ] if isinstance(src_dirs, str) else src_dirs
-    ext_list = [ext_list, ] if isinstance(ext_list, str) else ext_list
+    src_dirs = [src_dirs] if isinstance(src_dirs, str) else src_dirs
+    ext_list = [ext_list] if isinstance(ext_list, str) else ext_list
     for src_dir in src_dirs:
         for root, dirs, files in os.walk(src_dir):
             for file in files:
@@ -33,10 +34,9 @@ def get_file_list(
                 file_ext = file_ext.lower()
                 dir_name = os.path.basename(root)
                 if (
-                        file_ext in ext_list
-                        and dirname_template in dir_name
-                        and filename_template in file
-
+                    file_ext in ext_list
+                    and dirname_template in dir_name
+                    and filename_template in file
                 ):
                     file_path = os.path.join(root, file)
                     all_files.append(file_path)
@@ -55,16 +55,16 @@ def get_dir_list(
         if include_dirs and Path(series_dir).name not in include_dirs:
             logging.info(
                 'Skip {:s} dir because it is not in the included_dirs list'.format(
-                    Path(series_dir).name
-                )
+                    Path(series_dir).name,
+                ),
             )
             continue
 
         if exclude_dirs and Path(series_dir).name in exclude_dirs:
             logging.info(
                 'Skip {:s} dir because it is in the excluded_dirs list'.format(
-                    Path(series_dir).name
-                )
+                    Path(series_dir).name,
+                ),
             )
             continue
 
@@ -74,9 +74,9 @@ def get_dir_list(
 
 
 def convert_to_grayscale(
-        img_src: np.ndarray,
-        min_limit: int = 40,
-        max_limit: int = 220,
+    img_src: np.ndarray,
+    min_limit: int = 40,
+    max_limit: int = 220,
 ) -> np.ndarray:
 
     img = cv2.cvtColor(img_src, cv2.COLOR_RGB2GRAY)
