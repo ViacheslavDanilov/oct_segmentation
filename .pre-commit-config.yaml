@@ -42,10 +42,10 @@ repos:
 
 # pydocstyle
 -   repo: https://github.com/pycqa/pydocstyle
-    rev: '6.2.1'
+    rev: '6.2.2'
     hooks:
     -   id: pydocstyle
-        additional_dependencies: ['toml']
+        additional_dependencies: ['toml', 'tomli']
         args: ['--config', 'pyproject.toml']
 
 # mypy
