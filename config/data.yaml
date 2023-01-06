@@ -1,0 +1,7 @@
+defaults:
+  - main
+  - _self_
+
+meta:
+  study_dir: data/raw
+  save_dir: data/interim
