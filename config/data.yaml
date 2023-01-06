@@ -5,3 +5,13 @@ defaults:
 meta:
   study_dir: data/raw
   save_dir: data/interim
+
+conversion:
+  study_dir: data/raw
+  include_dirs: []
+  exclude_dirs: []
+  output_size: [1000, 1000]
+  to_gray: false
+  output_type: images         # images or video
+  fps: 15
+  save_dir: data/interim
