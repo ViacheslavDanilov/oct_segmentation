@@ -129,10 +129,37 @@ dmypy.json
 .pyre/
 
 # Dataset
-dataset/
+/data/
+
+# Models
+*.pth
 
 # PyCharm settings
 .idea
 
-# Logs
+# VSCode settings
+.vscode
+
+# Spyder
+.spyproject/
+
+# Jupyter NB Checkpoints
+.ipynb_checkpoints/
+
+# Mac OS-specific storage files
+.DS_Store
+
+# vim
+*.swp
+*.swo
+
+# Hydra logs directory
 logs/
+
+# DVC files
+.dvc/config.local
+.dvc/tmp
+.dvc/cache
+
+# Directory with temporary files
+temp/

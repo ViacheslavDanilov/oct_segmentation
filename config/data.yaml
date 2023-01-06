@@ -1,0 +1,26 @@
+defaults:
+  - main
+  - _self_
+
+meta:
+  study_dir: data/raw
+  save_dir: data/interim
+
+conversion:
+  study_dir: data/raw
+  include_dirs: []
+  exclude_dirs: []
+  output_size: [1000, 1000]
+  to_gray: false
+  output_type: image         # image or video
+  fps: 15
+  save_dir: data/interim
+
+stack:
+  study_dir: data/interim
+  include_dirs: []
+  exclude_dirs: []
+  output_size: [1000, 1000]
+  output_type: image         # image or video
+  fps: 15
+  save_dir: data/interim
