@@ -40,7 +40,7 @@ def process_single_study(
         save_dir = os.path.join(save_dir, study_name)
     else:
         save_dir = os.path.join(save_dir, study_name, f'images{suffix}')
-    os.makedirs(save_dir) if not os.path.isdir(save_dir) else False
+    os.makedirs(save_dir, exist_ok=True)
 
     img_list = []
     for img_dir in img_dirs:
