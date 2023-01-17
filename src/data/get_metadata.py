@@ -42,6 +42,7 @@ def extract_metadata(
         'WW',
     ]
     meta = {key: float('nan') for key in keys}
+    meta['Path'] = dcm_path
     meta['Study UID'] = str(dcm.StudyInstanceUID)
     meta['Series UID'] = str(dcm.SeriesInstanceUID)
 
