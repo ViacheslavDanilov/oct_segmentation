@@ -42,6 +42,7 @@ def extract_metadata(
         'WW',
     ]
     meta = {key: float('nan') for key in keys}
+    meta['Path'] = dcm_path
     meta['Study UID'] = str(dcm.StudyInstanceUID)
     meta['Series UID'] = str(dcm.SeriesInstanceUID)
 
@@ -123,7 +124,7 @@ def main(cfg: DictConfig) -> None:
 
     df = pd.DataFrame(meta)
     df.sort_values(by='Path')
-    os.makedirs(cfg.meta.save_dir)
+    os.makedirs(cfg.meta.save_dir, exist_ok=True)
     save_path = os.path.join(cfg.meta.save_dir, 'meta.xlsx')
     df.to_excel(save_path, sheet_name='Meta', index=False, startrow=0, startcol=0)
 
