@@ -41,7 +41,7 @@ def convert_single_study(
         save_dir = os.path.join(save_dir, study_name)
     else:
         save_dir = os.path.join(save_dir, study_name, f'images{suffix}')
-    os.makedirs(save_dir) if not os.path.isdir(save_dir) else False
+    os.makedirs(save_dir, exist_ok=True)
 
     # Create video writer
     if output_type == 'video':
