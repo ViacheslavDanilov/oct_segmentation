@@ -14,7 +14,7 @@ def get_file_list(
     dirname_template: str = '',
     filename_template: str = '',
 ) -> List[str]:
-    """Get the list of files in src_dirs.
+    """Get a list of files in the specified directory with specific extensions.
 
     Args:
         src_dirs: directory(s) with files inside
@@ -54,17 +54,13 @@ def get_dir_list(
     for series_dir in _dir_list:
         if include_dirs and Path(series_dir).name not in include_dirs:
             logging.info(
-                'Skip {:s} dir because it is not in the included_dirs list'.format(
-                    Path(series_dir).name,
-                ),
+                f'Skip {Path(series_dir).name} because it is not in the included_dirs list',
             )
             continue
 
         if exclude_dirs and Path(series_dir).name in exclude_dirs:
             logging.info(
-                'Skip {:s} dir because it is in the excluded_dirs list'.format(
-                    Path(series_dir).name,
-                ),
+                f'Skip {Path(series_dir).name} because it is in the excluded_dirs list',
             )
             continue
 
