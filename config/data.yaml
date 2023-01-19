@@ -6,7 +6,7 @@ meta:
   study_dir: data/raw
   save_dir: data/interim
 
-conversion:
+convert:
   study_dir: data/raw
   include_dirs: []
   exclude_dirs: []
