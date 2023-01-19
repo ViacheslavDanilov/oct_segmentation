@@ -102,19 +102,19 @@ def main(cfg: DictConfig) -> None:
     log.info(f'Config:\n\n{OmegaConf.to_yaml(cfg)}')
 
     study_list = get_dir_list(
-        data_dir=cfg.conversion.study_dir,
-        include_dirs=cfg.conversion.include_dirs,
-        exclude_dirs=cfg.conversion.exclude_dirs,
+        data_dir=cfg.convert.study_dir,
+        include_dirs=cfg.convert.include_dirs,
+        exclude_dirs=cfg.convert.exclude_dirs,
     )
 
     num_cores = multiprocessing.cpu_count()
     conversion_func = partial(
         convert_single_study,
-        output_type=cfg.conversion.output_type,
-        output_size=cfg.conversion.output_size,
-        to_gray=cfg.conversion.to_gray,
-        fps=cfg.conversion.fps,
-        save_dir=cfg.conversion.save_dir,
+        output_type=cfg.convert.output_type,
+        output_size=cfg.convert.output_size,
+        to_gray=cfg.convert.to_gray,
+        fps=cfg.convert.fps,
+        save_dir=cfg.convert.save_dir,
     )
     process_map(
         conversion_func,
