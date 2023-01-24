@@ -15,7 +15,25 @@ chmod +x Miniconda3-latest-Linux-x86_64.sh
 ./Miniconda3-latest-Linux-x86_64.sh
 ```
 
-Step 2: Clone the repository, create a conda environment and install the requirements for the repository
+Step 2: Install FFmpeg and verify that the installation is correct
+
+- Linux
+``` bash
+sudo apt update
+sudo apt upgrade
+sudo apt install ffmpeg
+ffmpeg -version
+```
+
+- macOS
+``` bash
+brew update
+brew upgrade
+brew install ffmpeg
+ffmpeg
+```
+
+Step 3: Clone the repository, create a conda environment, and install the requirements for the repository
 ``` bash
 git clone https://github.com/ViacheslavDanilov/oct_segmentation.git
 cd oct_segmentation
@@ -23,12 +41,12 @@ chmod +x create_env.sh
 source create_env.sh
 ```
 
-Step 3: Initialize git hooks using the pre-commit framework
+Step 4: Initialize git hooks using the pre-commit framework
 ``` bash
 pre-commit install
 ```
 
-Step 4 (optional): Download a raw dataset using DVC
+Step 5 (optional): Download a raw dataset using DVC
 ``` bash
 dvc pull dvc/data/raw.dvc
 ```
