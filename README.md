@@ -21,7 +21,7 @@ Step 2: Install FFmpeg and verify that the installation is correct
 ``` bash
 sudo apt update
 sudo apt upgrade
-sudo apt install ffmpeg
+sudo apt install ffmpeg -u
 ffmpeg -version
 ```
 
