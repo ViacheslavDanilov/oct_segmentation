@@ -56,7 +56,7 @@ def convert_single_study(
 
     # Iterate over DICOM slices
     for slice in range(slices):
-        img = dcm[slice, :, :, :]
+        img = dcm[slice]
         img = cv2.normalize(
             img,
             None,
