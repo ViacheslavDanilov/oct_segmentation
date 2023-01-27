@@ -27,6 +27,8 @@ if  [ ! -z  ${INPUT_ZIP_PATH}  ]
 then
   printf '\n\033[1;92mUnzip source dataset...\n'
   unzip -n ${INPUT_ZIP_PATH} -d 'data'
+  python src/data/reformate_data.py \
+    meta.study_dir=${INPUT_DIR}
 fi
 
 printf '\n\033[1;92mConvert DICOMs to regular images...\n'
