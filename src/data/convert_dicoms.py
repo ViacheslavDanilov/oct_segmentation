@@ -14,7 +14,7 @@ from omegaconf import DictConfig, OmegaConf
 from tqdm import tqdm
 from tqdm.contrib.concurrent import process_map
 
-from src.data.utils import convert_to_grayscale, get_dir_list
+from src.data.utils import convert_to_grayscale, get_dir_list, get_file_list
 
 log = logging.getLogger(__name__)
 log.setLevel(logging.INFO)
@@ -28,73 +28,86 @@ def convert_single_study(
     fps: int,
     save_dir: str,
 ) -> None:
-    dcm_path = os.path.join(study_dir, 'IMG001')  # FIXME: temporal solution
-    study = pydicom.dcmread(dcm_path)
-    dcm = study.pixel_array
-    slices = dcm.shape[0]
 
-    suffix = '_gray' if to_gray else ''
+    dcm_list = get_file_list(
+        src_dirs=study_dir,
+        ext_list='',
+        filename_template='IMG',
+    )
 
-    # Select save_dir based on output_type
-    study_name = Path(study_dir).stem
-    if output_type == 'video':
-        save_dir = os.path.join(save_dir, study_name)
-    else:
-        save_dir = os.path.join(save_dir, study_name, f'images{suffix}')
-    os.makedirs(save_dir, exist_ok=True)
+    for dcm_path in dcm_list:
+        study = pydicom.dcmread(dcm_path)
+        dcm = study.pixel_array
+        slices = dcm.shape[0]
 
-    # Create video writer
-    if output_type == 'video':
-        video_path_temp = os.path.join(save_dir, f'{study_name}{suffix}_temp.mp4')
-        video_height, video_width = output_size
-        video = cv2.VideoWriter(
-            video_path_temp,
-            cv2.VideoWriter_fourcc(*'mp4v'),
-            fps,
-            (video_width, video_height),
-        )
+        suffix = '_gray' if to_gray else ''
 
-    # Iterate over DICOM slices
-    for slice in range(slices):
-        img = dcm[slice]
-        img = cv2.normalize(
-            img,
-            None,
-            alpha=0,
-            beta=255,
-            norm_type=cv2.NORM_MINMAX,
-            dtype=cv2.CV_8U,
-        )
-        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-        img = convert_to_grayscale(img, min_limit=40, max_limit=220) if to_gray else img
-
-        img_size = img.shape[:-1] if len(img.shape) == 3 else img.shape
-        if img_size != output_size:
-            img = imutils.resize(img, height=output_size[0], inter=cv2.INTER_LINEAR)
-
-        if output_type == 'image':
-            img_name = f'{study_name}_{slice+1:04d}.png'
-            img_save_path = os.path.join(save_dir, img_name)
-            cv2.imwrite(img_save_path, img)
-        elif output_type == 'video':
-            video.write(img)
+        # Select save_dir based on output_type
+        dcm_name = Path(dcm_path).name
+        series_name = dcm_name.replace('IMG', '')
+        study_name = Path(study_dir).stem
+        if output_type == 'video':
+            save_dir_video = os.path.join(save_dir, study_name, series_name)
+            os.makedirs(save_dir_video, exist_ok=True)
         else:
-            raise ValueError(f'Unknown output_type value: {output_type}')
+            save_dir_img = os.path.join(save_dir, study_name, series_name, f'images{suffix}')
+            os.makedirs(save_dir_img, exist_ok=True)
 
-    video.release() if output_type == 'video' else False
+        # Create video writer
+        if output_type == 'video':
+            video_path_temp = os.path.join(
+                save_dir_video,
+                f'{study_name}{series_name}{suffix}_temp.mp4',
+            )
+            video_height, video_width = output_size
+            video = cv2.VideoWriter(
+                video_path_temp,
+                cv2.VideoWriter_fourcc(*'mp4v'),
+                fps,
+                (video_width, video_height),
+            )
 
-    # Replace OpenCV videos with FFmpeg ones
-    if output_type == 'video':
-        video_path = os.path.join(save_dir, f'{study_name}{suffix}.mp4')
-        stream = ffmpeg.input(video_path_temp)
-        stream = ffmpeg.output(stream, video_path, vcodec='libx264', video_bitrate='10M')
-        ffmpeg.run(stream, quiet=True, overwrite_output=True)
-        os.remove(video_path_temp)
+        # Iterate over DICOM slices
+        for slice in range(slices):
+            img = dcm[slice]
+            img = cv2.normalize(
+                img,
+                None,
+                alpha=0,
+                beta=255,
+                norm_type=cv2.NORM_MINMAX,
+                dtype=cv2.CV_8U,
+            )
+            img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+            img = convert_to_grayscale(img, min_limit=40, max_limit=220) if to_gray else img
 
-    if output_type == 'video':
-        log.info(f'Study {study_name} converted and saved to {video_path}')
-    else:
-        log.info(f'Study {study_name} converted and saved to {save_dir}')
+            img_size = img.shape[:-1] if len(img.shape) == 3 else img.shape
+            if img_size != output_size:
+                img = imutils.resize(img, height=output_size[0], inter=cv2.INTER_LINEAR)
+
+            if output_type == 'image':
+                img_name = f'{study_name}_{series_name}_{slice+1:03d}.png'
+                img_save_path = os.path.join(save_dir_img, img_name)
+                cv2.imwrite(img_save_path, img)
+            elif output_type == 'video':
+                video.write(img)
+            else:
+                raise ValueError(f'Unknown output_type value: {output_type}')
+
+        video.release() if output_type == 'video' else False
+
+        # Replace OpenCV videos with FFmpeg ones
+        if output_type == 'video':
+            video_path = os.path.join(save_dir_video, f'{study_name}_{series_name}{suffix}.mp4')
+            stream = ffmpeg.input(video_path_temp)
+            stream = ffmpeg.output(stream, video_path, vcodec='libx264', video_bitrate='10M')
+            ffmpeg.run(stream, quiet=True, overwrite_output=True)
+            os.remove(video_path_temp)
+
+        if output_type == 'video':
+            log.info(f'DICOM {dcm_path} converted and saved to {video_path}')
+        else:
+            log.info(f'DICOM {dcm_path} converted and saved to {save_dir_img}')
 
 
 @hydra.main(config_path=os.path.join(os.getcwd(), 'config'), config_name='data', version_base=None)
