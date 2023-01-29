@@ -1,5 +1,6 @@
 wdir: ../../data
 outs:
-- md5: 94d0def92c691f5a202310aaa18eddce
-  size: 2017017998
+- md5: f8a7580caffdbe5e5acfcae864dde32f
+  size: 3298289154
   path: raw.zip
+  isexec: true
