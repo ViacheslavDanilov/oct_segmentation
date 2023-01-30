@@ -4,8 +4,8 @@
 INPUT_DVC_PATH='dvc/data/raw.dvc'
 INPUT_ZIP_PATH='data/raw.zip'
 INPUT_DIR='data/raw'
-INCLUDE_DIRS="[]"           # Usage example: INCLUDE_DIRS="['05','15','25']"
-EXCLUDE_DIRS="[]"           # Usage example: EXCLUDE_DIRS="['07','13','20']"
+INCLUDE_DIRS="[]"           # Usage example: INCLUDE_DIRS="['005','025','032']"
+EXCLUDE_DIRS="[]"           # Usage example: EXCLUDE_DIRS="['007','013','020']"
 OUTPUT_SIZE="[1000,1000]"
 FPS=15
 OUTPUT_DIR='data/sly_input'
@@ -27,8 +27,6 @@ if  [ ! -z  ${INPUT_ZIP_PATH}  ]
 then
   printf '\n\033[1;92mUnzip source dataset...\n'
   unzip -n ${INPUT_ZIP_PATH} -d 'data'
-  python src/data/reformate_data.py \
-    meta.study_dir=${INPUT_DIR}
 fi
 
 printf '\n\033[1;92mConvert DICOMs to regular images...\n'
