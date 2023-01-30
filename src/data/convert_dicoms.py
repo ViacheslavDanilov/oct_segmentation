@@ -2,7 +2,6 @@ import logging
 import multiprocessing
 import os
 from functools import partial
-from pathlib import Path
 from typing import Tuple
 
 import cv2
@@ -14,7 +13,13 @@ from omegaconf import DictConfig, OmegaConf
 from tqdm import tqdm
 from tqdm.contrib.concurrent import process_map
 
-from src.data.utils import convert_to_grayscale, get_dir_list, get_file_list
+from src.data.utils import (
+    convert_to_grayscale,
+    get_dir_list,
+    get_file_list,
+    get_series_name,
+    get_study_name,
+)
 
 log = logging.getLogger(__name__)
 log.setLevel(logging.INFO)
@@ -43,9 +48,8 @@ def convert_single_study(
         suffix = '_gray' if to_gray else ''
 
         # Select save_dir based on output_type
-        dcm_name = Path(dcm_path).name
-        series_name = dcm_name.replace('IMG', '')
-        study_name = Path(study_dir).stem
+        study_name = get_study_name(dcm_path)
+        series_name = get_series_name(dcm_path)
         if output_type == 'video':
             save_dir_video = os.path.join(save_dir, study_name, series_name)
             os.makedirs(save_dir_video, exist_ok=True)

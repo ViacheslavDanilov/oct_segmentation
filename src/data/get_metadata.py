@@ -8,7 +8,7 @@ import pydicom
 from omegaconf import DictConfig, OmegaConf
 from tqdm import tqdm
 
-from src.data.utils import get_file_list
+from src.data.utils import get_file_list, get_series_name, get_study_name
 
 log = logging.getLogger(__name__)
 log.setLevel(logging.INFO)
@@ -23,6 +23,8 @@ def extract_metadata(
         'Path',
         'Study UID',
         'Series UID',
+        'Study name',
+        'Series name',
         'Acquisition Date',
         'Acquisition Time',
         'Patient Name',
@@ -45,6 +47,8 @@ def extract_metadata(
     meta['Path'] = dcm_path
     meta['Study UID'] = str(dcm.StudyInstanceUID)
     meta['Series UID'] = str(dcm.SeriesInstanceUID)
+    meta['Study name'] = get_study_name(dcm_path)
+    meta['Series name'] = get_series_name(dcm_path)
 
     try:
         if hasattr(dcm, 'AcquisitionDate'):
