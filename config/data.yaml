@@ -21,6 +21,6 @@ stack:
   include_dirs: []
   exclude_dirs: []
   output_size: [1000, 1000]
-  output_type: image         # image or video
+  output_type: video         # image or video
   fps: 15
   save_dir: data/sly_input
