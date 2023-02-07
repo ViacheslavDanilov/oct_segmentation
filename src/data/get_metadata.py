@@ -8,7 +8,7 @@ import pydicom
 from omegaconf import DictConfig, OmegaConf
 from tqdm import tqdm
 
-from src.data.utils import get_file_list
+from src.data.utils import get_file_list, get_series_name, get_study_name
 
 log = logging.getLogger(__name__)
 log.setLevel(logging.INFO)
@@ -23,6 +23,8 @@ def extract_metadata(
         'Path',
         'Study UID',
         'Series UID',
+        'Study name',
+        'Series name',
         'Acquisition Date',
         'Acquisition Time',
         'Patient Name',
@@ -45,62 +47,68 @@ def extract_metadata(
     meta['Path'] = dcm_path
     meta['Study UID'] = str(dcm.StudyInstanceUID)
     meta['Series UID'] = str(dcm.SeriesInstanceUID)
+    meta['Study name'] = get_study_name(dcm_path)
+    meta['Series name'] = get_series_name(dcm_path)
 
-    if hasattr(dcm, 'AcquisitionDate'):
-        _date = datetime.strptime(dcm.AcquisitionDate, '%Y%m%d')
-        date = '{:02d}.{:02d}.{:d}'.format(
-            _date.day,
-            _date.month,
-            _date.year,
-        )
-        meta['Acquisition Date'] = str(date)
+    try:
+        if hasattr(dcm, 'AcquisitionDate'):
+            _date = datetime.strptime(dcm.AcquisitionDate, '%Y%m%d')
+            date = '{:02d}.{:02d}.{:d}'.format(
+                _date.day,
+                _date.month,
+                _date.year,
+            )
+            meta['Acquisition Date'] = str(date)
 
-    if hasattr(dcm, 'AcquisitionTime'):
-        _time = datetime.strptime(dcm.AcquisitionTime, '%H%M%S.%f')
-        time = '{:02d}:{:02d}:{:02d}'.format(
-            _time.hour,
-            _time.minute,
-            _time.second,
-        )
-        meta['Acquisition Time'] = str(time)
+        if hasattr(dcm, 'AcquisitionTime'):
+            _time = datetime.strptime(dcm.AcquisitionTime, '%H%M%S.%f')
+            time = '{:02d}:{:02d}:{:02d}'.format(
+                _time.hour,
+                _time.minute,
+                _time.second,
+            )
+            meta['Acquisition Time'] = str(time)
 
-    if hasattr(dcm, 'PatientName'):
-        meta['Patient Name'] = str(dcm.PatientName)
+        if hasattr(dcm, 'PatientName'):
+            meta['Patient Name'] = str(dcm.PatientName)
 
-    if hasattr(dcm, 'PatientSex'):
-        meta['Patient Sex'] = str(dcm.PatientSex)
+        if hasattr(dcm, 'PatientSex'):
+            meta['Patient Sex'] = str(dcm.PatientSex)
 
-    if hasattr(dcm, 'BodyPartExamined'):
-        meta['Body Part'] = str(dcm.BodyPartExamined)
+        if hasattr(dcm, 'BodyPartExamined'):
+            meta['Body Part'] = str(dcm.BodyPartExamined)
 
-    if hasattr(dcm, 'PerformingPhysicianName'):
-        meta['Physician'] = str(dcm.PerformingPhysicianName)
+        if hasattr(dcm, 'PerformingPhysicianName'):
+            meta['Physician'] = str(dcm.PerformingPhysicianName)
 
-    if hasattr(dcm, 'InstitutionName'):
-        meta['Institution'] = str(dcm.InstitutionName)
+        if hasattr(dcm, 'InstitutionName'):
+            meta['Institution'] = str(dcm.InstitutionName)
 
-    if hasattr(dcm, 'Manufacturer'):
-        meta['Manufacturer'] = str(dcm.Manufacturer)
+        if hasattr(dcm, 'Manufacturer'):
+            meta['Manufacturer'] = str(dcm.Manufacturer)
 
-    if hasattr(dcm, 'Modality'):
-        meta['Modality'] = str(dcm.Modality)
+        if hasattr(dcm, 'Modality'):
+            meta['Modality'] = str(dcm.Modality)
 
-    if hasattr(dcm, 'ImageType'):
-        meta['Image Type'] = str(dcm.ImageType)
+        if hasattr(dcm, 'ImageType'):
+            meta['Image Type'] = str(dcm.ImageType)
 
-    meta['Slices'] = dcm.pixel_array.shape[0]
-    meta['Height'] = dcm.pixel_array.shape[1]
-    meta['Width'] = dcm.pixel_array.shape[2]
-    meta['Channels'] = dcm.pixel_array.shape[3]
-    meta['Data Type'] = dcm.pixel_array.dtype
+        meta['Slices'] = dcm.pixel_array.shape[0]
+        meta['Height'] = dcm.pixel_array.shape[1]
+        meta['Width'] = dcm.pixel_array.shape[2]
+        meta['Channels'] = dcm.pixel_array.shape[3]
+        meta['Data Type'] = dcm.pixel_array.dtype
 
-    if hasattr(dcm, 'WindowCenter'):
-        meta['WC'] = int(float(dcm.WindowCenter))
+        if hasattr(dcm, 'WindowCenter'):
+            meta['WC'] = int(float(dcm.WindowCenter))
 
-    if hasattr(dcm, 'WindowWidth'):
-        meta['WW'] = int(float(dcm.WindowWidth))
+        if hasattr(dcm, 'WindowWidth'):
+            meta['WW'] = int(float(dcm.WindowWidth))
 
-    log.info(f'Processed DICOM: {dcm_path}')
+        log.info(f'Processed DICOM: {dcm_path}')
+
+    except Exception as e:
+        log.warning(f'Broken DICOM: {dcm_path}')
 
     return meta
 

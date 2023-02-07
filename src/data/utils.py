@@ -82,3 +82,19 @@ def convert_to_grayscale(
     img = cv2.cvtColor(img, cv2.COLOR_GRAY2RGB)
 
     return img
+
+
+def get_study_name(
+    dcm_path: str,
+) -> str:
+    study_name = Path(dcm_path).parts[-2]
+    return study_name
+
+
+def get_series_name(
+    dcm_path: str,
+) -> str:
+    dcm_name = Path(dcm_path).name
+    series_name_ = dcm_name.replace('IMG', '')
+    series_name = str(int(series_name_))
+    return series_name

@@ -29,74 +29,81 @@ def process_single_study(
     save_dir: str,
 ):
 
-    suffix = '_stack'
-    img_dirs = glob(study_dir + '*/', recursive=True)
-    img_dirs = list(filter(lambda x: suffix not in x, img_dirs))
-    img_dirs.sort()
+    series_dirs = glob(study_dir + '*/', recursive=True)
+    for series_dir in series_dirs:
+        suffix = '_stack'
+        img_dirs = glob(series_dir + '*/', recursive=True)
+        img_dirs = list(filter(lambda x: suffix not in x, img_dirs))
+        img_dirs.sort()
 
-    # Select save_dir based on output_type
-    study_name = Path(study_dir).stem
-    if output_type == 'video':
-        save_dir = os.path.join(save_dir, study_name)
-    else:
-        save_dir = os.path.join(save_dir, study_name, f'images{suffix}')
-    os.makedirs(save_dir, exist_ok=True)
-
-    img_list = []
-    for img_dir in img_dirs:
-        _img_list = get_file_list(
-            src_dirs=img_dir,
-            ext_list='.png',
-        )
-        img_list.append(_img_list)
-
-    # Create video writer
-    if output_type == 'video':
-        video_path_temp = os.path.join(save_dir, f'{study_name}{suffix}_temp.mp4')
-        video = cv2.VideoWriter(
-            video_path_temp,
-            cv2.VideoWriter_fourcc(*'mp4v'),
-            fps,
-            (
-                len(img_list) * img_width,
-                img_height,
-            ),  # To keep aspect ratio: len(img_list) * img_height
-        )
-
-    # Iterate over images
-    for slice, img_paths in enumerate(zip(*img_list)):
-
-        img_out = np.zeros([img_height, 1, 3], dtype=np.uint8)
-        for img_path in img_paths:
-            img = cv2.imread(img_path)
-            if img.shape[0] != img_height or img.shape[1] != img_width:
-                img = imutils.resize(img, height=img_height, inter=cv2.INTER_LINEAR)
-            img_out = np.hstack([img_out, img])
-        img_out = np.delete(img_out, 0, 1)
-
-        if output_type == 'image':
-            img_name = f'{study_name}_{slice + 1:04d}.png'
-            img_save_path = os.path.join(save_dir, img_name)
-            cv2.imwrite(img_save_path, img_out)
-        elif output_type == 'video':
-            video.write(img_out)
+        # Select save_dir based on output_type
+        series_name = Path(series_dir).parts[-1]
+        study_name = Path(series_dir).parts[-2]
+        if output_type == 'video':
+            save_dir_video = os.path.join(save_dir, study_name, series_name)
+            os.makedirs(save_dir_video, exist_ok=True)
         else:
-            raise ValueError(f'Unknown output_type value: {output_type}')
+            save_dir_img = os.path.join(save_dir, study_name, series_name, f'images{suffix}')
+            os.makedirs(save_dir_img, exist_ok=True)
 
-    video.release() if output_type == 'video' else False
+        img_list = []
+        for img_dir in img_dirs:
+            _img_list = get_file_list(
+                src_dirs=img_dir,
+                ext_list='.png',
+            )
+            img_list.append(_img_list)
 
-    # Replace OpenCV videos with FFmpeg ones
-    if output_type == 'video':
-        video_path = os.path.join(save_dir, f'{study_name}{suffix}.mp4')
-        stream = ffmpeg.input(video_path_temp)
-        stream = ffmpeg.output(stream, video_path, vcodec='libx264', video_bitrate='10M')
-        ffmpeg.run(stream, quiet=True, overwrite_output=True)
-        os.remove(video_path_temp)
+        # Create video writer
+        if output_type == 'video':
+            video_path_temp = os.path.join(
+                save_dir_video,
+                f'{study_name}_{series_name}{suffix}_temp.mp4',
+            )
+            video = cv2.VideoWriter(
+                video_path_temp,
+                cv2.VideoWriter_fourcc(*'mp4v'),
+                fps,
+                (
+                    len(img_list) * img_width,
+                    img_height,
+                ),  # To keep aspect ratio: len(img_list) * img_height
+            )
 
-    if output_type == 'video':
-        log.info(f'Study {study_name} converted and saved to {video_path}')
-    else:
-        log.info(f'Study {study_name} converted and saved to {save_dir}')
+        # Iterate over images
+        for slice, img_paths in enumerate(zip(*img_list)):
+
+            img_out = np.zeros([img_height, 1, 3], dtype=np.uint8)
+            for img_path in img_paths:
+                img = cv2.imread(img_path)
+                if img.shape[0] != img_height or img.shape[1] != img_width:
+                    img = imutils.resize(img, height=img_height, inter=cv2.INTER_LINEAR)
+                img_out = np.hstack([img_out, img])
+            img_out = np.delete(img_out, 0, 1)
+
+            if output_type == 'image':
+                img_name = f'{study_name}_{series_name}_{slice + 1:03d}.png'
+                img_save_path = os.path.join(save_dir_img, img_name)
+                cv2.imwrite(img_save_path, img_out)
+            elif output_type == 'video':
+                video.write(img_out)
+            else:
+                raise ValueError(f'Unknown output_type value: {output_type}')
+
+        video.release() if output_type == 'video' else False
+
+        # Replace OpenCV videos with FFmpeg ones
+        if output_type == 'video':
+            video_path = os.path.join(save_dir_video, f'{study_name}_{series_name}{suffix}.mp4')
+            stream = ffmpeg.input(video_path_temp)
+            stream = ffmpeg.output(stream, video_path, vcodec='libx264', video_bitrate='10M')
+            ffmpeg.run(stream, quiet=True, overwrite_output=True)
+            os.remove(video_path_temp)
+
+        if output_type == 'video':
+            log.info(f'Series {study_name}/{series_name} converted and saved to {video_path}')
+        else:
+            log.info(f'Series {study_name}/{series_name} converted and saved to {save_dir_img}')
 
 
 @hydra.main(config_path=os.path.join(os.getcwd(), 'config'), config_name='data', version_base=None)
