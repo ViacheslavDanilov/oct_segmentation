@@ -4,7 +4,7 @@ defaults:
 
 meta:
   study_dir: data/raw
-  save_dir: data/interim
+  save_dir: data/raw
 
 convert:
   study_dir: data/raw
@@ -14,13 +14,13 @@ convert:
   to_gray: false
   output_type: image         # image or video
   fps: 15
-  save_dir: data/interim
+  save_dir: data/sly_input
 
 stack:
-  study_dir: data/interim
+  study_dir: data/sly_input
   include_dirs: []
   exclude_dirs: []
   output_size: [1000, 1000]
-  output_type: image         # image or video
+  output_type: video         # image or video
   fps: 15
-  save_dir: data/interim
+  save_dir: data/sly_input
