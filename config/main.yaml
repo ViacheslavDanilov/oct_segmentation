@@ -1,9 +1,9 @@
 hydra:
   run:
-    dir: logs/${hydra.job.name}/${now:%d-%m-%Y_%H-%M-%S}
+    dir: logs/${hydra.job.name}
   job:
-    chdir: False
-  output_subdir: null
+    chdir: false
+  output_subdir:
   job_logging:
     version: 1
     formatters:
@@ -19,7 +19,7 @@ hydra:
         class: logging.FileHandler
         formatter: simple
         # relative to the job log directory
-        filename: ${hydra.run.dir}/${hydra.job.name}.log
+        filename: ${hydra.run.dir}/${now:%d-%m-%Y_%H-%M-%S}.log
     root:
       level: DEBUG
       handlers: [file]    # [console, file]
