@@ -43,8 +43,8 @@ def main(
                 vid.set(1, frame['index'])
                 _, img = vid.read()
                 img = img[
-                      cfg.meta.window_position[0][0]: cfg.meta.window_position[1][0],
                       cfg.meta.window_position[0][1]: cfg.meta.window_position[1][1],
+                      cfg.meta.window_position[0][0]: cfg.meta.window_position[1][0],
                       :,
                 ]
                 img_name = f'{os.path.splitext(item_name)[0]}_frame_{str(frame["index"]).zfill(4)}.png'
@@ -58,8 +58,8 @@ def main(
                         polygon = figure['geometry']['points']['exterior']
                         cv2.fillPoly(mask, np.array([polygon]), 1)
                         mask = mask[
-                               cfg.meta.window_position[0][0]: cfg.meta.window_position[1][0],
                                cfg.meta.window_position[0][1]: cfg.meta.window_position[1][1],
+                               cfg.meta.window_position[0][0]: cfg.meta.window_position[1][0],
                         ]
                         mask = mask.astype(bool)
                     elif figure['geometryType'] == 'bitmap':
@@ -67,29 +67,23 @@ def main(
                         bitmap = figure['geometry']['bitmap']['data']
                         mask_ = sly.Bitmap.base64_2_data(bitmap)
                         mask[
-                            figure['geometry']['bitmap']['origin'][0]: figure['geometry']['bitmap']['origin'][0] + mask_.shape[0],
-                            figure['geometry']['bitmap']['origin'][1]: figure['geometry']['bitmap']['origin'][1] + mask_.shape[1]
+                            figure['geometry']['bitmap']['origin'][1]: figure['geometry']['bitmap']['origin'][1] + mask_.shape[0],
+                            figure['geometry']['bitmap']['origin'][0]: figure['geometry']['bitmap']['origin'][0] + mask_.shape[1]
                         ] = mask_[:, :]
                     else:
                         break
 
                     mask = mask[
-                           cfg.meta.window_position[0][0]: cfg.meta.window_position[1][0],
                            cfg.meta.window_position[0][1]: cfg.meta.window_position[1][1],
+                           cfg.meta.window_position[0][0]: cfg.meta.window_position[1][0],
                            ]
-
-                    color_mask = (cv2.cvtColor(np.array(mask).astype('uint8'), cv2.COLOR_GRAY2BGR)
-                                  * (243, 15, 15)).astype('uint8')
-                    result = cv2.addWeighted(np.array(img), 1, color_mask, 0.3, 0)
-                    cv2.imshow('e', result)
-                    cv2.waitKey()
 
                     encoded_string = sly.Bitmap.data_2_base64(mask)
                     n_m = np.nonzero(mask)
                     area = len(n_m[0])
                     rectangle = [
-                        [min(n_m[0]), min(n_m[1])],
-                        [max(n_m[0]), max(n_m[1])],
+                        [min(n_m[1]), min(n_m[0])],
+                        [max(n_m[1]), max(n_m[0])],
                     ]
 
                     with open(annotation_path, 'a', newline='', ) as f_object:
@@ -102,8 +96,8 @@ def main(
                                 'ID': id,
                                 'Image path': images_path,
                                 'Image name': img_name,
-                                'Study name': 0,
-                                'Slice': 0,
+                                'Study name': patient_name,
+                                'Slice': None,
                                 'Image width': cfg.meta.window_position[1][0] - cfg.meta.window_position[0][0],
                                 'Image height': cfg.meta.window_position[1][1] - cfg.meta.window_position[0][1],
                                 'Class ID': classes_id[classTitle],
