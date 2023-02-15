@@ -1,11 +1,8 @@
 defaults:
-  - main
-  - _self_
+- main
+- _self_
 
 meta:
   study_dir: data/sly/OCT segmentation
   save_dir: data/interim
-  window_position: [
-    [0, 0],
-    [1000, 750],
-  ]
+  window_position: [[0, 0], [1000, 1000]]
