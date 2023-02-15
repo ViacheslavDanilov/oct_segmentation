@@ -5,3 +5,7 @@ defaults:
 meta:
   study_dir: data/sly/OCT segmentation
   save_dir: data/interim
+  window_position: [
+    [0, 0],
+    [1000, 1000],
+  ]
