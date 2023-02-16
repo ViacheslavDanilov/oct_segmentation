@@ -16,6 +16,11 @@ convert:
   fps: 15
   save_dir: data/interim
 
+sly_convert:
+  study_dir: data/sly/OCT segmentation
+  save_dir: data/interim
+  window_position: [ [ 0, 0 ], [ 1000, 1000 ] ]
+
 stack:
   study_dir: data/interim
   include_dirs: []
