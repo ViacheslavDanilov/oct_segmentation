@@ -1,19 +1,18 @@
 import json
+import multiprocessing
 import os
 from csv import DictWriter
+from typing import List
 
 import cv2
 import hydra
-import multiprocessing
 import numpy as np
 import pandas
 import pandas as pd
 import supervisely_lib as sly
-
+from joblib import Parallel, delayed
 from omegaconf import DictConfig
 from tqdm import tqdm
-from typing import List
-from joblib import Parallel, delayed
 
 # global param
 id = 0
@@ -41,11 +40,11 @@ def annotation_write(
                 'ID': id,
                 'Image path': os.path.join(images_dir, img_name),
                 'Image name': img_name,
-                'Study name': patient_name,
+                'Study': patient_name,
                 'Series': series,
                 'Slice': slice,
-                'Image width': cfg.sly_convert.window_position[1][0] - cfg.sly_convert.window_position[0][0],
-                'Image height': cfg.sly_convert.window_position[1][1] - cfg.sly_convert.window_position[0][1],
+                'Image width': cfg.sly_to_int.crop[1][0] - cfg.sly_to_int.crop[0][0],
+                'Image height': cfg.sly_to_int.crop[1][1] - cfg.sly_to_int.crop[0][1],
                 'Class ID': classes_id[classTitle],
                 'Class': classTitle,
                 'x1': rectangle[0][0],
@@ -78,12 +77,11 @@ def _processing_frame(
     annotation_path: str,
 ):
     img = img[
-          cfg.sly_convert.window_position[0][1]: cfg.sly_convert.window_position[1][1],
-          cfg.sly_convert.window_position[0][0]: cfg.sly_convert.window_position[1][0],
-          :,
-          ]
-    slice = str(frame['index']).zfill(4)
-    img_name = f'{patient_name}_{series}_{slice}.png'
+        cfg.sly_to_int.crop[0][1] : cfg.sly_to_int.crop[1][1],
+        cfg.sly_to_int.crop[0][0] : cfg.sly_to_int.crop[1][0],
+        :,
+    ]
+    img_name = f'{patient_name}_{series:1d}_{frame["index"]:03d}.png'
     cv2.imwrite(os.path.join(images_dir, img_name), img)
     # Annotation
     for figure in frame['figures']:
@@ -95,31 +93,31 @@ def _processing_frame(
             polygon = figure['geometry']['points']['exterior']
             cv2.fillPoly(mask, np.array([polygon]), 1)
             mask = mask[
-                   cfg.sly_convert.window_position[0][1]: cfg.sly_convert.window_position[1][1],
-                   cfg.sly_convert.window_position[0][0]: cfg.sly_convert.window_position[1][0],
-                   ]
+                cfg.sly_to_int.crop[0][1] : cfg.sly_to_int.crop[1][1],
+                cfg.sly_to_int.crop[0][0] : cfg.sly_to_int.crop[1][0],
+            ]
             mask = mask.astype(bool)
         elif figure['geometryType'] == 'bitmap':
             mask = mask.astype(bool)
             bitmap = figure['geometry']['bitmap']['data']
             mask_ = sly.Bitmap.base64_2_data(bitmap)
             mask[
-            figure['geometry']['bitmap']['origin'][1]: figure['geometry'][
-                                                           'bitmap'
-                                                       ]['origin'][1]
-                                                       + mask_.shape[0],
-            figure['geometry']['bitmap']['origin'][0]: figure['geometry'][
-                                                           'bitmap'
-                                                       ]['origin'][0]
-                                                       + mask_.shape[1],
+                figure['geometry']['bitmap']['origin'][1] : figure['geometry']['bitmap']['origin'][
+                    1
+                ]
+                + mask_.shape[0],
+                figure['geometry']['bitmap']['origin'][0] : figure['geometry']['bitmap']['origin'][
+                    0
+                ]
+                + mask_.shape[1],
             ] = mask_[:, :]
         else:
             break
 
         mask = mask[
-               cfg.sly_convert.window_position[0][1]: cfg.sly_convert.window_position[1][1],
-               cfg.sly_convert.window_position[0][0]: cfg.sly_convert.window_position[1][0],
-               ]
+            cfg.sly_to_int.crop[0][1] : cfg.sly_to_int.crop[1][1],
+            cfg.sly_to_int.crop[0][0] : cfg.sly_to_int.crop[1][0],
+        ]
 
         encoded_string = sly.Bitmap.data_2_base64(mask)
         n_m = np.nonzero(mask)
@@ -146,22 +144,22 @@ def _processing_frame(
 
 
 def _processing_item(
-        cfg: DictConfig,
-        fieldnames: List[str],
-        dataset_fs: sly.VideoDataset,
-        classes_id: dict,
-        images_dir: str,
-        annotation_path: str,
+    cfg: DictConfig,
+    fieldnames: List[str],
+    dataset_fs: sly.VideoDataset,
+    classes_id: dict,
+    images_dir: str,
+    annotation_path: str,
 ):
     patient_name = dataset_fs.name
     for series, item_name in enumerate(dataset_fs):
         series += 1
         vid = cv2.VideoCapture(
-            f'{cfg.sly_convert.study_dir}/{patient_name}/{dataset_fs.item_dir_name}/{item_name}',
+            f'{cfg.sly_to_int.study_dir}/{patient_name}/{dataset_fs.item_dir_name}/{item_name}',
         )
         ann = json.load(
             open(
-                f'{cfg.sly_convert.study_dir}/{patient_name}/{dataset_fs.ann_dir_name}/{item_name}.json',
+                f'{cfg.sly_to_int.study_dir}/{patient_name}/{dataset_fs.ann_dir_name}/{item_name}.json',
             ),
         )
         objects = pandas.DataFrame(ann['objects'])
@@ -191,14 +189,14 @@ def _processing_item(
 def main(
     cfg: DictConfig,
 ):
-    project_fs = sly.VideoProject(cfg.sly_convert.study_dir, sly.OpenMode.READ)
-    annotation_path = os.path.join(cfg.sly_convert.save_dir, 'annotation.csv')
-    images_dir = os.path.join(cfg.sly_convert.save_dir, 'img')
+    project_fs = sly.VideoProject(cfg.sly_to_int.study_dir, sly.OpenMode.READ)
+    annotation_path = os.path.join(cfg.sly_to_int.save_dir, 'annotation.csv')
+    images_dir = os.path.join(cfg.sly_to_int.save_dir, 'img')
     fieldnames = [
         'ID',
         'Image path',
         'Image name',
-        'Study name',
+        'Study',
         'Series',
         'Slice',
         'Image width',
@@ -216,8 +214,8 @@ def main(
         'Area',
         'Mask',
     ]
-    meta = json.load(open(os.path.join(cfg.sly_convert.study_dir, 'meta.json')))
-    classes_id = {value['title']: id for id, value in enumerate(meta['classes'])}
+    meta = json.load(open(os.path.join(cfg.sly_to_int.study_dir, 'meta.json')))
+    classes_id = {value['title']: id for (id, value) in enumerate(meta['classes'])}
 
     if os.path.exists(annotation_path):
         os.remove(annotation_path)
@@ -229,9 +227,17 @@ def main(
     os.makedirs(images_dir, exist_ok=True)
 
     num_cores = multiprocessing.cpu_count()
-    Parallel(n_jobs=num_cores, backend="threading") \
-        (delayed(_processing_item)(cfg, fieldnames, dataset_fs, classes_id, images_dir, annotation_path)
-         for dataset_fs in tqdm(project_fs, desc='patients analysis'))
+    Parallel(n_jobs=num_cores, backend='threading')(
+        delayed(_processing_item)(
+            cfg,
+            fieldnames,
+            dataset_fs,
+            classes_id,
+            images_dir,
+            annotation_path,
+        )
+        for dataset_fs in tqdm(project_fs, desc='patients analysis')
+    )
 
 
 if __name__ == '__main__':
