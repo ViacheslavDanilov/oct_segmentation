@@ -19,6 +19,7 @@ convert:
 sly_to_int:
   study_dir: data/sly_output
   crop: [[0, 0], [1000, 1000]]
+  save_data: all            # annotation or all
   save_dir: data/interim
 
 stack:

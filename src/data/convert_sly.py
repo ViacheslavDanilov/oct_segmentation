@@ -7,7 +7,6 @@ from typing import List
 import cv2
 import hydra
 import numpy as np
-import pandas
 import pandas as pd
 import supervisely_lib as sly
 from joblib import Parallel, delayed
@@ -19,13 +18,14 @@ id = 0
 
 
 def annotation_write(
-    cfg: DictConfig,
+    crop: List[List[int]],
     annotation_path: str,
     fieldnames: List[str],
     images_dir: str,
     img_name: str,
     patient_name: str,
     series: int,
+    slice: str,
     classes_id: dict,
     classTitle: str,
     rectangle: List[List[int]],
@@ -43,8 +43,8 @@ def annotation_write(
                 'Study': patient_name,
                 'Series': series,
                 'Slice': slice,
-                'Image width': cfg.sly_to_int.crop[1][0] - cfg.sly_to_int.crop[0][0],
-                'Image height': cfg.sly_to_int.crop[1][1] - cfg.sly_to_int.crop[0][1],
+                'Image width': crop[1][0] - crop[0][0],
+                'Image height': crop[1][1] - crop[0][1],
                 'Class ID': classes_id[classTitle],
                 'Class': classTitle,
                 'x1': rectangle[0][0],
@@ -64,9 +64,9 @@ def annotation_write(
 
 
 def _processing_frame(
-    cfg: DictConfig,
+    crop: List[List[int]],
     classes_id: dict,
-    img: List[List[float]],
+    img: np.ndarray,
     frame: dict,
     fieldnames: List[str],
     ann: dict,
@@ -77,11 +77,12 @@ def _processing_frame(
     annotation_path: str,
 ):
     img = img[
-        cfg.sly_to_int.crop[0][1] : cfg.sly_to_int.crop[1][1],
-        cfg.sly_to_int.crop[0][0] : cfg.sly_to_int.crop[1][0],
+        crop[0][1] : crop[1][1],
+        crop[0][0] : crop[1][0],
         :,
     ]
-    img_name = f'{patient_name}_{series:1d}_{frame["index"]:03d}.png'
+    slice = f'{frame["index"] + 1:03d}'
+    img_name = f'{patient_name}_{series:1d}_{slice}.png'
     cv2.imwrite(os.path.join(images_dir, img_name), img)
     # Annotation
     for figure in frame['figures']:
@@ -93,8 +94,8 @@ def _processing_frame(
             polygon = figure['geometry']['points']['exterior']
             cv2.fillPoly(mask, np.array([polygon]), 1)
             mask = mask[
-                cfg.sly_to_int.crop[0][1] : cfg.sly_to_int.crop[1][1],
-                cfg.sly_to_int.crop[0][0] : cfg.sly_to_int.crop[1][0],
+                crop[0][1] : crop[1][1],
+                crop[0][0] : crop[1][0],
             ]
             mask = mask.astype(bool)
         elif figure['geometryType'] == 'bitmap':
@@ -115,8 +116,8 @@ def _processing_frame(
             break
 
         mask = mask[
-            cfg.sly_to_int.crop[0][1] : cfg.sly_to_int.crop[1][1],
-            cfg.sly_to_int.crop[0][0] : cfg.sly_to_int.crop[1][0],
+            crop[0][1] : crop[1][1],
+            crop[0][0] : crop[1][0],
         ]
 
         encoded_string = sly.Bitmap.data_2_base64(mask)
@@ -128,13 +129,14 @@ def _processing_frame(
         ]
 
         annotation_write(
-            cfg=cfg,
+            crop=crop,
             annotation_path=annotation_path,
             fieldnames=fieldnames,
             images_dir=images_dir,
             img_name=img_name,
             patient_name=patient_name,
             series=series,
+            slice=slice,
             classes_id=classes_id,
             classTitle=classTitle,
             rectangle=rectangle,
@@ -144,32 +146,33 @@ def _processing_frame(
 
 
 def _processing_item(
-    cfg: DictConfig,
+    study_dir: str,
     fieldnames: List[str],
     dataset_fs: sly.VideoDataset,
     classes_id: dict,
     images_dir: str,
     annotation_path: str,
+    crop: List[List[int]],
 ):
     patient_name = dataset_fs.name
     for series, item_name in enumerate(dataset_fs):
         series += 1
         vid = cv2.VideoCapture(
-            f'{cfg.sly_to_int.study_dir}/{patient_name}/{dataset_fs.item_dir_name}/{item_name}',
+            f'{study_dir}/{patient_name}/{dataset_fs.item_dir_name}/{item_name}',
         )
         ann = json.load(
             open(
-                f'{cfg.sly_to_int.study_dir}/{patient_name}/{dataset_fs.ann_dir_name}/{item_name}.json',
+                f'{study_dir}/{patient_name}/{dataset_fs.ann_dir_name}/{item_name}.json',
             ),
         )
-        objects = pandas.DataFrame(ann['objects'])
+        objects = pd.DataFrame(ann['objects'])
         for frame in ann['frames']:
             vid.set(1, frame['index'])
             _, img = vid.read()
             _processing_frame(
-                cfg=cfg,
+                crop=crop,
                 classes_id=classes_id,
-                img=img,
+                img=np.array(img),
                 frame=frame,
                 fieldnames=fieldnames,
                 ann=ann,
@@ -229,15 +232,17 @@ def main(
     num_cores = multiprocessing.cpu_count()
     Parallel(n_jobs=num_cores, backend='threading')(
         delayed(_processing_item)(
-            cfg,
+            cfg.sly_to_int.study_dir,
             fieldnames,
             dataset_fs,
             classes_id,
             images_dir,
             annotation_path,
+            cfg.sly_to_int.crop,
         )
         for dataset_fs in tqdm(project_fs, desc='patients analysis')
     )
+    pd.read_csv(annotation_path).to_excel(f'{os.path.splitext(annotation_path)[0]}.xlsx')
 
 
 if __name__ == '__main__':
