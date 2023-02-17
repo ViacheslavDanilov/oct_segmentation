@@ -27,9 +27,9 @@ def annotation_write(
     series: int,
     slice: str,
     classes_id: dict,
-    classTitle: str,
+    class_title: str,
     rectangle: List[List[int]],
-    area: int,
+    area: float,
     encoded_string: str,
 ):
     global id
@@ -45,8 +45,8 @@ def annotation_write(
                 'Slice': slice,
                 'Image width': crop[1][0] - crop[0][0],
                 'Image height': crop[1][1] - crop[0][1],
-                'Class ID': classes_id[classTitle],
-                'Class': classTitle,
+                'Class ID': classes_id[class_title],
+                'Class': class_title,
                 'x1': rectangle[0][0],
                 'y1': rectangle[0][1],
                 'x2': rectangle[1][0],
@@ -87,7 +87,7 @@ def _processing_frame(
     # Annotation
     for figure in frame['figures']:
         obj = objects[objects['key'] == figure['objectKey']]
-        classTitle = obj.classTitle.values[0]
+        class_title = obj.classTitle.values[0]
         mask = np.zeros((ann['size']['width'], ann['size']['height']))
 
         if figure['geometryType'] == 'polygon':
@@ -119,13 +119,12 @@ def _processing_frame(
             crop[0][1] : crop[1][1],
             crop[0][0] : crop[1][0],
         ]
-
         encoded_string = sly.Bitmap.data_2_base64(mask)
-        n_m = np.nonzero(mask)
-        area = len(n_m[0])
+        mask = sly.Bitmap(mask)
+        contour = mask.to_contours()[0]
         rectangle = [
-            [min(n_m[1]), min(n_m[0])],
-            [max(n_m[1]), max(n_m[0])],
+            [min(contour.exterior_np[:, 1]), min(contour.exterior_np[:, 0])],
+            [max(contour.exterior_np[:, 1]), max(contour.exterior_np[:, 0])],
         ]
 
         annotation_write(
@@ -138,9 +137,9 @@ def _processing_frame(
             series=series,
             slice=slice,
             classes_id=classes_id,
-            classTitle=classTitle,
+            class_title=class_title,
             rectangle=rectangle,
-            area=area,
+            area=contour.area,
             encoded_string=encoded_string,
         )
 
