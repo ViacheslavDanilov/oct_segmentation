@@ -268,12 +268,12 @@ def main(
     img_dir = os.path.join(cfg.sly_to_int.save_dir, 'img')
 
     # # 1. Video parsing
-    # video_parsing(
-    #     datasets=project_sly.datasets,
-    #     img_dir=img_dir,
-    #     src_dir=cfg.sly_to_int.study_dir,
-    #     crop=cfg.sly_to_int.crop,
-    # )
+    video_parsing(
+        datasets=project_sly.datasets,
+        img_dir=img_dir,
+        src_dir=cfg.sly_to_int.study_dir,
+        crop=cfg.sly_to_int.crop,
+    )
 
     # 2. Annotation parsing
     annotation = annotation_parsing(
