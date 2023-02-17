@@ -14,13 +14,11 @@ from omegaconf import DictConfig
 from tqdm import tqdm
 
 
-def process_ann(
+def parse_single_annotation(
     dataset: sly.VideoDataset,
-    src_dir: str,
     img_dir: str,
     fields: List[str],
     class_ids: dict,
-    ann_path: str,
     crop: List[List[int]],
     return_annotation: bool,
 ):
@@ -33,11 +31,8 @@ def process_ann(
     study = dataset.name
     for video_name in dataset:
         series = video_name.split('_')[1]
-        ann = json.load(
-            open(
-                f'{src_dir}/{study}/{dataset.ann_dir_name}/{video_name}.json',
-            ),
-        )
+        ann_path = os.path.join(dataset.ann_dir, f'{video_name}.json')
+        ann = json.load(open(ann_path))
         ann_frames = pd.DataFrame(ann['frames'])
         objects = pd.DataFrame(ann['objects'])
         for idx in range(ann['framesCount']):
@@ -110,6 +105,7 @@ def process_ann(
                         'Area': int(contour.area),
                         'Mask': encoded_mask,
                     }
+
                     if ann_path:
                         with open(ann_path, 'a', newline='') as f:
                             writer = DictWriter(f, fieldnames=fields)
@@ -119,6 +115,7 @@ def process_ann(
                             f.close()
                     if return_annotation:
                         annotation = pd.concat([annotation, pd.DataFrame(result_dict, index=[0])])
+
             else:
                 result_dict = {
                     'Image path': os.path.join(img_dir, img_name),
@@ -141,6 +138,7 @@ def process_ann(
                     'Area': None,
                     'Mask': None,
                 }
+
                 if ann_path:
                     with open(ann_path, 'a', newline='') as f:
                         writer = DictWriter(f, fieldnames=fields)
@@ -150,10 +148,11 @@ def process_ann(
                         f.close()
                 if return_annotation:
                     annotation = pd.concat([annotation, pd.DataFrame(result_dict, index=[0])])
+
     return annotation
 
 
-def process_video(
+def parse_single_video(
     dataset: sly.VideoDataset,
     src_dir: str,
     img_dir: str,
@@ -182,7 +181,6 @@ def process_video(
 
 
 def annotation_parsing(
-    src_dir,
     img_dir,
     datasets,
     class_ids,
@@ -199,13 +197,11 @@ def annotation_parsing(
 
     num_cores = multiprocessing.cpu_count()
     annotation = Parallel(n_jobs=num_cores, backend='threading')(
-        delayed(process_ann)(
+        delayed(parse_single_annotation)(
             dataset=dataset,
-            src_dir=src_dir,
             img_dir=img_dir,
             fields=fields,
             class_ids=class_ids,
-            ann_path=ann_path,
             crop=crop,
             return_annotation=return_annotation,
         )
@@ -227,7 +223,7 @@ def video_parsing(
 
     num_cores = multiprocessing.cpu_count()
     Parallel(n_jobs=num_cores, backend='threading')(
-        delayed(process_video)(
+        delayed(parse_single_video)(
             dataset=dataset,
             src_dir=src_dir,
             img_dir=img_dir,
@@ -267,7 +263,7 @@ def main(
     class_ids = {value['title']: id for (id, value) in enumerate(meta['classes'])}
     img_dir = os.path.join(cfg.sly_to_int.save_dir, 'img')
 
-    # # 1. Video parsing
+    # 1. Video parsing
     video_parsing(
         datasets=project_sly.datasets,
         img_dir=img_dir,
@@ -277,14 +273,11 @@ def main(
 
     # 2. Annotation parsing
     annotation = annotation_parsing(
-        src_dir=cfg.sly_to_int.study_dir,
         img_dir=img_dir,
         datasets=project_sly.datasets,
         class_ids=class_ids,
         fields=fields,
         crop=cfg.sly_to_int.crop,
-        # ann_path=os.path.join(cfg.sly_to_int.save_dir, 'metadata.csv'),
-        ann_path=None,
         return_annotation=True,
     )
 
