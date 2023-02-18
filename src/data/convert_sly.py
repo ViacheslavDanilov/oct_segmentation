@@ -13,6 +13,69 @@ from joblib import Parallel, delayed
 from omegaconf import DictConfig
 from tqdm import tqdm
 
+annotation_write = {
+    'Image path': None,
+    'Image name': None,
+    'Study': None,
+    'Series': None,
+    'Slice': None,
+    'Image width': None,
+    'Image height': None,
+    'Class ID': None,
+    'Class': None,
+    'x1': None,
+    'y1': None,
+    'x2': None,
+    'y2': None,
+    'xc': None,
+    'yc': None,
+    'Box width': None,
+    'Box height': None,
+    'Area': None,
+    'Mask': None,
+}
+
+
+def get_feature_mask(
+    figure: dict,
+    mask: np.ndarray,
+    crop: List[List[int]],
+):
+    if figure['geometryType'] == 'polygon':
+        polygon = figure['geometry']['points']['exterior']
+        cv2.fillPoly(mask, np.array([polygon]), 1)
+        mask = mask[
+            crop[0][1] : crop[1][1],
+            crop[0][0] : crop[1][0],
+        ]
+        mask = mask.astype(bool)
+    elif figure['geometryType'] == 'bitmap':
+        mask = mask.astype(bool)
+        bitmap = figure['geometry']['bitmap']['data']
+        mask_ = sly.Bitmap.base64_2_data(bitmap)
+        mask[
+            figure['geometry']['bitmap']['origin'][1] : figure['geometry']['bitmap']['origin'][1]
+            + mask_.shape[0],
+            figure['geometry']['bitmap']['origin'][0] : figure['geometry']['bitmap']['origin'][0]
+            + mask_.shape[1],
+        ] = mask_[:, :]
+    else:
+        return None, None, None
+
+    mask = mask[
+        crop[0][1] : crop[1][1],
+        crop[0][0] : crop[1][0],
+    ]
+    encoded_mask = sly.Bitmap.data_2_base64(mask)
+    mask = sly.Bitmap(mask)
+    contour = mask.to_contours()[0]
+    bbox = [
+        [min(contour.exterior_np[:, 1]), min(contour.exterior_np[:, 0])],
+        [max(contour.exterior_np[:, 1]), max(contour.exterior_np[:, 0])],
+    ]
+
+    return encoded_mask, contour, bbox
+
 
 def parse_single_annotation(
     dataset: sly.VideoDataset,
@@ -21,6 +84,7 @@ def parse_single_annotation(
     class_ids: dict,
     crop: List[List[int]],
     return_annotation: bool,
+    save_annotation_path: str,
 ):
 
     if return_annotation:
@@ -42,72 +106,48 @@ def parse_single_annotation(
                 ann_frame = ann_frames.loc[ann_frames['index'] == idx]
             else:
                 ann_frame = []
+
+            # initialization result dict
+            result_dict = annotation_write.copy()
+            result_dict['Image path'] = os.path.join(img_dir, img_name)
+            result_dict['Image name'] = img_name
+            result_dict['Study'] = study
+            result_dict['Series'] = series
+            result_dict['Slice'] = slice
+            result_dict['Image width'] = crop[1][0] - crop[0][0]
+            result_dict['Image height'] = crop[1][1] - crop[0][1]
+
             if len(ann_frame) != 0:
                 for figure in ann_frame.figures.tolist()[0]:
+                    # GET feature figure
                     obj = objects[objects['key'] == figure['objectKey']]
                     class_title = obj.classTitle.values[0]
                     mask = np.zeros((ann['size']['width'], ann['size']['height']))
-
-                    if figure['geometryType'] == 'polygon':
-                        polygon = figure['geometry']['points']['exterior']
-                        cv2.fillPoly(mask, np.array([polygon]), 1)
-                        mask = mask[
-                            crop[0][1] : crop[1][1],
-                            crop[0][0] : crop[1][0],
-                        ]
-                        mask = mask.astype(bool)
-                    elif figure['geometryType'] == 'bitmap':
-                        mask = mask.astype(bool)
-                        bitmap = figure['geometry']['bitmap']['data']
-                        mask_ = sly.Bitmap.base64_2_data(bitmap)
-                        mask[
-                            figure['geometry']['bitmap']['origin'][1] : figure['geometry'][
-                                'bitmap'
-                            ]['origin'][1]
-                            + mask_.shape[0],
-                            figure['geometry']['bitmap']['origin'][0] : figure['geometry'][
-                                'bitmap'
-                            ]['origin'][0]
-                            + mask_.shape[1],
-                        ] = mask_[:, :]
-                    else:
+                    encoded_mask, contour, bbox = get_feature_mask(
+                        figure=figure,
+                        mask=mask,
+                        crop=crop,
+                    )
+                    if encoded_mask is None:
                         break
 
-                    mask = mask[
-                        crop[0][1] : crop[1][1],
-                        crop[0][0] : crop[1][0],
-                    ]
-                    encoded_mask = sly.Bitmap.data_2_base64(mask)
-                    mask = sly.Bitmap(mask)
-                    contour = mask.to_contours()[0]
-                    bbox = [
-                        [min(contour.exterior_np[:, 1]), min(contour.exterior_np[:, 0])],
-                        [max(contour.exterior_np[:, 1]), max(contour.exterior_np[:, 0])],
-                    ]
-                    result_dict = {
-                        'Image path': os.path.join(img_dir, img_name),
-                        'Image name': img_name,
-                        'Study': study,
-                        'Series': series,
-                        'Slice': slice,
-                        'Image width': crop[1][0] - crop[0][0],
-                        'Image height': crop[1][1] - crop[0][1],
-                        'Class ID': class_ids[class_title],
-                        'Class': class_title,
-                        'x1': bbox[0][0],
-                        'y1': bbox[0][1],
-                        'x2': bbox[1][0],
-                        'y2': bbox[1][1],
-                        'xc': int(np.mean([bbox[0][0], bbox[1][0]])),
-                        'yc': int(np.mean([bbox[0][1], bbox[1][1]])),
-                        'Box width': bbox[1][0] - bbox[0][0],
-                        'Box height': bbox[1][1] - bbox[0][1],
-                        'Area': int(contour.area),
-                        'Mask': encoded_mask,
-                    }
+                    # result dict add feature values
+                    result_dict['Class ID'] = class_ids[class_title]
+                    result_dict['Class'] = class_title
+                    result_dict['x1'] = bbox[0][0]
+                    result_dict['y1'] = bbox[0][1]
+                    result_dict['x2'] = bbox[1][0]
+                    result_dict['y2'] = bbox[1][1]
+                    result_dict['xc'] = int(np.mean([bbox[0][0], bbox[1][0]]))
+                    result_dict['yc'] = int(np.mean([bbox[0][1], bbox[1][1]]))
+                    result_dict['Box width'] = bbox[1][0] - bbox[0][0]
+                    result_dict['Box height'] = bbox[1][1] - bbox[0][1]
+                    result_dict['Area'] = int(contour.area)
+                    result_dict['Mask'] = encoded_mask
 
-                    if ann_path:
-                        with open(ann_path, 'a', newline='') as f:
+                    # save annotation
+                    if save_annotation_path:
+                        with open(save_annotation_path, 'a', newline='') as f:
                             writer = DictWriter(f, fieldnames=fields)
                             writer.writerow(
                                 result_dict,
@@ -117,30 +157,9 @@ def parse_single_annotation(
                         annotation = pd.concat([annotation, pd.DataFrame(result_dict, index=[0])])
 
             else:
-                result_dict = {
-                    'Image path': os.path.join(img_dir, img_name),
-                    'Image name': img_name,
-                    'Study': study,
-                    'Series': series,
-                    'Slice': slice,
-                    'Image width': crop[1][0] - crop[0][0],
-                    'Image height': crop[1][1] - crop[0][1],
-                    'Class ID': None,
-                    'Class': None,
-                    'x1': None,
-                    'y1': None,
-                    'x2': None,
-                    'y2': None,
-                    'xc': None,
-                    'yc': None,
-                    'Box width': None,
-                    'Box height': None,
-                    'Area': None,
-                    'Mask': None,
-                }
-
-                if ann_path:
-                    with open(ann_path, 'a', newline='') as f:
+                # IF ann none save empty annotation
+                if save_annotation_path:
+                    with open(save_annotation_path, 'a', newline='') as f:
                         writer = DictWriter(f, fieldnames=fields)
                         writer.writerow(
                             result_dict,
@@ -186,11 +205,11 @@ def annotation_parsing(
     class_ids,
     fields: List[str],
     crop: List[List[int]],
-    ann_path: str = None,
+    save_annotation_path: str = None,
     return_annotation: bool = True,
 ):
-    if ann_path is not None:
-        with open(ann_path, 'w', newline='') as f_object:
+    if save_annotation_path is not None:
+        with open(save_annotation_path, 'w', newline='') as f_object:
             writer = DictWriter(f_object, fieldnames=fields)
             writer.writeheader()
             f_object.close()
@@ -204,6 +223,7 @@ def annotation_parsing(
             class_ids=class_ids,
             crop=crop,
             return_annotation=return_annotation,
+            save_annotation_path=save_annotation_path,
         )
         for dataset in tqdm(datasets, desc='Annotation parsing')
     )
@@ -264,12 +284,12 @@ def main(
     img_dir = os.path.join(cfg.sly_to_int.save_dir, 'img')
 
     # 1. Video parsing
-    video_parsing(
-        datasets=project_sly.datasets,
-        img_dir=img_dir,
-        src_dir=cfg.sly_to_int.study_dir,
-        crop=cfg.sly_to_int.crop,
-    )
+    # video_parsing(
+    #     datasets=project_sly.datasets,
+    #     img_dir=img_dir,
+    #     src_dir=cfg.sly_to_int.study_dir,
+    #     crop=cfg.sly_to_int.crop,
+    # )
 
     # 2. Annotation parsing
     annotation = annotation_parsing(
@@ -278,6 +298,7 @@ def main(
         class_ids=class_ids,
         fields=fields,
         crop=cfg.sly_to_int.crop,
+        save_annotation_path=os.path.join(cfg.sly_to_int.save_dir, 'metadata.csv'),
         return_annotation=True,
     )
 
