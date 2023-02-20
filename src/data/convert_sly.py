@@ -1,8 +1,7 @@
 import json
 import multiprocessing
 import os
-from csv import DictWriter
-from typing import List
+from typing import Any, List, Tuple
 
 import cv2
 import hydra
@@ -11,36 +10,15 @@ import pandas as pd
 import supervisely_lib as sly
 from joblib import Parallel, delayed
 from omegaconf import DictConfig
+from supervisely import Polygon
 from tqdm import tqdm
 
-annotation_write = {
-    'Image path': None,
-    'Image name': None,
-    'Study': None,
-    'Series': None,
-    'Slice': None,
-    'Image width': None,
-    'Image height': None,
-    'Class ID': None,
-    'Class': None,
-    'x1': None,
-    'y1': None,
-    'x2': None,
-    'y2': None,
-    'xc': None,
-    'yc': None,
-    'Box width': None,
-    'Box height': None,
-    'Area': None,
-    'Mask': None,
-}
 
-
-def get_feature_mask(
+def get_mask_properties(
     figure: dict,
     mask: np.ndarray,
     crop: List[List[int]],
-):
+) -> Tuple[str, Polygon, List[List[Any]]]:
     if figure['geometryType'] == 'polygon':
         polygon = figure['geometry']['points']['exterior']
         cv2.fillPoly(mask, np.array([polygon]), 1)
@@ -79,19 +57,12 @@ def get_feature_mask(
 
 def parse_single_annotation(
     dataset: sly.VideoDataset,
-    img_dir: str,
-    fields: List[str],
     class_ids: dict,
     crop: List[List[int]],
-    return_annotation: bool,
-    save_annotation_path: str,
-):
+    img_dir: str,
+) -> pd.DataFrame:
 
-    if return_annotation:
-        annotation = pd.DataFrame()
-    else:
-        annotation = None
-
+    df_ann = pd.DataFrame()
     study = dataset.name
     for video_name in dataset:
         series = video_name.split('_')[1]
@@ -107,23 +78,36 @@ def parse_single_annotation(
             else:
                 ann_frame = []
 
-            # initialization result dict
-            result_dict = annotation_write.copy()
-            result_dict['Image path'] = os.path.join(img_dir, img_name)
-            result_dict['Image name'] = img_name
-            result_dict['Study'] = study
-            result_dict['Series'] = series
-            result_dict['Slice'] = slice
-            result_dict['Image width'] = crop[1][0] - crop[0][0]
-            result_dict['Image height'] = crop[1][1] - crop[0][1]
+            # Initializing the dictionary with annotations
+            result_dict = {
+                'Image path': os.path.join(img_dir, img_name),
+                'Image name': img_name,
+                'Study': study,
+                'Series': series,
+                'Slice': slice,
+                'Image width': crop[1][0] - crop[0][0],
+                'Image height': crop[1][1] - crop[0][1],
+                'Class ID': None,
+                'Class': None,
+                'x1': None,
+                'y1': None,
+                'x2': None,
+                'y2': None,
+                'xc': None,
+                'yc': None,
+                'Box width': None,
+                'Box height': None,
+                'Area': None,
+                'Mask': None,
+            }
 
             if len(ann_frame) != 0:
                 for figure in ann_frame.figures.tolist()[0]:
-                    # GET feature figure
+                    # Extract figure features
                     obj = objects[objects['key'] == figure['objectKey']]
                     class_title = obj.classTitle.values[0]
                     mask = np.zeros((ann['size']['width'], ann['size']['height']))
-                    encoded_mask, contour, bbox = get_feature_mask(
+                    encoded_mask, contour, bbox = get_mask_properties(
                         figure=figure,
                         mask=mask,
                         crop=crop,
@@ -131,7 +115,7 @@ def parse_single_annotation(
                     if encoded_mask is None:
                         break
 
-                    # result dict add feature values
+                    # Fill the result dictionary with the figure properties
                     result_dict['Class ID'] = class_ids[class_title]
                     result_dict['Class'] = class_title
                     result_dict['x1'] = bbox[0][0]
@@ -144,31 +128,13 @@ def parse_single_annotation(
                     result_dict['Box height'] = bbox[1][1] - bbox[0][1]
                     result_dict['Area'] = int(contour.area)
                     result_dict['Mask'] = encoded_mask
+                    df_ann = pd.concat([df_ann, pd.DataFrame(result_dict, index=[0])])
 
-                    # save annotation
-                    if save_annotation_path:
-                        with open(save_annotation_path, 'a', newline='') as f:
-                            writer = DictWriter(f, fieldnames=fields)
-                            writer.writerow(
-                                result_dict,
-                            )
-                            f.close()
-                    if return_annotation:
-                        annotation = pd.concat([annotation, pd.DataFrame(result_dict, index=[0])])
-
+            # Save empty annotation if ann is None
             else:
-                # IF ann none save empty annotation
-                if save_annotation_path:
-                    with open(save_annotation_path, 'a', newline='') as f:
-                        writer = DictWriter(f, fieldnames=fields)
-                        writer.writerow(
-                            result_dict,
-                        )
-                        f.close()
-                if return_annotation:
-                    annotation = pd.concat([annotation, pd.DataFrame(result_dict, index=[0])])
+                df_ann = pd.concat([df_ann, pd.DataFrame(result_dict, index=[0])])
 
-    return annotation
+    return df_ann
 
 
 def parse_single_video(
@@ -200,37 +166,24 @@ def parse_single_video(
 
 
 def annotation_parsing(
-    img_dir,
-    datasets,
-    class_ids,
-    fields: List[str],
+    datasets: sly.Project.DatasetDict,
+    class_ids: dict,
     crop: List[List[int]],
-    save_annotation_path: str = None,
-    return_annotation: bool = True,
+    img_dir: str,
 ):
-    if save_annotation_path is not None:
-        with open(save_annotation_path, 'w', newline='') as f_object:
-            writer = DictWriter(f_object, fieldnames=fields)
-            writer.writeheader()
-            f_object.close()
 
     num_cores = multiprocessing.cpu_count()
     annotation = Parallel(n_jobs=num_cores, backend='threading')(
         delayed(parse_single_annotation)(
             dataset=dataset,
-            img_dir=img_dir,
-            fields=fields,
             class_ids=class_ids,
             crop=crop,
-            return_annotation=return_annotation,
-            save_annotation_path=save_annotation_path,
+            img_dir=img_dir,
         )
         for dataset in tqdm(datasets, desc='Annotation parsing')
     )
-    if return_annotation:
-        return annotation
-    else:
-        return None
+
+    return annotation
 
 
 def video_parsing(
@@ -259,64 +212,37 @@ def main(
 ) -> None:
     meta = json.load(open(os.path.join(cfg.sly_to_int.study_dir, 'meta.json')))
     project_sly = sly.VideoProject(cfg.sly_to_int.study_dir, sly.OpenMode.READ)
-    fields = [
-        'Image path',
-        'Image name',
-        'Study',
-        'Series',
-        'Slice',
-        'Image width',
-        'Image height',
-        'Class ID',
-        'Class',
-        'x1',
-        'y1',
-        'x2',
-        'y2',
-        'xc',
-        'yc',
-        'Box width',
-        'Box height',
-        'Area',
-        'Mask',
-    ]
     class_ids = {value['title']: id for (id, value) in enumerate(meta['classes'])}
     img_dir = os.path.join(cfg.sly_to_int.save_dir, 'img')
 
     # 1. Video parsing
-    # video_parsing(
-    #     datasets=project_sly.datasets,
-    #     img_dir=img_dir,
-    #     src_dir=cfg.sly_to_int.study_dir,
-    #     crop=cfg.sly_to_int.crop,
-    # )
+    video_parsing(
+        datasets=project_sly.datasets,
+        img_dir=img_dir,
+        src_dir=cfg.sly_to_int.study_dir,
+        crop=cfg.sly_to_int.crop,
+    )
 
     # 2. Annotation parsing
-    annotation = annotation_parsing(
+    df_list = annotation_parsing(
         img_dir=img_dir,
         datasets=project_sly.datasets,
         class_ids=class_ids,
-        fields=fields,
         crop=cfg.sly_to_int.crop,
-        save_annotation_path=os.path.join(cfg.sly_to_int.save_dir, 'metadata.csv'),
-        return_annotation=True,
     )
 
-    # 3. Save annotation .xlsx
-    if annotation is not None:
-        df = pd.DataFrame()
-        for ann in annotation:
-            df = pd.concat([df, ann])
-        df.sort_values(['Image path', 'Class ID'], inplace=True)
-        df.reset_index(drop=True, inplace=True)
-        df.index += 1
-        save_path = os.path.join(cfg.sly_to_int.save_dir, 'metadata.xlsx')
-        df.to_excel(
-            save_path,
-            sheet_name='Metadata',
-            index=True,
-            index_label='ID',
-        )
+    # 3. Save annotation data frame
+    df = pd.concat(df_list)
+    df.sort_values(['Image path', 'Class ID'], inplace=True)
+    df.reset_index(drop=True, inplace=True)
+    df.index += 1
+    save_path = os.path.join(cfg.sly_to_int.save_dir, 'metadata.xlsx')
+    df.to_excel(
+        save_path,
+        sheet_name='Metadata',
+        index=True,
+        index_label='ID',
+    )
 
 
 if __name__ == '__main__':
