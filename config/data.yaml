@@ -1,6 +1,6 @@
 defaults:
-  - main
-  - _self_
+- main
+- _self_
 
 meta:
   study_dir: data/raw
@@ -15,6 +15,11 @@ convert:
   output_type: image         # image or video
   fps: 15
   save_dir: data/sly_input
+
+sly_to_int:
+  study_dir: data/sly_output
+  crop: [[0, 0], [1000, 1000]]
+  save_dir: data/interim
 
 stack:
   study_dir: data/sly_input
