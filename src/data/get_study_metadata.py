@@ -113,12 +113,16 @@ def extract_metadata(
     return meta
 
 
-@hydra.main(config_path=os.path.join(os.getcwd(), 'config'), config_name='data', version_base=None)
+@hydra.main(
+    config_path=os.path.join(os.getcwd(), 'config'),
+    config_name='get_study_metadata',
+    version_base=None,
+)
 def main(cfg: DictConfig) -> None:
     log.info(f'Config:\n\n{OmegaConf.to_yaml(cfg)}')
 
     dcm_list = get_file_list(
-        src_dirs=cfg.meta.study_dir,
+        src_dirs=cfg.study_dir,
         ext_list='',
         filename_template='IMG',
     )
@@ -132,8 +136,8 @@ def main(cfg: DictConfig) -> None:
 
     df = pd.DataFrame(meta)
     df.sort_values(by='Path')
-    os.makedirs(cfg.meta.save_dir, exist_ok=True)
-    save_path = os.path.join(cfg.meta.save_dir, 'meta.xlsx')
+    os.makedirs(cfg.save_dir, exist_ok=True)
+    save_path = os.path.join(cfg.save_dir, 'meta.xlsx')
     df.to_excel(save_path, sheet_name='Meta', index=False, startrow=0, startcol=0)
 
     log.info(f'Metadata saved: {save_path}')

@@ -206,7 +206,11 @@ def video_parsing(
     )
 
 
-@hydra.main(config_path=os.path.join(os.getcwd(), 'config'), config_name='data', version_base=None)
+@hydra.main(
+    config_path=os.path.join(os.getcwd(), 'config'),
+    config_name='convert_sly_to_int',
+    version_base=None,
+)
 def main(
     cfg: DictConfig,
 ) -> None:

@@ -1,0 +1,11 @@
+defaults:
+- main
+- _self_
+
+study_dir: data/sly_input
+include_dirs: []
+exclude_dirs: []
+output_size: [1000, 1000]
+output_type: video         # image or video
+fps: 15
+save_dir: data/sly_input

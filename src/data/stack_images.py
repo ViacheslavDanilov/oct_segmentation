@@ -106,7 +106,11 @@ def process_single_study(
             log.info(f'Series {study_name}/{series_name} converted and saved to {save_dir_img}')
 
 
-@hydra.main(config_path=os.path.join(os.getcwd(), 'config'), config_name='data', version_base=None)
+@hydra.main(
+    config_path=os.path.join(os.getcwd(), 'config'),
+    config_name='stack_images',
+    version_base=None,
+)
 def main(cfg: DictConfig) -> None:
     log.info(f'Config:\n\n{OmegaConf.to_yaml(cfg)}')
 

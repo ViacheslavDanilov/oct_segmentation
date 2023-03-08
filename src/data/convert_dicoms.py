@@ -114,24 +114,28 @@ def convert_single_study(
             log.info(f'DICOM {dcm_path} converted and saved to {save_dir_img}')
 
 
-@hydra.main(config_path=os.path.join(os.getcwd(), 'config'), config_name='data', version_base=None)
+@hydra.main(
+    config_path=os.path.join(os.getcwd(), 'config'),
+    config_name='convert_dicoms',
+    version_base=None,
+)
 def main(cfg: DictConfig) -> None:
     log.info(f'Config:\n\n{OmegaConf.to_yaml(cfg)}')
 
     study_list = get_dir_list(
-        data_dir=cfg.convert.study_dir,
-        include_dirs=cfg.convert.include_dirs,
-        exclude_dirs=cfg.convert.exclude_dirs,
+        data_dir=cfg.study_dir,
+        include_dirs=cfg.include_dirs,
+        exclude_dirs=cfg.exclude_dirs,
     )
 
     num_cores = multiprocessing.cpu_count()
     conversion_func = partial(
         convert_single_study,
-        output_type=cfg.convert.output_type,
-        output_size=cfg.convert.output_size,
-        to_gray=cfg.convert.to_gray,
-        fps=cfg.convert.fps,
-        save_dir=cfg.convert.save_dir,
+        output_type=cfg.output_type,
+        output_size=cfg.output_size,
+        to_gray=cfg.to_gray,
+        fps=cfg.fps,
+        save_dir=cfg.save_dir,
     )
     process_map(
         conversion_func,
