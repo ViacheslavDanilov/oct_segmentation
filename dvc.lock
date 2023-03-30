@@ -1,0 +1,9 @@
+schema: '2.0'
+stages:
+  zip_update:
+    cmd: tar -cvzf data/raw.zip data/raw
+    deps:
+    - path: data/raw
+      md5: 1a94302d00bc0242ed0de17bc17a694f.dir
+      size: 18465326293
+      nfiles: 101

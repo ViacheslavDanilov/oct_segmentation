@@ -214,17 +214,17 @@ def video_parsing(
 def main(
     cfg: DictConfig,
 ) -> None:
-    meta = json.load(open(os.path.join(cfg.sly_to_int.study_dir, 'meta.json')))
-    project_sly = sly.VideoProject(cfg.sly_to_int.study_dir, sly.OpenMode.READ)
+    meta = json.load(open(os.path.join(cfg.study_dir, 'meta.json')))
+    project_sly = sly.VideoProject(cfg.study_dir, sly.OpenMode.READ)
     class_ids = {value['title']: id for (id, value) in enumerate(meta['classes'])}
-    img_dir = os.path.join(cfg.sly_to_int.save_dir, 'img')
+    img_dir = os.path.join(cfg.save_dir, 'img')
 
     # 1. Video parsing
     video_parsing(
         datasets=project_sly.datasets,
         img_dir=img_dir,
-        src_dir=cfg.sly_to_int.study_dir,
-        crop=cfg.sly_to_int.crop,
+        src_dir=cfg.study_dir,
+        crop=cfg.crop,
     )
 
     # 2. Annotation parsing
@@ -232,7 +232,7 @@ def main(
         img_dir=img_dir,
         datasets=project_sly.datasets,
         class_ids=class_ids,
-        crop=cfg.sly_to_int.crop,
+        crop=cfg.crop,
     )
 
     # 3. Save annotation data frame
@@ -240,7 +240,7 @@ def main(
     df.sort_values(['Image path', 'Class ID'], inplace=True)
     df.reset_index(drop=True, inplace=True)
     df.index += 1
-    save_path = os.path.join(cfg.sly_to_int.save_dir, 'metadata.xlsx')
+    save_path = os.path.join(cfg.save_dir, 'metadata.xlsx')
     df.to_excel(
         save_path,
         sheet_name='Metadata',
