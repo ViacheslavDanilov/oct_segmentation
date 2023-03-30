@@ -80,14 +80,14 @@ def parse_single_annotation(
 
             # Initializing the dictionary with annotations
             result_dict = {
-                'Image path': os.path.join(img_dir, img_name),
-                'Image name': img_name,
+                'Image_path': os.path.join(img_dir, img_name),
+                'Image_name': img_name,
                 'Study': study,
                 'Series': series,
                 'Slice': slice,
-                'Image width': crop[1][0] - crop[0][0],
-                'Image height': crop[1][1] - crop[0][1],
-                'Class ID': None,
+                'Image_width': crop[1][0] - crop[0][0],
+                'Image_height': crop[1][1] - crop[0][1],
+                'Class_ID': None,
                 'Class': None,
                 'x1': None,
                 'y1': None,
@@ -95,8 +95,8 @@ def parse_single_annotation(
                 'y2': None,
                 'xc': None,
                 'yc': None,
-                'Box width': None,
-                'Box height': None,
+                'Box_width': None,
+                'Box_height': None,
                 'Area': None,
                 'Mask': None,
             }
@@ -116,7 +116,7 @@ def parse_single_annotation(
                         break
 
                     # Fill the result dictionary with the figure properties
-                    result_dict['Class ID'] = class_ids[class_title]
+                    result_dict['Class_ID'] = class_ids[class_title]
                     result_dict['Class'] = class_title
                     result_dict['x1'] = bbox[0][0]
                     result_dict['y1'] = bbox[0][1]
@@ -124,8 +124,8 @@ def parse_single_annotation(
                     result_dict['y2'] = bbox[1][1]
                     result_dict['xc'] = int(np.mean([bbox[0][0], bbox[1][0]]))
                     result_dict['yc'] = int(np.mean([bbox[0][1], bbox[1][1]]))
-                    result_dict['Box width'] = bbox[1][0] - bbox[0][0]
-                    result_dict['Box height'] = bbox[1][1] - bbox[0][1]
+                    result_dict['Box_width'] = bbox[1][0] - bbox[0][0]
+                    result_dict['Box_height'] = bbox[1][1] - bbox[0][1]
                     result_dict['Area'] = int(contour.area)
                     result_dict['Mask'] = encoded_mask
                     df_ann = pd.concat([df_ann, pd.DataFrame(result_dict, index=[0])])
@@ -237,7 +237,7 @@ def main(
 
     # 3. Save annotation data frame
     df = pd.concat(df_list)
-    df.sort_values(['Image path', 'Class ID'], inplace=True)
+    df.sort_values(['Image_path', 'Class_ID'], inplace=True)
     df.reset_index(drop=True, inplace=True)
     df.index += 1
     save_path = os.path.join(cfg.save_dir, 'metadata.xlsx')
