@@ -1,0 +1,8 @@
+defaults:
+- main
+- _self_
+
+study_dir: data/interim
+save_dir: data/final/smt/ann
+df_name: metadata.xlsx
+classes: [Lipid core, Lumen, Fibrous cap, Vasa vasorum]

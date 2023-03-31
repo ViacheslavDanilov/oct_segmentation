@@ -1,0 +1,7 @@
+defaults:
+- main
+- _self_
+
+img_dir: data/interim/img
+ann_dir: data/final/smt/ann
+classes: [Lipid core, Lumen, Fibrous cap, Vasa vasorum]
