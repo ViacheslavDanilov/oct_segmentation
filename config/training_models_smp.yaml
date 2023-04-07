@@ -1,0 +1,15 @@
+defaults:
+- main
+- _self_
+
+project_name: OST segmentation
+task_name: test start
+train_data_dir: data/final/smp/train
+val_data_dir: data/final/smp/val
+classes: [Lipid core, Lumen, Fibrous cap, Vasa vasorum]
+architecture: unet
+encoder: mobilenet_v2
+input_size: 448
+batch_size: 16
+epochs: 75
+device: cuda

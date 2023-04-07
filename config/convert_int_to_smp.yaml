@@ -1,0 +1,9 @@
+defaults:
+- main
+- _self_
+
+df_path: data/interim/metadata.xlsx
+save_dir: data/final/smp
+train: 0.85
+test: 0.15
+classes: [Lipid core, Lumen, Fibrous cap, Vasa vasorum]

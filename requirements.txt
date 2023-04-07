@@ -22,3 +22,5 @@ tomli==2.0.1
 tqdm==4.64.1
 segmentation_models_pytorch==0.3.2
 pytorch_lightning==2.0.0
+tensorboard-2.12.1
+
