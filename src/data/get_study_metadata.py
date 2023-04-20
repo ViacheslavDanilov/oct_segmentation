@@ -114,7 +114,7 @@ def extract_metadata(
 
 
 @hydra.main(
-    config_path=os.path.join(os.getcwd(), 'config'),
+    config_path=os.path.join(os.getcwd(), 'configs'),
     config_name='get_study_metadata',
     version_base=None,
 )

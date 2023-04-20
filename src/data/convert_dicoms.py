@@ -115,7 +115,7 @@ def convert_single_study(
 
 
 @hydra.main(
-    config_path=os.path.join(os.getcwd(), 'config'),
+    config_path=os.path.join(os.getcwd(), 'configs'),
     config_name='convert_dicoms',
     version_base=None,
 )

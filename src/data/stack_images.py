@@ -107,7 +107,7 @@ def process_single_study(
 
 
 @hydra.main(
-    config_path=os.path.join(os.getcwd(), 'config'),
+    config_path=os.path.join(os.getcwd(), 'configs'),
     config_name='stack_images',
     version_base=None,
 )
