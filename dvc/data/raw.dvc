@@ -1,0 +1,6 @@
+wdir: ../../data
+outs:
+- md5: d9e8594124a31026a68606a6e2a5e60f.dir
+  size: 18465326627
+  nfiles: 101
+  path: raw
