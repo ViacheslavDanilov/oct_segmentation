@@ -137,8 +137,14 @@ def main(cfg: DictConfig) -> None:
     df = pd.DataFrame(meta)
     df.sort_values(by='Path')
     os.makedirs(cfg.save_dir, exist_ok=True)
-    save_path = os.path.join(cfg.save_dir, 'meta.xlsx')
-    df.to_excel(save_path, sheet_name='Meta', index=False, startrow=0, startcol=0)
+    save_path = os.path.join(cfg.save_dir, 'metadata.xlsx')
+    df.index += 1
+    df.to_excel(
+        save_path,
+        sheet_name='Metadata',
+        index=True,
+        index_label='ID',
+    )
 
     log.info(f'Metadata saved: {save_path}')
 
