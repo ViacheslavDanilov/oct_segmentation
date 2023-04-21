@@ -2,7 +2,8 @@ defaults:
 - main
 - _self_
 
-data_dir: data/sly_input
+data_dir_1: data/sly_input_rgb
+data_dir_2: data/sly_input_gray
 include_dirs: []
 exclude_dirs: []
 output_size: [1000, 1000]
