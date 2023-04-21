@@ -45,23 +45,21 @@ def convert_single_study(
         dcm = study.pixel_array
         slices = dcm.shape[0]
 
-        suffix = '_gray' if to_gray else ''
-
         # Select save_dir based on output_type
         study_name = get_study_name(dcm_path)
         series_name = get_series_name(dcm_path)
         if output_type == 'video':
-            save_dir_video = os.path.join(save_dir, study_name, series_name)
+            save_dir_video = os.path.join(save_dir, study_name)
             os.makedirs(save_dir_video, exist_ok=True)
         else:
-            save_dir_img = os.path.join(save_dir, study_name, series_name, f'images{suffix}')
+            save_dir_img = os.path.join(save_dir, study_name, series_name)
             os.makedirs(save_dir_img, exist_ok=True)
 
         # Create video writer
         if output_type == 'video':
             video_path_temp = os.path.join(
                 save_dir_video,
-                f'{study_name}{series_name}{suffix}_temp.mp4',
+                f'{study_name}_{series_name}_temp.mp4',
             )
             video_height, video_width = output_size
             video = cv2.VideoWriter(
@@ -102,7 +100,7 @@ def convert_single_study(
 
         # Replace OpenCV videos with FFmpeg ones
         if output_type == 'video':
-            video_path = os.path.join(save_dir_video, f'{study_name}_{series_name}{suffix}.mp4')
+            video_path = os.path.join(save_dir_video, f'{study_name}_{series_name}.mp4')
             stream = ffmpeg.input(video_path_temp)
             stream = ffmpeg.output(stream, video_path, vcodec='libx264', video_bitrate='10M')
             ffmpeg.run(stream, quiet=True, overwrite_output=True)
