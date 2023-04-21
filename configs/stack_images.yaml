@@ -2,7 +2,7 @@ defaults:
 - main
 - _self_
 
-study_dir: data/sly_input
+data_dir: data/sly_input
 include_dirs: []
 exclude_dirs: []
 output_size: [1000, 1000]

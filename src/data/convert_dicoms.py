@@ -26,7 +26,7 @@ log.setLevel(logging.INFO)
 
 
 def convert_single_study(
-    study_dir: str,
+    data_dir: str,
     output_type: str,
     output_size: Tuple[int, int],
     to_gray: bool,
@@ -35,7 +35,7 @@ def convert_single_study(
 ) -> None:
 
     dcm_list = get_file_list(
-        src_dirs=study_dir,
+        src_dirs=data_dir,
         ext_list='',
         filename_template='IMG',
     )
@@ -123,7 +123,7 @@ def main(cfg: DictConfig) -> None:
     log.info(f'Config:\n\n{OmegaConf.to_yaml(cfg)}')
 
     study_list = get_dir_list(
-        data_dir=cfg.study_dir,
+        data_dir=cfg.data_dir,
         include_dirs=cfg.include_dirs,
         exclude_dirs=cfg.exclude_dirs,
     )

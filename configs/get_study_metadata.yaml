@@ -2,5 +2,5 @@ defaults:
 - main
 - _self_
 
-study_dir: data/raw
+data_dir: data/raw
 save_dir: data/raw

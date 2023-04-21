@@ -21,7 +21,7 @@ log.setLevel(logging.INFO)
 
 
 def process_single_study(
-    study_dir: str,
+    data_dir: str,
     img_height: int,
     img_width: int,
     output_type: str,
@@ -29,7 +29,7 @@ def process_single_study(
     save_dir: str,
 ):
 
-    series_dirs = glob(study_dir + '*/', recursive=True)
+    series_dirs = glob(data_dir + '*/', recursive=True)
     for series_dir in series_dirs:
         suffix = '_stack'
         img_dirs = glob(series_dir + '*/', recursive=True)
@@ -115,19 +115,19 @@ def main(cfg: DictConfig) -> None:
     log.info(f'Config:\n\n{OmegaConf.to_yaml(cfg)}')
 
     study_list = get_dir_list(
-        data_dir=cfg.stack.study_dir,
-        include_dirs=cfg.stack.include_dirs,
-        exclude_dirs=cfg.stack.exclude_dirs,
+        data_dir=cfg.data_dir,
+        include_dirs=cfg.include_dirs,
+        exclude_dirs=cfg.exclude_dirs,
     )
 
     num_cores = multiprocessing.cpu_count()
     processing_func = partial(
         process_single_study,
-        img_height=cfg.stack.output_size[0],
-        img_width=cfg.stack.output_size[1],
-        output_type=cfg.stack.output_type,
-        fps=cfg.stack.fps,
-        save_dir=cfg.stack.save_dir,
+        img_height=cfg.output_size[0],
+        img_width=cfg.output_size[1],
+        output_type=cfg.output_type,
+        fps=cfg.fps,
+        save_dir=cfg.save_dir,
     )
     process_map(
         processing_func,

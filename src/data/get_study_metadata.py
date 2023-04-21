@@ -122,7 +122,7 @@ def main(cfg: DictConfig) -> None:
     log.info(f'Config:\n\n{OmegaConf.to_yaml(cfg)}')
 
     dcm_list = get_file_list(
-        src_dirs=cfg.study_dir,
+        src_dirs=cfg.data_dir,
         ext_list='',
         filename_template='IMG',
     )
