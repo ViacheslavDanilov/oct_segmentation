@@ -65,5 +65,5 @@ repos:
 exclude: |
   (?x)(
       ^src/models/smp/|
-      ^src/models/yolo
+      ^src/models/yolo/
   )
