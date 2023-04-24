@@ -33,7 +33,6 @@ def convert_single_study(
     fps: int,
     save_dir: str,
 ) -> None:
-
     dcm_list = get_file_list(
         src_dirs=data_dir,
         ext_list='',

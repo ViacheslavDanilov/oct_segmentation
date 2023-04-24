@@ -74,7 +74,6 @@ def convert_to_grayscale(
     min_limit: int = 40,
     max_limit: int = 220,
 ) -> np.ndarray:
-
     img = cv2.cvtColor(img_src, cv2.COLOR_RGB2GRAY)
     img[img < min_limit] = 0
     img[img > max_limit] = 255

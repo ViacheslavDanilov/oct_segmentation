@@ -29,7 +29,6 @@ def process_single_series(
     fps: int,
     save_dir: str,
 ):
-
     series_name = Path(series_dirs[0]).parts[-1]
     study_name = Path(series_dirs[0]).parts[-2]
     if output_type == 'video':
@@ -65,7 +64,6 @@ def process_single_series(
 
     # Iterate over images
     for slice, img_paths in enumerate(zip(*img_list)):
-
         img_out = np.zeros([img_height, 1, 3], dtype=np.uint8)
         for img_path in img_paths:
             img = cv2.imread(img_path)
