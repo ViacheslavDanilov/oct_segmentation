@@ -10,7 +10,7 @@ opencv-python==4.7.0.68
 openpyxl==3.0.10
 pandas==1.5.2
 Pillow==9.4.0
-pre-commit==2.21.0
+pre-commit==3.2.2
 pydicom==2.3.1
 pytest==7.2.0
 pytorch_lightning==2.0.0
@@ -19,7 +19,7 @@ scikit-learn==1.2.0
 scipy==1.10.0
 segmentation_models_pytorch==0.3.2
 supervisely==6.69.2
-tensorboard-2.12.1
+tensorboard==2.12.1
 toml==0.10.2
 tomli==2.0.1
 tqdm==4.64.1
