@@ -2,6 +2,6 @@ defaults:
 - main
 - _self_
 
-study_dir: data/sly_output
+data_dir: data/sly_output
 crop: [[0, 0], [1000, 1000]]
 save_dir: data/interim

@@ -1,0 +1,55 @@
+schema: '2.0'
+stages:
+  dicoms_to_rgb:
+    cmd:
+    - python src/data/convert_dicoms.py to_gray=false save_dir=data/sly_input_rgb
+    deps:
+    - path: src/data/convert_dicoms.py
+      md5: ea0be77975cc96403d78c848b3906dc4
+      size: 4412
+    outs:
+    - path: data/sly_input_rgb
+      md5: 55a97e5ad9d6342085b05cbde67bef4a.dir
+      size: 391142821
+      nfiles: 431
+  dicoms_to_grayscale:
+    cmd:
+    - python src/data/convert_dicoms.py to_gray=true save_dir=data/sly_input_gray
+    deps:
+    - path: src/data/convert_dicoms.py
+      md5: ea0be77975cc96403d78c848b3906dc4
+      size: 4412
+    outs:
+    - path: data/sly_input_gray
+      md5: b80fee0a7770a36febf2919276bafaac.dir
+      size: 132426249
+      nfiles: 431
+  stack_images:
+    cmd:
+    - python src/data/stack_images.py output_type=video save_dir=data/sly_input
+    deps:
+    - path: data/sly_input_gray
+      md5: b80fee0a7770a36febf2919276bafaac.dir
+      size: 132426249
+      nfiles: 431
+    - path: data/sly_input_rgb
+      md5: 55a97e5ad9d6342085b05cbde67bef4a.dir
+      size: 391142821
+      nfiles: 431
+    - path: src/data/stack_images.py
+      md5: 2e8146bbe44c42f186c601500ebfb953
+      size: 4881
+    outs:
+    - path: data/sly_input
+      md5: ae196ef5973f82fe780a06ac639fc064.dir
+      size: 35656325
+      nfiles: 2
+  remove_images:
+    cmd:
+    - rm -rf data/sly_input_rgb || true
+    - rm -rf data/sly_input_gray || true
+    deps:
+    - path: data/sly_input
+      md5: ae196ef5973f82fe780a06ac639fc064.dir
+      size: 35656325
+      nfiles: 2
