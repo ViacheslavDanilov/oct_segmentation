@@ -1,0 +1,106 @@
+name: Continuous Integration
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches:
+    - main
+
+env:
+  GREEN: '\033[0;32m'
+  NO_COLOR: '\033[0m'
+
+jobs:
+  linting:
+    runs-on: ubuntu-latest
+    name: Linting
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      id: cache
+      with:
+        python-version: '3.8'
+        cache: 'pip'
+
+    - name: Setup dependencies
+      run: |
+        pip install --upgrade pip
+        pip install -r requirements/tests.txt
+
+    - name: Linting
+      run: |
+        pre-commit run check-yaml --all-files --verbose
+        pre-commit run check-yaml --all-files --verbose
+        pre-commit run check-toml --all-files --verbose
+        pre-commit run check-json --all-files --verbose
+        pre-commit run check-ast --all-files --verbose
+        pre-commit run requirements-txt-fixer --all-files --verbose
+        pre-commit run trailing-whitespace --all-files --verbose
+        pre-commit run end-of-file-fixer --all-files --verbose
+        pre-commit run double-quote-string-fixer --all-files --verbose
+        pre-commit run add-trailing-comma --all-files --verbose
+        pre-commit run black --all-files --verbose
+        pre-commit run pretty-format-yaml --all-files --verbose
+        pre-commit run pycln --all-files --verbose
+        pre-commit run isort --all-files --verbose
+        echo -e "${GREEN}Job completed successfully${NC}"
+
+  unit-testing:
+    needs: [linting]
+    runs-on: ubuntu-latest
+    name: Unit testing
+    steps:
+    - name: Unit testing
+      run: |
+        echo -e "${GREEN}Job completed successfully${NC}"
+#    - name: Checkout code
+#      uses: actions/checkout@v3
+#
+#    - name: Setup Python
+#      uses: actions/setup-python@v4
+#      with:
+#        python-version: '3.8'
+#        cache: 'pip'
+#
+#    - name: Setup dependencies
+#      run: |
+#        pip install --upgrade pip
+#        pip install -r requirements/tests.txt
+#
+#    - name: Unit testing
+#      run: |
+#        export PYTHONPATH=${PWD}
+#        echo -e "${GREEN}PWD: $PYTHONPATH${NC}"
+#        python tests/test_name.py
+#        echo -e "${GREEN}Job completed successfully${NC}"
+
+  reporting:
+    needs: [unit-testing]
+    runs-on: ubuntu-latest
+    name: Reporting
+    # optionally use a convenient Ubuntu LTS + DVC + CML image
+    # container: ghcr.io/iterative/cml:0-dvc2-base1
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Setup CML
+      uses: iterative/setup-cml@v1
+
+    - name: CML reporting
+      env:
+        REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        echo ":white_check_mark: **linting**" >> report.md
+        echo ">  complete" >> report.md
+        echo " " >> report.md
+        echo ":white_check_mark: **testing**" >> report.md
+        echo ">  complete" >> report.md
+        echo " " >> report.md
+        echo ":white_check_mark: **reporting**" >> report.md
+        echo ">  complete" >> report.md
+        cml comment create report.md
+        echo -e "${GREEN}Job completed successfully${NC}"

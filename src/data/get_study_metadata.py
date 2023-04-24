@@ -17,7 +17,6 @@ log.setLevel(logging.INFO)
 def extract_metadata(
     dcm_path: str,
 ) -> dict:
-
     dcm = pydicom.dcmread(dcm_path)
     keys = [
         'Path',
