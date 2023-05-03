@@ -15,10 +15,10 @@ from tqdm import tqdm
 
 
 def get_mask(
-        img_path: str,
-        classes: List[str],
-        data: pd.DataFrame,
-        save_dir: str,
+    img_path: str,
+    classes: List[str],
+    data: pd.DataFrame,
+    save_dir: str,
 ) -> None:
     if len(data) > 0 and len(list(set(classes) & set(data.class_name.unique()))) > 0:
         mask = np.zeros((int(data.image_width.mean()), int(data.image_height.mean())))
@@ -36,7 +36,7 @@ def get_mask(
     version_base=None,
 )
 def main(
-        cfg: DictConfig,
+    cfg: DictConfig,
 ):
     df = pd.read_excel(cfg.df_path)
     if not os.path.exists(cfg.save_dir):
@@ -48,8 +48,13 @@ def main(
     num_cores = multiprocessing.cpu_count()
 
     studies = np.unique(df.study.values)
-    train_studies, val_studies = train_test_split(studies, train_size=cfg.train_size, test_size=1 - cfg.train_size,
-                                                  shuffle=True, random_state=cfg.seed)
+    train_studies, val_studies = train_test_split(
+        studies,
+        train_size=cfg.train_size,
+        test_size=1 - cfg.train_size,
+        shuffle=True,
+        random_state=cfg.seed,
+    )
 
     train_images_path = df[df['study'].isin(train_studies)].image_path.values
     val_images_path = df[df['study'].isin(val_studies)].image_path.values
@@ -59,7 +64,7 @@ def main(
             img_path=img_path,
             classes=cfg.classes,
             data=df.loc[df['image_path'] == img_path],
-            save_dir=f'{cfg.save_dir}/train'
+            save_dir=f'{cfg.save_dir}/train',
         )
         for img_path in tqdm(train_images_path, desc='training images analysis')
     )
@@ -68,7 +73,7 @@ def main(
             img_path=img_path,
             classes=cfg.classes,
             data=df.loc[df['image_path'] == img_path],
-            save_dir=f'{cfg.save_dir}/val'
+            save_dir=f'{cfg.save_dir}/val',
         )
         for img_path in tqdm(val_images_path, desc='validation images analysis')
     )
