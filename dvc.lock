@@ -1,9 +1,72 @@
 schema: '2.0'
 stages:
-  zip_update:
-    cmd: tar -cvzf data/raw.zip data/raw
+  extract_metadata:
+    cmd:
+    - python src/data/extract_metadata.py
     deps:
-    - path: data/raw
-      md5: 1a94302d00bc0242ed0de17bc17a694f.dir
-      size: 18465326293
-      nfiles: 101
+    - path: src/data/extract_metadata.py
+      md5: 063022648bcd39a902bd4015d2f5eef8
+      size: 4068
+    outs:
+    - path: data/raw_metadata.xlsx
+      md5: 81a65e0be91250493b44abd4b989ac68
+      size: 12489
+  dicoms_to_rgb:
+    cmd:
+    - python src/data/convert_dicoms.py to_gray=false save_dir=data/sly_input_rgb
+    deps:
+    - path: data/raw_metadata.xlsx
+      md5: 81a65e0be91250493b44abd4b989ac68
+      size: 12489
+    - path: src/data/convert_dicoms.py
+      md5: c7cddb3baf6bc9a4c53409e5b2e9c20b
+      size: 4411
+    outs:
+    - path: data/sly_input_rgb
+      md5: 03d24fbe8a74fc67a9c097ab6a2a1e69.dir
+      size: 13247360699
+      nfiles: 14363
+  dicoms_to_grayscale:
+    cmd:
+    - python src/data/convert_dicoms.py to_gray=true save_dir=data/sly_input_gray
+    deps:
+    - path: data/raw_metadata.xlsx
+      md5: 81a65e0be91250493b44abd4b989ac68
+      size: 12489
+    - path: src/data/convert_dicoms.py
+      md5: c7cddb3baf6bc9a4c53409e5b2e9c20b
+      size: 4411
+    outs:
+    - path: data/sly_input_gray
+      md5: cde6ae30ce8602f3b46f84bbfd78deb2.dir
+      size: 3878583354
+      nfiles: 14363
+  stack_images:
+    cmd:
+    - python src/data/stack_images.py output_type=video save_dir=data/sly_input
+    deps:
+    - path: data/sly_input_gray
+      md5: cde6ae30ce8602f3b46f84bbfd78deb2.dir
+      size: 3878583354
+      nfiles: 14363
+    - path: data/sly_input_rgb
+      md5: 03d24fbe8a74fc67a9c097ab6a2a1e69.dir
+      size: 13247360699
+      nfiles: 14363
+    - path: src/data/stack_images.py
+      md5: 0d01627ccdf79f668ba2983a2dd42ae2
+      size: 4879
+    outs:
+    - path: data/sly_input
+      md5: ca53b3d8cc7c4d6e55160771440161c4.dir
+      size: 1178481901
+      nfiles: 58
+  remove_images:
+    cmd:
+    - rm -rf data/sly_input_rgb || true
+    - rm -rf data/sly_input_gray || true
+    deps:
+    - path: data/sly_input
+      md5: ca53b3d8cc7c4d6e55160771440161c4.dir
+      size: 1178481901
+      nfiles: 58
