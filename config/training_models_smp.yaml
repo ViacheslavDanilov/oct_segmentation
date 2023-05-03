@@ -8,7 +8,7 @@ train_data_dir: data/final/smp/train
 val_data_dir: data/final/smp/val
 classes: [Lipid core, Lumen, Fibrous cap, Vasa vasorum]
 architecture: unet
-encoder: mobilenet_v2
+encoder: resnet50
 input_size: 448
 batch_size: 16
 epochs: 75

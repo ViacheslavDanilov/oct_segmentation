@@ -47,9 +47,12 @@ def main(
 
     num_cores = multiprocessing.cpu_count()
 
-    images_path = df.image_path.unique()
-    train_images_path, val_images_path = train_test_split(images_path, train_size=cfg.train, test_size=cfg.test,
-                                                          shuffle=True, random_state=11)
+    studies = np.unique(df.study.values)
+    train_studies, val_studies = train_test_split(studies, train_size=cfg.train_size, test_size=1 - cfg.train_size,
+                                                  shuffle=True, random_state=cfg.seed)
+
+    train_images_path = df[df['study'].isin(train_studies)].image_path.values
+    val_images_path = df[df['study'].isin(val_studies)].image_path.values
 
     Parallel(n_jobs=num_cores, backend='threading')(
         delayed(get_mask)(
