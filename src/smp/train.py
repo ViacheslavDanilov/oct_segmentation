@@ -1,42 +1,39 @@
-import os
-import hydra
 import multiprocessing
-from torch.utils.data import Dataset, DataLoader
-import segmentation_models_pytorch as smp
-from pytorch_lightning.callbacks import EarlyStopping, LearningRateMonitor, ModelCheckpoint
+import os
 from glob import glob
-from tqdm import tqdm
-import numpy as np
+
 import cv2
+import hydra
+import numpy as np
 import plotly.express as px
-import plotly.graph_objects as go
-from clearml import Task, Dataset as ds
-from pytorch_lightning import loggers as pl_loggers
-import torch
-from clearml import Logger
-from joblib import Parallel, delayed
 import pytorch_lightning as pl
+import segmentation_models_pytorch as smp
+import torch
+from clearml import Dataset as ds
+from clearml import Logger, Task
+from joblib import Parallel, delayed
 from omegaconf import DictConfig
-from typing import List
-from pytorch_lightning import loggers
-from segmentation_models_pytorch.encoders import get_preprocessing_fn
+from pytorch_lightning import loggers as pl_loggers
+from pytorch_lightning.callbacks import LearningRateMonitor, ModelCheckpoint
+from torch.utils.data import DataLoader, Dataset
+from tqdm import tqdm
 
 # os.environ['WANDB_API_KEY'] = '0a94ef68f2a7a8b709671d6ef76e61580d20da7f'
 
 DEFAULT_CLASSES = ['Lipid core', 'Lumen', 'Fibrous cap', 'Vasa vasorum']
 COLOR = {
-    "Lumen": (133, 21, 199),
-    "Lipid core": (0, 252, 124),
-    "Fibrous cap": (170, 178, 32),
-    "Vasa vasorum": (34, 34, 178),
-    "Artifact": (152, 251, 152),
+    'Lumen': (133, 21, 199),
+    'Lipid core': (0, 252, 124),
+    'Fibrous cap': (170, 178, 32),
+    'Vasa vasorum': (34, 34, 178),
+    'Artifact': (152, 251, 152),
 }
 EPOCH = 0
 
 
 def data_checked(
-        img_dir: str,
-        ann_id: str,
+    img_dir: str,
+    ann_id: str,
 ):
     img_path = f'{img_dir}/{os.path.basename(ann_id)}'
     if os.path.exists(img_path):
@@ -86,23 +83,25 @@ def to_tensor(x, **kwargs):
 #     return np.array(dataset)[:, 0], np.array(dataset)[:, 1]
 
 
+# TODO: D101: Missing docstring in public class
 class CustomImageDataset(Dataset):
     def __init__(
-            self,
-            input_size,
-            ann_dir,
-            img_dir,
-            classes=None,
-            augmentation=None,
-            preprocessing=None,
+        self,
+        input_size,
+        ann_dir,
+        img_dir,
+        classes=None,
+        augmentation=None,
+        preprocessing=None,
     ):
         self.classes = classes
         self.ids = glob(f'{ann_dir}/*.png')
         self.input_size = input_size
 
         num_cores = multiprocessing.cpu_count()
-        check_list = Parallel(n_jobs=num_cores, backend="threading")\
-            (delayed(data_checked)(img_dir, ann_id) for ann_id in tqdm(self.ids, desc='image load'))
+        check_list = Parallel(n_jobs=num_cores, backend='threading')(
+            delayed(data_checked)(img_dir, ann_id) for ann_id in tqdm(self.ids, desc='image load')
+        )
 
         self.images_fps = list(np.array(check_list)[:, 1])
         self.masks_fps = list(np.array(check_list)[:, 0])
@@ -140,8 +139,8 @@ class CustomImageDataset(Dataset):
         return len(self.ids)
 
 
+# TODO: D101: Missing docstring in public class
 class MyModel(pl.LightningModule):
-
     def __init__(self, arch, encoder_name, in_channels, out_classes, **kwargs):
         super().__init__()
         self.model = smp.create_model(
@@ -149,14 +148,14 @@ class MyModel(pl.LightningModule):
             encoder_name=encoder_name,
             in_channels=in_channels,
             classes=len(out_classes),
-            **kwargs
+            **kwargs,
         )
 
         self.classes = out_classes
         # preprocessing parameteres for image
         params = smp.encoders.get_preprocessing_params(encoder_name)
-        self.register_buffer("std", torch.tensor(params["std"]).view(1, 3, 1, 1))
-        self.register_buffer("mean", torch.tensor(params["mean"]).view(1, 3, 1, 1))
+        self.register_buffer('std', torch.tensor(params['std']).view(1, 3, 1, 1))
+        self.register_buffer('mean', torch.tensor(params['mean']).view(1, 3, 1, 1))
 
         # for image segmentation dice loss could be the best first choice
         self.loss_fn = smp.losses.DiceLoss(smp.losses.MULTILABEL_MODE, from_logits=True)
@@ -174,20 +173,25 @@ class MyModel(pl.LightningModule):
         loss = self.loss_fn(logits_mask, mask)
         prob_mask = logits_mask.sigmoid()
         pred_mask = (prob_mask > 0.5).float()
-        tp, fp, fn, tn = smp.metrics.get_stats(pred_mask.long(), mask.long(), mode="multilabel", num_classes=len(self.classes))
+        tp, fp, fn, tn = smp.metrics.get_stats(
+            pred_mask.long(),
+            mask.long(),
+            mode='multilabel',
+            num_classes=len(self.classes),
+        )
         iou = smp.metrics.iou_score(tp, fp, fn, tn)
 
         self.log('train/loss', loss, prog_bar=True, on_epoch=True)
 
         metrics = {
-            f"train/IOU (mean)": iou.mean(),
+            f'train/IOU (mean)': iou.mean(),
         }
         for num, cl in enumerate(self.classes):
             metrics[f'train/IOU ({cl})'] = iou[:, num].mean()
         self.log_dict(metrics, on_epoch=True)
 
         return {
-            "loss": loss,
+            'loss': loss,
         }
 
     def validation_step(self, batch, batch_idx):
@@ -197,10 +201,15 @@ class MyModel(pl.LightningModule):
         loss = self.loss_fn(logits_mask, mask)
         prob_mask = logits_mask.sigmoid()
         pred_mask = (prob_mask > 0.5).float()
-        tp, fp, fn, tn = smp.metrics.get_stats(pred_mask.long(), mask.long(), mode="multilabel", num_classes=len(self.classes))
+        tp, fp, fn, tn = smp.metrics.get_stats(
+            pred_mask.long(),
+            mask.long(),
+            mode='multilabel',
+            num_classes=len(self.classes),
+        )
         iou = smp.metrics.iou_score(tp, fp, fn, tn)
         metrics = {
-            f"validation/IOU (mean)": iou.mean(),
+            f'validation/IOU (mean)': iou.mean(),
         }
         for num, cl in enumerate(self.classes):
             metrics[f'validation/IOU ({cl})'] = iou[:, num].mean()
@@ -224,47 +233,67 @@ class MyModel(pl.LightningModule):
                     img_g = cv2.addWeighted(
                         np.array(img_g).astype('uint8'),
                         1,
-                        (cv2.cvtColor(np.array(m).astype('uint8'), cv2.COLOR_GRAY2RGB) * COLOR[cl]).astype(
-                            np.uint8),
-                        0.5, 0
+                        (
+                            cv2.cvtColor(np.array(m).astype('uint8'), cv2.COLOR_GRAY2RGB)
+                            * COLOR[cl]
+                        ).astype(
+                            np.uint8,
+                        ),
+                        0.5,
+                        0,
                     )
                     img_g_cl = cv2.addWeighted(
                         np.array(img_0.copy()).astype('uint8'),
                         1,
-                        (cv2.cvtColor(np.array(m).astype('uint8'), cv2.COLOR_GRAY2RGB) * COLOR[cl]).astype(
-                            np.uint8),
-                        0.5, 0
+                        (
+                            cv2.cvtColor(np.array(m).astype('uint8'), cv2.COLOR_GRAY2RGB)
+                            * COLOR[cl]
+                        ).astype(
+                            np.uint8,
+                        ),
+                        0.5,
+                        0,
                     )
                     # Prediction
                     img_p = cv2.addWeighted(
                         np.array(img_p).astype('uint8'),
                         1,
-                        (cv2.cvtColor(np.array(m_p).astype('uint8'), cv2.COLOR_GRAY2RGB) * COLOR[cl]).astype(
-                            np.uint8),
-                        0.5, 0
+                        (
+                            cv2.cvtColor(np.array(m_p).astype('uint8'), cv2.COLOR_GRAY2RGB)
+                            * COLOR[cl]
+                        ).astype(
+                            np.uint8,
+                        ),
+                        0.5,
+                        0,
                     )
                     img_p_cl = cv2.addWeighted(
                         np.array(img_0.copy()).astype('uint8'),
                         1,
-                        (cv2.cvtColor(np.array(m_p).astype('uint8'), cv2.COLOR_GRAY2RGB) * COLOR[cl]).astype(
-                            np.uint8),
-                        0.5, 0
+                        (
+                            cv2.cvtColor(np.array(m_p).astype('uint8'), cv2.COLOR_GRAY2RGB)
+                            * COLOR[cl]
+                        ).astype(
+                            np.uint8,
+                        ),
+                        0.5,
+                        0,
                     )
                     res = np.hstack((img_0, img_g_cl))
                     res = np.hstack((res, img_p_cl))
-                    logger.report_image(cl, f"Experiment {idy}", iteration=EPOCH, image=res)
+                    logger.report_image(cl, f'Experiment {idy}', iteration=EPOCH, image=res)
                 res = np.hstack((img_0, img_g))
                 res = np.hstack((res, img_p))
-                logger.report_image("All class", f"Experiment {idy}", iteration=EPOCH, image=res)
+                logger.report_image('All class', f'Experiment {idy}', iteration=EPOCH, image=res)
 
                 fig = px.imshow(res)
                 logger.report_matrix(
-                    "example_confusion",
-                    "ignored",
+                    'example_confusion',
+                    'ignored',
                     iteration=EPOCH,
                     matrix=res,
-                    xaxis="title X",
-                    yaxis="title Y",
+                    xaxis='title X',
+                    yaxis='title Y',
                 )
                 # logger.report_scatter2d(
                 #     "example_scatter",
@@ -276,8 +305,6 @@ class MyModel(pl.LightningModule):
                 # )
 
             EPOCH += 1
-
-
 
     # def test_step(self, batch, batch_idx):
     #     x, y = batch
@@ -391,18 +418,18 @@ class MyModel(pl.LightningModule):
     version_base=None,
 )
 def main(
-        cfg: DictConfig,
+    cfg: DictConfig,
 ):
     model_dir = 'models/model_6'
     task = Task.init(
         project_name=cfg.project_name,
         task_name=cfg.task_name,
-        auto_connect_frameworks={'tensorboard': True, 'pytorch': True}
+        auto_connect_frameworks={'tensorboard': True, 'pytorch': True},
     )
 
     dataset_path = ds.get(
         dataset_name='data_all',
-        dataset_project=cfg.project_name
+        dataset_project=cfg.project_name,
     ).get_local_copy()
 
     train_dataset = CustomImageDataset(
@@ -424,8 +451,18 @@ def main(
     )
 
     n_cpu = os.cpu_count()
-    train_dataloader = DataLoader(train_dataset, batch_size=cfg.batch_size, shuffle=True, num_workers=n_cpu)
-    valid_dataloader = DataLoader(valid_dataset, batch_size=cfg.batch_size, shuffle=False, num_workers=n_cpu)
+    train_dataloader = DataLoader(
+        train_dataset,
+        batch_size=cfg.batch_size,
+        shuffle=True,
+        num_workers=n_cpu,
+    )
+    valid_dataloader = DataLoader(
+        valid_dataset,
+        batch_size=cfg.batch_size,
+        shuffle=False,
+        num_workers=n_cpu,
+    )
     # test_dataloader = DataLoader(test_dataset, batch_size=16, shuffle=False, num_workers=n_cpu)
 
     model = MyModel(
@@ -438,14 +475,14 @@ def main(
     # saves top-K checkpoints based on "val_loss" metric
     checkpoint = ModelCheckpoint(
         save_top_k=5,
-        monitor="validation/loss",
-        mode="min",
-        dirpath=f"{model_dir}/ckpt/",
-        filename="sample-mnist-{epoch:02d}-{validation/loss:.2f}",
+        monitor='validation/loss',
+        mode='min',
+        dirpath=f'{model_dir}/ckpt/',
+        filename='sample-mnist-{epoch:02d}-{validation/loss:.2f}',
     )
 
     lr_monitor = LearningRateMonitor(logging_interval='epoch')
-    tb_logger = pl_loggers.TensorBoardLogger(save_dir="logs/")
+    tb_logger = pl_loggers.TensorBoardLogger(save_dir='logs/')
     trainer = pl.Trainer(
         devices=-1,
         accelerator=cfg.device,
