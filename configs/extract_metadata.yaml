@@ -3,4 +3,4 @@ defaults:
 - _self_
 
 data_dir: data/raw
-save_dir: data/raw
+save_dir: data
