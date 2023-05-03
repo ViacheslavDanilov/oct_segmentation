@@ -42,7 +42,7 @@ def extract_metadata(
         'WC',
         'WW',
     ]
-    meta = {key: float('nan') for key in keys}
+    meta = {key: '' for key in keys}
     meta['Path'] = dcm_path
     meta['Study UID'] = str(dcm.StudyInstanceUID)
     meta['Series UID'] = str(dcm.SeriesInstanceUID)
@@ -99,10 +99,10 @@ def extract_metadata(
         meta['Data Type'] = dcm.pixel_array.dtype
 
         if hasattr(dcm, 'WindowCenter'):
-            meta['WC'] = int(float(dcm.WindowCenter))
+            meta['WC'] = dcm.WindowCenter
 
         if hasattr(dcm, 'WindowWidth'):
-            meta['WW'] = int(float(dcm.WindowWidth))
+            meta['WW'] = dcm.WindowWidth
 
         log.info(f'Processed DICOM: {dcm_path}')
 
@@ -114,7 +114,7 @@ def extract_metadata(
 
 @hydra.main(
     config_path=os.path.join(os.getcwd(), 'configs'),
-    config_name='get_study_metadata',
+    config_name='extract_metadata',
     version_base=None,
 )
 def main(cfg: DictConfig) -> None:
@@ -136,7 +136,7 @@ def main(cfg: DictConfig) -> None:
     df = pd.DataFrame(meta)
     df.sort_values(by='Path')
     os.makedirs(cfg.save_dir, exist_ok=True)
-    save_path = os.path.join(cfg.save_dir, 'metadata.xlsx')
+    save_path = os.path.join(cfg.save_dir, 'raw_metadata.xlsx')
     df.index += 1
     df.to_excel(
         save_path,
