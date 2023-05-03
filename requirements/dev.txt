@@ -23,6 +23,3 @@ tensorboard==2.12.1
 toml==0.10.2
 tomli==2.0.1
 tqdm==4.64.1
-segmentation_models_pytorch==0.3.2
-pytorch_lightning==2.0.0
-
