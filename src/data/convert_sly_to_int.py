@@ -61,7 +61,6 @@ def parse_single_annotation(
     crop: List[List[int]],
     img_dir: str,
 ) -> pd.DataFrame:
-
     df_ann = pd.DataFrame()
     study = dataset.name
     for video_name in dataset:
