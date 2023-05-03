@@ -1,10 +1,21 @@
 stages:
 
+  extract_metadata:
+    cmd:
+    - python src/data/extract_metadata.py
+    deps:
+    - src/data/extract_metadata.py
+    outs:
+    - data/raw_metadata.xlsx:
+        cache: true
+        persist: false
+
   dicoms_to_rgb:
     cmd:
     - python src/data/convert_dicoms.py to_gray=false save_dir=data/sly_input_rgb
     deps:
     - src/data/convert_dicoms.py
+    - data/raw_metadata.xlsx
     outs:
     - data/sly_input_rgb:
         cache: true
@@ -15,6 +26,7 @@ stages:
     - python src/data/convert_dicoms.py to_gray=true save_dir=data/sly_input_gray
     deps:
     - src/data/convert_dicoms.py
+    - data/raw_metadata.xlsx
     outs:
     - data/sly_input_gray:
         cache: true
