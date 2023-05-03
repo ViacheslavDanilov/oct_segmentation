@@ -31,7 +31,7 @@ def get_mask(
 
 
 @hydra.main(
-    config_path=os.path.join(os.getcwd(), 'config'),
+    config_path=os.path.join(os.getcwd(), 'configs'),
     config_name='convert_int_to_smp',
     version_base=None,
 )
