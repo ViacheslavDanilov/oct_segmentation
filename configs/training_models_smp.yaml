@@ -3,6 +3,7 @@ defaults:
 - _self_
 
 project_name: OST segmentation
+dataset_name: smp_dataset
 task_name: test start
 train_data_dir: data/final/smp/train
 val_data_dir: data/final/smp/val
