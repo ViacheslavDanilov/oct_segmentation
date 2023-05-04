@@ -3,7 +3,7 @@ defaults:
 - _self_
 
 df_path: data/interim/metadata.xlsx
-save_dir: data/final/smp
-train_size: 0.85
+save_dir: data/final
+train_size: 0.80
 seed: 11
 classes: [Lipid core, Lumen, Fibrous cap, Vasa vasorum]
