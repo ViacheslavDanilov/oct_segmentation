@@ -1,4 +1,5 @@
-dvc[gdrive]==2.41.1
+dvc==2.55.0
+dvc-gdrive==2.19.2
 ffmpeg-python==0.2.0
 hydra-core==1.3.1
 imutils==0.5.4
@@ -19,7 +20,7 @@ scikit-learn==1.2.0
 scipy==1.10.0
 segmentation_models_pytorch==0.3.2
 supervisely==6.69.2
-tensorboard==2.12.1
+# tensorboard==2.12.1       # TODO: check whether this is still needed
 toml==0.10.2
 tomli==2.0.1
 tqdm==4.64.1
