@@ -1,4 +1,4 @@
-import multiprocessing
+import logging
 import os
 import shutil
 from typing import List
@@ -9,9 +9,12 @@ import numpy as np
 import pandas as pd
 import supervisely_lib as sly
 from joblib import Parallel, delayed
-from omegaconf import DictConfig
+from omegaconf import DictConfig, OmegaConf
 from sklearn.model_selection import train_test_split
 from tqdm import tqdm
+
+log = logging.getLogger(__name__)
+log.setLevel(logging.INFO)
 
 
 def get_mask(
@@ -26,56 +29,54 @@ def get_mask(
             if row.class_name in classes:
                 figure_data = sly.Bitmap.base64_2_data(row.mask_b64)
                 mask[figure_data == True] = row.class_id + 1
-        cv2.imwrite(f'{save_dir}/ann/{os.path.basename(img_path)}', mask)
+        cv2.imwrite(f'{save_dir}/mask/{os.path.basename(img_path)}', mask)
         shutil.copy(img_path, f'{save_dir}/img/{os.path.basename(img_path)}')
 
 
 @hydra.main(
     config_path=os.path.join(os.getcwd(), 'configs'),
-    config_name='convert_int_to_smp',
+    config_name='convert_int_to_final',
     version_base=None,
 )
-def main(
-    cfg: DictConfig,
-):
+def main(cfg: DictConfig) -> None:
+    log.info(f'Config:\n\n{OmegaConf.to_yaml(cfg)}')
+
+    for subset in ['train', 'test']:
+        for dir_type in ['img', 'mask']:
+            os.makedirs(f'{cfg.save_dir}/{subset}/{dir_type}', exist_ok=True)
+
     df = pd.read_excel(cfg.df_path)
-    if not os.path.exists(cfg.save_dir):
-        os.makedirs(f'{cfg.save_dir}/train/img')
-        os.makedirs(f'{cfg.save_dir}/train/ann')
-        os.makedirs(f'{cfg.save_dir}/val/img')
-        os.makedirs(f'{cfg.save_dir}/val/ann')
-
-    num_cores = multiprocessing.cpu_count()
-
     studies = np.unique(df.study.values)
-    train_studies, val_studies = train_test_split(
+    train_studies, test_studies = train_test_split(
         studies,
         train_size=cfg.train_size,
-        test_size=1 - cfg.train_size,
         shuffle=True,
         random_state=cfg.seed,
     )
 
-    train_images_path = df[df['study'].isin(train_studies)].image_path.values
-    val_images_path = df[df['study'].isin(val_studies)].image_path.values
+    train_img_paths = df[df['study'].isin(train_studies)].image_path.values
+    test_img_paths = df[df['study'].isin(test_studies)].image_path.values
+    log.info(f'Train images...: {len(train_img_paths)}')
+    log.info(f'Test images....: {len(train_img_paths)}')
 
-    Parallel(n_jobs=num_cores, backend='threading')(
+    Parallel(n_jobs=-1, backend='threading')(
         delayed(get_mask)(
             img_path=img_path,
             classes=cfg.classes,
             data=df.loc[df['image_path'] == img_path],
             save_dir=f'{cfg.save_dir}/train',
         )
-        for img_path in tqdm(train_images_path, desc='training images analysis')
+        for img_path in tqdm(train_img_paths, desc='Preparing the training subset')
     )
-    Parallel(n_jobs=num_cores, backend='threading')(
+
+    Parallel(n_jobs=-1, backend='threading')(
         delayed(get_mask)(
             img_path=img_path,
             classes=cfg.classes,
             data=df.loc[df['image_path'] == img_path],
-            save_dir=f'{cfg.save_dir}/val',
+            save_dir=f'{cfg.save_dir}/test',
         )
-        for img_path in tqdm(val_images_path, desc='validation images analysis')
+        for img_path in tqdm(test_img_paths, desc='Preparing the testing subset')
     )
 
 
