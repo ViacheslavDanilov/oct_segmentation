@@ -1,4 +1,5 @@
 import json
+import logging
 import multiprocessing
 import os
 from typing import Any, List, Tuple
@@ -9,9 +10,12 @@ import numpy as np
 import pandas as pd
 import supervisely_lib as sly
 from joblib import Parallel, delayed
-from omegaconf import DictConfig
+from omegaconf import DictConfig, OmegaConf
 from supervisely import Polygon
 from tqdm import tqdm
+
+log = logging.getLogger(__name__)
+log.setLevel(logging.INFO)
 
 
 def get_mask_properties(
@@ -205,15 +209,14 @@ def video_parsing(
 
 
 @hydra.main(
-    config_path=os.path.join(os.getcwd(), 'config'),
+    config_path=os.path.join(os.getcwd(), 'configs'),
     config_name='convert_sly_to_int',
     version_base=None,
 )
-def main(
-    cfg: DictConfig,
-) -> None:
-    meta = json.load(open(os.path.join(cfg.study_dir, 'meta.json')))
-    project_sly = sly.VideoProject(cfg.study_dir, sly.OpenMode.READ)
+def main(cfg: DictConfig) -> None:
+    log.info(f'Config:\n\n{OmegaConf.to_yaml(cfg)}')
+    meta = json.load(open(os.path.join(cfg.data_dir, 'meta.json')))
+    project_sly = sly.VideoProject(cfg.data_dir, sly.OpenMode.READ)
     class_ids = {value['title']: id for (id, value) in enumerate(meta['classes'])}
     img_dir = os.path.join(cfg.save_dir, 'img')
 
@@ -221,7 +224,7 @@ def main(
     video_parsing(
         datasets=project_sly.datasets,
         img_dir=img_dir,
-        src_dir=cfg.study_dir,
+        src_dir=cfg.data_dir,
         crop=cfg.crop,
     )
 
