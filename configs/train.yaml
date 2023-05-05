@@ -2,9 +2,10 @@ defaults:
 - main
 - _self_
 
-project_name: OST segmentation
+project_name: OCT segmentation    # TODO: do we need it?
 dataset_name: smp_dataset
-task_name: test start
+task_name: test start             # TODO: do we need it?
+# data_dir: data/final            # TODO: i think it is better to use data_dir instead of train_data_dir and val_data_dir
 train_data_dir: data/final/smp/train
 val_data_dir: data/final/smp/val
 classes: [Lipid core, Lumen, Fibrous cap, Vasa vasorum]

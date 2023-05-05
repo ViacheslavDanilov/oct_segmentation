@@ -1,3 +1,4 @@
+import logging
 import multiprocessing
 import os
 from glob import glob
@@ -11,13 +12,23 @@ import torch
 from clearml import Dataset as ds
 from clearml import Logger, Task
 from joblib import Parallel, delayed
-from omegaconf import DictConfig
+from omegaconf import DictConfig, OmegaConf
 from pytorch_lightning import loggers as pl_loggers
 from pytorch_lightning.callbacks import LearningRateMonitor, ModelCheckpoint
 from torch.utils.data import DataLoader, Dataset
 from tqdm import tqdm
 
-DEFAULT_CLASSES = ['Lipid core', 'Lumen', 'Fibrous cap', 'Vasa vasorum']
+log = logging.getLogger(__name__)
+log.setLevel(logging.INFO)
+
+DEFAULT_CLASSES = (
+    [  # TODO: why do we use it here if we have "classes" argument in the train config file?
+        'Lipid core',
+        'Lumen',
+        'Fibrous cap',
+        'Vasa vasorum',
+    ]
+)
 COLOR = {
     'Lumen': (133, 21, 199),
     'Lipid core': (0, 252, 124),
@@ -43,25 +54,26 @@ def to_tensor(x, **kwargs):
     return x.transpose(2, 0, 1).astype('float32')
 
 
-class CustomImageDataset(Dataset):
-    """Constructor."""
+# TODO: this dataset should be moved to a separate file src/models/dataset.py
+class OCTDataset(Dataset):
+    """The dataset used to process OCT images and corresponding segmentation masks."""
 
     def __init__(
         self,
         input_size,
-        ann_dir,
         img_dir,
+        mask_dir,
         classes=None,
-        augmentation=None,
-        preprocessing=None,
+        augmentation=None,  # TODO: augmentation should be implemented, but can be removed as an argument
+        preprocessing=None,  # TODO: preprocessing can be removed as it is not utilized
     ):
         self.classes = classes
-        self.ids = glob(f'{ann_dir}/*.png')
+        self.ids = glob(f'{mask_dir}/*.png')
         self.input_size = input_size
 
         num_cores = multiprocessing.cpu_count()
         check_list = Parallel(n_jobs=num_cores, backend='threading')(
-            delayed(data_checked)(img_dir, ann_id) for ann_id in tqdm(self.ids, desc='image load')
+            delayed(data_checked)(img_dir, mask_id) for mask_id in tqdm(self.ids, desc='image load')
         )
 
         self.images_fps = list(np.array(check_list)[:, 1])
@@ -81,10 +93,12 @@ class CustomImageDataset(Dataset):
         masks = [(mask == v) for v in self.class_values]
         mask = np.stack(masks, axis=-1).astype('float')
 
+        # TODO: implement augmentation as an additional method of the class
         if self.augmentation:
             sample = self.augmentation(image=image, mask=mask)
             image, mask = sample['image'], sample['mask']
 
+        # TODO: I think we will never use the condigon under the if-loop section
         if self.preprocessing:
             sample = self.preprocessing(image=image, mask=mask)
             image, mask = sample['image'], sample['mask']
@@ -97,20 +111,21 @@ class CustomImageDataset(Dataset):
         return len(self.ids)
 
 
-class MyModel(pl.LightningModule):
-    """Constructor."""
+# TODO: the model should be moved to a separate file src/models/models.py
+class OCTSegmentationModel(pl.LightningModule):
+    """The model dedicated to the segmentation of OCT images."""
 
-    def __init__(self, arch, encoder_name, in_channels, out_classes, **kwargs):
+    def __init__(self, arch, encoder_name, in_channels, classes, **kwargs):
         super().__init__()
         self.model = smp.create_model(
             arch=arch,
             encoder_name=encoder_name,
             in_channels=in_channels,
-            classes=len(out_classes),
+            classes=len(classes),
             **kwargs,
         )
 
-        self.classes = out_classes
+        self.classes = classes
         # preprocessing parameteres for image
         params = smp.encoders.get_preprocessing_params(encoder_name)
         self.register_buffer('std', torch.tensor(params['std']).view(1, 3, 1, 1))
@@ -153,7 +168,7 @@ class MyModel(pl.LightningModule):
             'loss': loss,
         }
 
-    def validation_step(self, batch, batch_idx):
+    def test_step(self, batch, batch_idx):
         img, mask = batch
         logits_mask = self.forward(img)
 
@@ -168,12 +183,12 @@ class MyModel(pl.LightningModule):
         )
         iou = smp.metrics.iou_score(tp, fp, fn, tn)
         metrics = {
-            f'validation/IOU (mean)': iou.mean(),
+            f'test/IOU (mean)': iou.mean(),
         }
         for num, cl in enumerate(self.classes):
-            metrics[f'validation/IOU ({cl})'] = iou[:, num].mean()
+            metrics[f'test/IOU ({cl})'] = iou[:, num].mean()
         self.log_dict(metrics, on_epoch=True)
-        self.log('validation/loss', loss, prog_bar=True, on_epoch=True)
+        self.log('test/loss', loss, prog_bar=True, on_epoch=True)
 
         if batch_idx == 0:
             global EPOCH
@@ -266,14 +281,14 @@ class MyModel(pl.LightningModule):
 
 @hydra.main(
     config_path=os.path.join(os.getcwd(), 'configs'),
-    config_name='training_models_smp',
+    config_name='train',
     version_base=None,
 )
-def main(
-    cfg: DictConfig,
-):
-    model_dir = 'models/model_7'
-    task = Task.init(
+def main(cfg: DictConfig) -> None:
+    log.info(f'Config:\n\n{OmegaConf.to_yaml(cfg)}')
+
+    model_dir = 'models/model_7'  # TODO: Is it a temporary solution?
+    task = Task.init(  # TODO: this variable value is not used. Is it fine?
         project_name=cfg.project_name,
         task_name=cfg.task_name,
         auto_connect_frameworks={'tensorboard': True, 'pytorch': True},
@@ -284,16 +299,16 @@ def main(
         dataset_project=cfg.project_name,
     ).get_local_copy()
 
-    train_dataset = CustomImageDataset(
+    train_dataset = OCTDataset(
         input_size=cfg.input_size,
-        ann_dir=f'{dataset_path}/train/ann',
+        mask_dir=f'{dataset_path}/train/mask',
         img_dir=f'{dataset_path}/train/img',
         classes=cfg.classes,
     )
 
-    valid_dataset = CustomImageDataset(
+    test_dataset = OCTDataset(
         input_size=cfg.input_size,
-        ann_dir=f'{dataset_path}/val/ann',
+        mask_dir=f'{dataset_path}/val/mask',
         img_dir=f'{dataset_path}/val/img',
         classes=cfg.classes,
     )
@@ -305,26 +320,26 @@ def main(
         shuffle=True,
         num_workers=n_cpu,
     )
-    valid_dataloader = DataLoader(
-        valid_dataset,
+    test_dataloader = DataLoader(
+        test_dataset,
         batch_size=cfg.batch_size,
         shuffle=False,
         num_workers=n_cpu,
     )
 
-    model = MyModel(
+    model = OCTSegmentationModel(
         cfg.architecture,
         cfg.encoder,
         in_channels=3,
-        out_classes=cfg.classes,
+        classes=cfg.classes,
     )
 
     checkpoint = ModelCheckpoint(
         save_top_k=5,
-        monitor='validation/loss',
+        monitor='test/loss',
         mode='min',
         dirpath=f'{model_dir}/ckpt/',
-        filename='sample-mnist-{epoch:02d}-{validation/loss:.2f}',
+        filename='sample-mnist-{epoch:02d}-{test/loss:.2f}',  # TODO: change name
     )
 
     lr_monitor = LearningRateMonitor(logging_interval='epoch')
@@ -346,7 +361,7 @@ def main(
     trainer.fit(
         model,
         train_dataloaders=train_dataloader,
-        val_dataloaders=valid_dataloader,
+        val_dataloaders=test_dataloader,
     )
 
 
