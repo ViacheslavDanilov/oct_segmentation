@@ -4,15 +4,13 @@ import os
 
 import hydra
 import pytorch_lightning as pl
-from clearml import Dataset as ds
 from clearml import Task
 from omegaconf import DictConfig, OmegaConf
 from pytorch_lightning import loggers as pl_loggers
 from pytorch_lightning.callbacks import LearningRateMonitor, ModelCheckpoint
-from torch.utils.data import DataLoader
 
-from src.smp.dataset import OCTDataset, get_img_augmentation
-from src.smp.model import OCTSegmentationModel
+from src.models.smp.dataset import OCTDataModule
+from src.models.smp.model import OCTSegmentationModel
 
 log = logging.getLogger(__name__)
 log.setLevel(logging.INFO)
@@ -31,41 +29,6 @@ def main(cfg: DictConfig) -> None:
         project_name=cfg.project_name,
         task_name=cfg.task_name,
         auto_connect_frameworks={'tensorboard': True, 'pytorch': True},
-    )
-
-    dataset_path = ds.get(
-        dataset_name=cfg.dataset_name,
-        dataset_project=cfg.project_name,
-    ).get_local_copy()
-
-    # TODO: replace train_dataset/train_dataloader and test_dataset/test_dataloader with data_module
-    train_dataset = OCTDataset(
-        input_size=cfg.input_size,
-        mask_dir=f'{dataset_path}/train/ann',
-        img_dir=f'{dataset_path}/train/img',
-        classes=cfg.classes,
-        augmentation=get_img_augmentation(cfg.input_size),
-    )
-
-    test_dataset = OCTDataset(
-        input_size=cfg.input_size,
-        mask_dir=f'{dataset_path}/val/ann',
-        img_dir=f'{dataset_path}/val/img',
-        classes=cfg.classes,
-    )
-
-    n_cpu = os.cpu_count()
-    train_dataloader = DataLoader(
-        train_dataset,
-        batch_size=cfg.batch_size,
-        shuffle=True,
-        num_workers=n_cpu,
-    )
-    test_dataloader = DataLoader(
-        test_dataset,
-        batch_size=cfg.batch_size,
-        shuffle=False,
-        num_workers=n_cpu,
     )
 
     model = OCTSegmentationModel(
@@ -99,12 +62,29 @@ def main(cfg: DictConfig) -> None:
         log_every_n_steps=cfg.batch_size,
         default_root_dir=model_dir,
     )
+    oct_data = OCTDataModule(
+        dataset_name=cfg.dataset_name,
+        project_name=cfg.project_name,
+        input_size=cfg.input_size,
+        classes=cfg.classes,
+    )
+    oct_data.prepare_data()
+    oct_data.setup()
 
-    # TODO: replace with OCTDataModule
+    val_dataloaders = oct_data.val_dataloaders(
+        batch_size=cfg.batch_size,
+        num_workers=os.cpu_count(),
+        shuffle=False,
+    )
+    train_dataloader = oct_data.train_dataloader(
+        batch_size=cfg.batch_size,
+        num_workers=os.cpu_count(),
+        shuffle=True,
+    )
     trainer.fit(
         model,
         train_dataloaders=train_dataloader,
-        val_dataloaders=test_dataloader,
+        val_dataloaders=val_dataloaders,
     )
 
 
