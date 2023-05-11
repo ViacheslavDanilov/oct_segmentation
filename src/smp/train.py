@@ -38,6 +38,7 @@ def main(cfg: DictConfig) -> None:
         dataset_project=cfg.project_name,
     ).get_local_copy()
 
+    # TODO: replace train_dataset/train_dataloader and test_dataset/test_dataloader with data_module
     train_dataset = OCTDataset(
         input_size=cfg.input_size,
         mask_dir=f'{dataset_path}/train/ann',
@@ -99,6 +100,7 @@ def main(cfg: DictConfig) -> None:
         default_root_dir=model_dir,
     )
 
+    # TODO: replace with OCTDataModule
     trainer.fit(
         model,
         train_dataloaders=train_dataloader,

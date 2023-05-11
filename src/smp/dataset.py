@@ -10,21 +10,29 @@ from torch.utils.data import Dataset
 from tqdm import tqdm
 
 
+# TODO: type of output?
+# TODO: move the method to the OCTDataset / OCTDataModule and make it a static method
 def data_checked(
-        img_dir: str,
-        ann_id: str,
+    img_dir: str,
+    ann_id: str,
 ):
     img_path = f'{img_dir}/{os.path.basename(ann_id)}'
     if os.path.exists(img_path):
         return ann_id, img_path
     else:
         print(f'Warning: not exists {img_path}')
+        # TODO: replace print with logging
 
 
-def to_tensor(x, **kwargs):
+# TODO: type of input and output?
+# TODO: move the method to the OCTDataset / OCTDataModule and make it a static method
+def to_tensor(x):
     return x.transpose(2, 0, 1).astype('float32')
 
 
+# TODO: type of input and output?
+# TODO: move the method to the OCTDataset / OCTDataModule and make it a static method
+# TODO: the augmentation looks aggressive? Have you tried to visualize the results?
 def get_img_augmentation(input_size):
     transform = [
         albu.HorizontalFlip(p=0.5),
@@ -80,12 +88,12 @@ class OCTDataset(Dataset):
     """The dataset used to process OCT images and corresponding segmentation masks."""
 
     def __init__(
-            self,
-            input_size,
-            img_dir,
-            mask_dir,
-            classes=None,
-            augmentation=None,
+        self,
+        input_size,
+        img_dir,  # TODO: maybe replace img_dir and mask_dir with a single data_dir?
+        mask_dir,
+        classes=None,
+        augmentation=None,  # TODO: change to use_augmentation = True or False
     ):
         self.classes = classes
         self.ids = glob(f'{mask_dir}/*.png')

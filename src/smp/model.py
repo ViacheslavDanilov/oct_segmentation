@@ -9,11 +9,11 @@ from clearml import Logger
 
 
 def get_img_mask_union(
-        img_0: np.ndarray,
-        alpha_0: float,
-        img_1: np.ndarray,
-        alpha_1: float,
-        color: Tuple[int],
+    img_0: np.ndarray,
+    alpha_0: float,
+    img_1: np.ndarray,
+    alpha_1: float,
+    color: Tuple[int, int, int],
 ) -> np.ndarray:
     return cv2.addWeighted(
         np.array(img_0).astype('uint8'),
@@ -26,12 +26,19 @@ def get_img_mask_union(
     )
 
 
-class OCTSegmentationModel(
-    pl.LightningModule,
-):
+class OCTSegmentationModel(pl.LightningModule):
     """The model dedicated to the segmentation of OCT images."""
 
-    def __init__(self, arch, encoder_name, in_channels, classes, colors, **kwargs):
+    # TODO: input and output types?
+    def __init__(
+        self,
+        arch,
+        encoder_name,
+        in_channels,
+        classes,
+        colors,
+        **kwargs,
+    ):
         super().__init__()
         self.model = smp.create_model(
             arch=arch,
@@ -57,19 +64,22 @@ class OCTSegmentationModel(
 
         self.my_logger = Logger.current_logger()
 
+    # TODO: input and output types?
     def forward(
-            self,
-            image,
+        self,
+        image,
     ):
         # normalize image here
+        # TODO: Should you move the normalization to the OCTDataModule?
         image = (image - self.mean) / self.std
         mask = self.model(image)
         return mask
 
+    # TODO: input and output types?
     def training_step(
-            self,
-            batch,
-            batch_idx,
+        self,
+        batch,
+        batch_idx,
     ):
         if batch_idx == 0:
             if self.epoch > 0:
@@ -107,6 +117,8 @@ class OCTSegmentationModel(
             mode='multilabel',
             num_classes=len(self.classes),
         )
+        # TODO: please add other metrics like dice, accuracy, sensitivity and specificity
+        # TODO: additional method to compute these metrics for both train and test subsets is also needed
         iou = smp.metrics.iou_score(tp, fp, fn, tn)
 
         self.log('train/loss', loss, prog_bar=True, on_epoch=True)
@@ -127,7 +139,12 @@ class OCTSegmentationModel(
             'loss': loss,
         }
 
-    def validation_step(self, batch, batch_idx):
+    # TODO: input and output types?
+    def validation_step(
+        self,
+        batch,
+        batch_idx,
+    ):
         img, mask = batch
         logits_mask = self.forward(img)
 
@@ -161,7 +178,7 @@ class OCTSegmentationModel(
                     yaxis='IOU',
                 )
                 if np.mean(self.validation_histogram) > np.mean(
-                        self.validation_histogram_best_mean
+                    self.validation_histogram_best_mean,
                 ):
                     self.validation_histogram_best_mean = self.validation_histogram
                     self.my_logger.report_histogram(
@@ -239,5 +256,6 @@ class OCTSegmentationModel(
             if batch_idx != 0:
                 self.validation_histogram[num] /= 2
 
+    # TODO: input and output types?
     def configure_optimizers(self):
         return torch.optim.Adam(self.parameters(), lr=0.0001)
