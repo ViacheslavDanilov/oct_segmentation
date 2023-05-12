@@ -1,17 +1,17 @@
 defaults:
-  - main
-  - _self_
+- main
+- _self_
 
 project_name: OCT segmentation
 dataset_name: smp_dataset
 task_name: test_start_new
-classes: [ Lipid core, Lumen, Fibrous cap, Vasa vasorum ]
+classes: [Lipid core, Lumen, Fibrous cap, Vasa vasorum]
 classes_color:
-  Lipid core: [ 0, 252, 124 ]
-  Lumen: [ 133, 21, 199 ]
-  Fibrous cap: [ 170, 178, 32 ]
-  Vasa vasorum: [ 34, 34, 178 ]
-  Artifact: [ 152, 251, 152 ]
+  Lipid core: [0, 252, 124]
+  Lumen: [133, 21, 199]
+  Fibrous cap: [170, 178, 32]
+  Vasa vasorum: [34, 34, 178]
+  Artifact: [152, 251, 152]
 architecture: unet
 encoder: resnet50
 input_size: 448

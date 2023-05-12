@@ -23,14 +23,54 @@ log.setLevel(logging.INFO)
 )
 def main(cfg: DictConfig) -> None:
     log.info(f'Config:\n\n{OmegaConf.to_yaml(cfg)}')
+
     today = datetime.datetime.today()
     model_dir = f'models/{cfg.project_name}/{cfg.task_name}_#{today.strftime("%m-%d-%H.%M")}'
+
+    # Initialize ClearML task
     Task.init(
         project_name=cfg.project_name,
         task_name=cfg.task_name,
         auto_connect_frameworks={'tensorboard': True, 'pytorch': True},
     )
 
+    # Initialize data module
+    oct_data_module = OCTDataModule(
+        dataset_name=cfg.dataset_name,
+        project_name=cfg.project_name,
+        input_size=cfg.input_size,
+        classes=cfg.classes,
+    )
+    oct_data_module.prepare_data()
+    oct_data_module.setup(stage='train')
+    train_dataloader = oct_data_module.train_dataloader(
+        batch_size=cfg.batch_size,
+        num_workers=os.cpu_count(),
+        shuffle=True,
+    )
+    val_dataloader = oct_data_module.val_dataloader(
+        batch_size=cfg.batch_size,
+        num_workers=os.cpu_count(),
+        shuffle=False,
+    )
+
+    # Initialize callbacks
+    checkpoint = ModelCheckpoint(
+        save_top_k=5,
+        monitor='test/loss',
+        mode='min',
+        dirpath=f'{model_dir}/ckpt/',
+        filename='models_{epoch:02d}',
+    )
+    lr_monitor = LearningRateMonitor(
+        logging_interval='epoch',
+        log_momentum=False,
+    )
+    tb_logger = pl_loggers.TensorBoardLogger(
+        save_dir='logs/',
+    )
+
+    # Initialize model
     model = OCTSegmentationModel(
         cfg.architecture,
         cfg.encoder,
@@ -39,16 +79,7 @@ def main(cfg: DictConfig) -> None:
         colors=cfg.classes_color,
     )
 
-    checkpoint = ModelCheckpoint(
-        save_top_k=5,
-        monitor='test/loss',
-        mode='min',
-        dirpath=f'{model_dir}/ckpt/',
-        filename='models_{epoch:02d}',
-    )
-
-    lr_monitor = LearningRateMonitor(logging_interval='epoch')
-    tb_logger = pl_loggers.TensorBoardLogger(save_dir='logs/')
+    # Initialize and tun trainer
     trainer = pl.Trainer(
         devices=-1,
         accelerator=cfg.device,
@@ -62,29 +93,12 @@ def main(cfg: DictConfig) -> None:
         log_every_n_steps=cfg.batch_size,
         default_root_dir=model_dir,
     )
-    oct_data = OCTDataModule(
-        dataset_name=cfg.dataset_name,
-        project_name=cfg.project_name,
-        input_size=cfg.input_size,
-        classes=cfg.classes,
-    )
-    oct_data.prepare_data()
-    oct_data.setup()
-
-    val_dataloaders = oct_data.val_dataloaders(
-        batch_size=cfg.batch_size,
-        num_workers=os.cpu_count(),
-        shuffle=False,
-    )
-    train_dataloader = oct_data.train_dataloader(
-        batch_size=cfg.batch_size,
-        num_workers=os.cpu_count(),
-        shuffle=True,
-    )
     trainer.fit(
         model,
         train_dataloaders=train_dataloader,
-        val_dataloaders=val_dataloaders,
+        val_dataloaders=val_dataloader,
+        # datamodule=oct_data_module    # TODO: you may directly pass DataModule here
+        #                                       https://lightning.ai/docs/pytorch/stable/notebooks/lightning_examples/datamodules.html
     )
 
 
