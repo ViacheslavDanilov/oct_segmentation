@@ -40,18 +40,8 @@ def main(cfg: DictConfig) -> None:
         project_name=cfg.project_name,
         input_size=cfg.input_size,
         classes=cfg.classes,
-    )
-    oct_data_module.prepare_data()
-    oct_data_module.setup(stage='train')
-    train_dataloader = oct_data_module.train_dataloader(
         batch_size=cfg.batch_size,
         num_workers=os.cpu_count(),
-        shuffle=True,
-    )
-    val_dataloader = oct_data_module.val_dataloader(
-        batch_size=cfg.batch_size,
-        num_workers=os.cpu_count(),
-        shuffle=False,
     )
 
     # Initialize callbacks
@@ -95,10 +85,7 @@ def main(cfg: DictConfig) -> None:
     )
     trainer.fit(
         model,
-        train_dataloaders=train_dataloader,
-        val_dataloaders=val_dataloader,
-        # datamodule=oct_data_module    # TODO: you may directly pass DataModule here
-        #                                       https://lightning.ai/docs/pytorch/stable/notebooks/lightning_examples/datamodules.html
+        datamodule=oct_data_module,
     )
 
 
