@@ -1,6 +1,7 @@
 [tool.black]
 line_length = 100
 skip_string_normalization = true
+verbose = true
 
 [tool.pycln]
 all = true
