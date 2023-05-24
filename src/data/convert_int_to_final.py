@@ -28,7 +28,7 @@ def get_mask(
         for _, row in data.iterrows():
             if row.class_name in classes:
                 figure_data = sly.Bitmap.base64_2_data(row.mask_b64)
-                mask[figure_data == True] = row.class_id + 1
+                mask[figure_data is True] = row.class_id + 1
         cv2.imwrite(f'{save_dir}/mask/{os.path.basename(img_path)}', mask)
         shutil.copy(img_path, f'{save_dir}/img/{os.path.basename(img_path)}')
 

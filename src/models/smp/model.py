@@ -129,7 +129,7 @@ class OCTSegmentationModel(pl.LightningModule):
                 self.training_histogram[num] /= 2
 
         metrics = {
-            f'train/IOU (mean)': iou.mean(),
+            'train/IOU (mean)': iou.mean(),
         }
         for num, cl in enumerate(self.classes):
             metrics[f'train/IOU ({cl})'] = iou[:, num].mean()
@@ -159,7 +159,7 @@ class OCTSegmentationModel(pl.LightningModule):
         )
         iou = smp.metrics.iou_score(tp, fp, fn, tn)
         metrics = {
-            f'test/IOU (mean)': iou.mean(),
+            'test/IOU (mean)': iou.mean(),
         }
         for num, cl in enumerate(self.classes):
             metrics[f'test/IOU ({cl})'] = iou[:, num].mean()
