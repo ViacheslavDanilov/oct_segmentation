@@ -46,6 +46,7 @@ jobs:
         pre-commit run pretty-format-yaml --all-files --verbose
         pre-commit run pycln --all-files --verbose
         pre-commit run isort --all-files --verbose
+        pre-commit run ruff --all-files --verbose
         echo -e "${GREEN}Job completed successfully${NC}"
 
   unit-testing:
