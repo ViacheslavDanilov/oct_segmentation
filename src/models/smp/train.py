@@ -1,6 +1,6 @@
-import datetime
 import logging
 import os
+import time
 
 import hydra
 import pytorch_lightning as pl
@@ -9,7 +9,7 @@ from omegaconf import DictConfig, OmegaConf
 from pytorch_lightning import loggers as pl_loggers
 from pytorch_lightning.callbacks import LearningRateMonitor, ModelCheckpoint
 
-from src.models.smp.dataset import OCTDataModule
+from src.models.smp.dataset import ClearMLDataProcessor, OCTDataModule
 from src.models.smp.model import OCTSegmentationModel
 
 log = logging.getLogger(__name__)
@@ -24,20 +24,31 @@ log.setLevel(logging.INFO)
 def main(cfg: DictConfig) -> None:
     log.info(f'Config:\n\n{OmegaConf.to_yaml(cfg)}')
 
-    today = datetime.datetime.today()
-    model_dir = f'models/{cfg.project_name}/{cfg.task_name}_#{today.strftime("%m-%d-%H.%M")}'
+    timestamp = time.strftime('%d%m_%H%M%S', time.localtime())
+    exp_name = f'{cfg.architecture}_{cfg.encoder}'
+    model_dir = os.path.join('models', f'{cfg.project_name}', f'{exp_name}_{timestamp}')
 
     # Initialize ClearML task
     Task.init(
         project_name=cfg.project_name,
-        task_name=cfg.task_name,
-        auto_connect_frameworks={'tensorboard': True, 'pytorch': True},
+        task_name=exp_name,
+        auto_connect_frameworks={
+            'tensorboard': True,
+            'pytorch': True,
+        },
     )
+
+    # TODO: implement this class
+    # Dataset processor
+    data_processor = ClearMLDataProcessor(
+        data_dir=cfg.data_dir,
+    )
+    data_processor.prepare_data()
 
     # Initialize data module
     oct_data_module = OCTDataModule(
-        dataset_name=cfg.dataset_name,
         project_name=cfg.project_name,
+        dataset_name=cfg.dataset_name,
         input_size=cfg.input_size,
         classes=cfg.classes,
         batch_size=cfg.batch_size,
@@ -50,7 +61,7 @@ def main(cfg: DictConfig) -> None:
         monitor='test/loss',
         mode='min',
         dirpath=f'{model_dir}/ckpt/',
-        filename='models_{epoch:02d}',
+        filename='models_{epoch+1:03d}',  # TODO: check if epoch increment works
     )
     lr_monitor = LearningRateMonitor(
         logging_interval='epoch',
@@ -62,8 +73,8 @@ def main(cfg: DictConfig) -> None:
 
     # Initialize model
     model = OCTSegmentationModel(
-        cfg.architecture,
-        cfg.encoder,
+        arch=cfg.architecture,
+        encoder_name=cfg.encoder,
         in_channels=3,
         classes=cfg.classes,
         colors=cfg.classes_color,
