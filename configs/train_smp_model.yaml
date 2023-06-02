@@ -3,8 +3,7 @@ defaults:
 - _self_
 
 project_name: OCT segmentation
-dataset_name: smp_dataset
-task_name: test_start_new
+dataset_name: smp_dataset   # TODO: change to final or final_smp.
 classes: [Lipid core, Lumen, Fibrous cap, Vasa vasorum]
 classes_color:
   Lipid core: [0, 252, 124]
@@ -17,4 +16,4 @@ encoder: resnet50
 input_size: 448
 batch_size: 16
 epochs: 75
-device: cuda
+device: auto    # TODO: if GPU is not available, I get an error when device = cuda
