@@ -34,7 +34,7 @@ repos:
 
 # import cleaner
 - repo: https://github.com/hadialqattan/pycln
-  rev: v2.1.3
+  rev: v2.1.4
   hooks:
   - id: pycln
     args: [--config, pyproject.toml]
@@ -49,7 +49,7 @@ repos:
 
 # ruff
 - repo: https://github.com/astral-sh/ruff-pre-commit
-  rev: 'v0.0.269'
+  rev: 'v0.0.270'
   hooks:
   - id: ruff
     args: [--fix, --exit-non-zero-on-fix]
