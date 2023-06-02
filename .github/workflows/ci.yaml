@@ -95,13 +95,13 @@ jobs:
       env:
         REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
-        echo ":white_check_mark: **linting**" >> report.md
-        echo ">  complete" >> report.md
-        echo " " >> report.md
-        echo ":white_check_mark: **testing**" >> report.md
-        echo ">  complete" >> report.md
-        echo " " >> report.md
-        echo ":white_check_mark: **reporting**" >> report.md
-        echo ">  complete" >> report.md
-        cml comment create report.md
         echo -e "${GREEN}Job completed successfully${NC}"
+#        echo ":white_check_mark: **linting**" >> report.md
+#        echo ">  complete" >> report.md
+#        echo " " >> report.md
+#        echo ":white_check_mark: **testing**" >> report.md
+#        echo ">  complete" >> report.md
+#        echo " " >> report.md
+#        echo ":white_check_mark: **reporting**" >> report.md
+#        echo ">  complete" >> report.md
+#        cml comment create report.md
