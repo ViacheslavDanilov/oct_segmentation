@@ -9,8 +9,7 @@ from omegaconf import DictConfig, OmegaConf
 from pytorch_lightning import loggers as pl_loggers
 from pytorch_lightning.callbacks import LearningRateMonitor, ModelCheckpoint
 
-from src.models.smp.dataset import ClearMLDataProcessor, OCTDataModule
-from src.models.smp.model import OCTSegmentationModel
+from src import ClearMLDataProcessor, OCTDataModule, OCTSegmentationModel
 
 log = logging.getLogger(__name__)
 log.setLevel(logging.INFO)
@@ -38,8 +37,7 @@ def main(cfg: DictConfig) -> None:
         },
     )
 
-    # TODO: implement this class
-    # Dataset processor
+    # TODO: Synchronize dataset with ClearML workspace
     data_processor = ClearMLDataProcessor(
         data_dir=cfg.data_dir,
     )
@@ -98,6 +96,8 @@ def main(cfg: DictConfig) -> None:
         model,
         datamodule=oct_data_module,
     )
+
+    log.info('Complete')
 
 
 if __name__ == '__main__':

@@ -221,11 +221,11 @@ class ClearMLDataProcessor:
 
     @staticmethod
     def upload_dataset():
-        print('Uploading')
+        print('Uploading...')
 
     @staticmethod
     def download_dataset():
-        print('Downloading')
+        print('Downloading...')
 
 
 # TODO: remove once classes are implemented and debugged
