@@ -140,9 +140,9 @@ class OCTDataModule(pl.LightningDataModule):
 
     def __init__(
         self,
-        dataset_name: str,
-        project_name: str,
+        dataset_name: str,  # TODO: we need to set data_dir instead of dataset_name
         classes: List[str],
+        project_name: str = 'OCT segmentation',  # TODO: project_name is no longer needed when using ClearMLDataProcessor
         input_size: int = 224,
         batch_size: int = 2,
         num_workers: int = 2,
@@ -156,11 +156,16 @@ class OCTDataModule(pl.LightningDataModule):
         self.batch_size = batch_size
         self.num_workers = num_workers
 
+    # TODO: What if I don't have the dataset in the cloud? What if I am running the training for the first time?
+    # TODO: Move this method to the ClearMLDataProcessor class
     def prepare_data(self):
-        self.data_dir = cl_dataset.get(
+        dataset_clearml = cl_dataset.get(
             dataset_name=self.dataset_name,
             dataset_project=self.project_name,
-        ).get_local_copy()
+        )
+        # TODO: it is a read-only copy, while a mutable copy is needed
+        # TODO: get_mutable_local_copy() should be used here
+        self.data_dir = dataset_clearml.get_local_copy()
 
     def setup(self, stage: str = 'fit'):
         if stage == 'fit':
@@ -196,3 +201,47 @@ class OCTDataModule(pl.LightningDataModule):
             shuffle=False,
             num_workers=self.num_workers,
         )
+
+
+class ClearMLDataProcessor:
+    """A class for processing data in the ClearML framework."""
+
+    def __init__(
+        self,
+        data_dir: str,
+    ):
+        self.data_dir = data_dir
+
+    def prepare_data(self):
+        # TODO: if local data is newer than server data, upload it
+        self.upload_dataset()
+
+        # TODO: if no data is available locally, download it from the server
+        self.download_dataset()
+
+    @staticmethod
+    def upload_dataset():
+        print('Uploading')
+
+    @staticmethod
+    def download_dataset():
+        print('Downloading')
+
+
+# TODO: remove once classes are implemented and debugged
+if __name__ == '__main__':
+    oct_data_module = OCTDataModule(
+        project_name='OCT segmentation',
+        dataset_name='smp_dataset',
+        classes=[
+            'Lipid core',
+            'Lumen',
+            'Fibrous cap',
+            'Vasa vasorum',
+        ],
+        input_size=224,
+        batch_size=2,
+        num_workers=2,
+    )
+    oct_data_module.prepare_data()
+    print('Complete')
