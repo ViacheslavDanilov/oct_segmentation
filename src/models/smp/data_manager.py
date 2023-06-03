@@ -6,7 +6,7 @@ from clearml import Dataset
 from src.data.utils import get_file_list
 
 
-class ClearMLDataset:
+class ClearMLDataManager:
     """A class for processing data in the ClearML framework."""
 
     def __init__(
@@ -39,13 +39,13 @@ class ClearMLDataset:
 
         # Check remote dataset
         try:
-            clearml_dataset = Dataset.get(
+            dataset = Dataset.get(
                 dataset_name=self.dataset_name,
                 dataset_project=self.project_name,
                 dataset_version='1.0.0',
                 only_completed=True,
             )
-            hash_remote = clearml_dataset.tags[0]
+            hash_remote = dataset.tags[0]
             is_remote_exist = True
         except Exception:
             is_remote_exist = False
@@ -59,7 +59,7 @@ class ClearMLDataset:
         elif hash_local == hash_remote:
             print('\nDatasets on both sides are completely consistent\n')
         else:
-            self.download_dataset()
+            self.download_dataset(dataset=dataset)
 
     def upload_dataset(
         self,
@@ -114,11 +114,17 @@ class ClearMLDataset:
         dataset.finalize(verbose=True)
         print('Upload complete')
 
-    @staticmethod
-    def download_dataset():
-        print('Downloading dataset...\n')
-
-        print('Download complete')
+    def download_dataset(
+        self,
+        dataset: Dataset,
+    ):
+        num_images = self.count_images(file_paths=dataset.list_files())
+        num_pairs = num_images // 2
+        print(f'Downloading a dataset of {num_pairs} pairs')
+        local_path = dataset.get_mutable_local_copy(
+            target_folder=self.data_dir,
+        )
+        print(f'Dataset downloaded: {local_path}')
 
     @staticmethod
     def compute_dir_hash(
@@ -133,9 +139,26 @@ class ClearMLDataset:
                         sha_hash.update(chunk)
         return sha_hash.hexdigest()
 
+    @staticmethod
+    def count_images(file_paths):
+        image_extensions = [
+            '.jpg',
+            '.jpeg',
+            '.png',
+            '.bmp',
+        ]
+        image_count = 0
+
+        for file_path in file_paths:
+            file_extension = os.path.splitext(file_path)[1].lower()
+            if file_extension in image_extensions:
+                image_count += 1
+
+        return image_count
+
 
 if __name__ == '__main__':
-    processor = ClearMLDataset(
+    processor = ClearMLDataManager(
         data_dir='data/final',
         project_name='OCT segmentation',
     )
