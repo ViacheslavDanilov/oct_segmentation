@@ -19,38 +19,72 @@ class ClearMLDataset:
         self.project_name = project_name
 
     def prepare_data(self):
-        # TODO: if local data is newer than server data, upload it
+        # Check local dataset
+        try:
+            local_image_paths = get_file_list(
+                src_dirs=self.data_dir,
+                ext_list='.png',
+            )
+            num_local_images = len(local_image_paths)
+            is_local_exist = True if num_local_images > 0 else False
+            hash_local = self.compute_dir_hash(dir_path=self.data_dir)
+        except Exception:
+            is_local_exist = False
+            num_local_images = 0
+            hash_local = float('nan')
 
-        clearml_dataset = Dataset.get(
-            dataset_name=self.dataset_name,
-            dataset_project=self.project_name,
-            only_completed=True,
-        )
-        num_removed_files, num_added_files, num_modified_files = clearml_dataset.sync_folder(
-            local_path=self.data_dir,
-            verbose=True,
-        )
-        if sum([num_removed_files, num_added_files, num_modified_files]) > 1:
-            dataset = Dataset.create(
+        # Check remote dataset
+        try:
+            clearml_dataset = Dataset.get(
                 dataset_name=self.dataset_name,
                 dataset_project=self.project_name,
+                # dataset_version='1.0.0',
+                only_completed=True,
             )
-            self.upload_dataset(dataset)
+            num_removed_files, num_added_files, num_modified_files = clearml_dataset.sync_folder(
+                local_path=self.data_dir,
+                verbose=True,
+            )
+            hash_remote = clearml_dataset.tags[0]
+            is_remote_exist = True
+        except Exception:
+            is_remote_exist = False
+            num_removed_files, num_added_files, num_modified_files = 0, 0, 0
+            hash_remote = float('nan')
 
-        # a = clearml_dataset.verify_dataset_hash(
-        #     local_copy_path=self.data_dir,
-        #     skip_hash=True,
-        #     verbose=True,
-        # )
+        # Raise an error if both datasets do not exist
+        assert is_local_exist or is_remote_exist, 'Neither local nor remote dataset exists'
 
-        # TODO: if no data is available locally, download it from the server
-        self.download_dataset()
+        # TODO: Complete
+        if (
+            sum([num_removed_files, num_added_files, num_modified_files]) > 1
+            and num_local_images != 0
+        ):
+            step = 'upload'
+        elif hash_local == hash_remote:
+            step = 'nothing'
+        else:
+            step = 'download'
 
-    def upload_dataset(
-        self,
-        dataset: Dataset,
-    ):
-        # Create a dataset instance
+        # Run one of three possible scenarios
+        if step == 'upload':
+            self.upload_dataset()
+        elif step == 'download':
+            self.download_dataset()
+        elif step == 'nothing':
+            print('Datasets on both sides are completely consistent')
+        else:
+            raise ValueError('Unknown step')
+
+    def upload_dataset(self):
+        print('Uploading dataset...')
+
+        # Create a dataset instance and add files to it
+        dataset = Dataset.create(
+            dataset_name=self.dataset_name,
+            dataset_project=self.project_name,
+            # dataset_version='1.0.0',
+        )
         dataset.add_files(
             path=self.data_dir,
             verbose=True,
@@ -99,8 +133,8 @@ class ClearMLDataset:
         print('Downloading...')
         print('Downloading...')
 
+    @staticmethod
     def compute_dir_hash(
-        self,
         dir_path,
     ):
         sha_hash = hashlib.sha256()
