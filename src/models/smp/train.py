@@ -9,7 +9,7 @@ from omegaconf import DictConfig, OmegaConf
 from pytorch_lightning import loggers as pl_loggers
 from pytorch_lightning.callbacks import LearningRateMonitor, ModelCheckpoint
 
-from src import ClearMLDataManager, OCTDataModule, OCTSegmentationModel
+from src import DataManager, OCTDataModule, OCTSegmentationModel
 
 log = logging.getLogger(__name__)
 log.setLevel(logging.INFO)
@@ -37,11 +37,11 @@ def main(cfg: DictConfig) -> None:
         },
     )
 
-    # TODO: Synchronize dataset with ClearML workspace
-    data_processor = ClearMLDataManager(
+    # Synchronize dataset with ClearML workspace
+    data_manager = DataManager(
         data_dir=cfg.data_dir,
     )
-    data_processor.prepare_data()
+    data_manager.prepare_data()
 
     # Initialize data module
     oct_data_module = OCTDataModule(
@@ -57,7 +57,7 @@ def main(cfg: DictConfig) -> None:
         monitor='test/loss',
         mode='min',
         dirpath=f'{model_dir}/ckpt/',
-        filename='models_{epoch+1:03d}',  # TODO: check if epoch increment works
+        filename='models_{epoch+1:03d}',
     )
     lr_monitor = LearningRateMonitor(
         logging_interval='epoch',

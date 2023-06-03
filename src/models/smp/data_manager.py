@@ -6,7 +6,7 @@ from clearml import Dataset
 from src.data.utils import get_file_list
 
 
-class ClearMLDataManager:
+class DataManager:
     """A class for processing data in the ClearML framework."""
 
     def __init__(
@@ -42,7 +42,6 @@ class ClearMLDataManager:
             dataset = Dataset.get(
                 dataset_name=self.dataset_name,
                 dataset_project=self.project_name,
-                dataset_version='1.0.0',
                 only_completed=True,
             )
             hash_remote = dataset.tags[0]
@@ -54,7 +53,7 @@ class ClearMLDataManager:
         # Raise an error if both datasets do not exist
         assert is_local_exist or is_remote_exist, 'Neither local nor remote dataset exists'
 
-        if num_local_images != 0 and not is_remote_exist:
+        if num_local_images != 0 and (not is_remote_exist or hash_local != hash_remote):
             self.upload_dataset(hash_value=hash_local)
         elif hash_local == hash_remote:
             print('\nDatasets on both sides are completely consistent\n')
@@ -65,26 +64,13 @@ class ClearMLDataManager:
         self,
         hash_value: str,
     ):
-        print('Uploading dataset...\n')
-
-        # Create a dataset instance and add files to it
-        dataset = Dataset.create(
-            dataset_name=self.dataset_name,
-            dataset_project=self.project_name,
-            dataset_version='1.0.0',
-        )
-        dataset.add_files(
-            path=self.data_dir,
-            verbose=True,
-        )
-
         # Check subsets
         train_pairs = get_file_list(
             src_dirs=os.path.join(self.data_dir, 'train'),
             ext_list='.png',
         )
         test_pairs = get_file_list(
-            src_dirs=os.path.join(self.data_dir, 'train'),
+            src_dirs=os.path.join(self.data_dir, 'test'),
             ext_list='.png',
         )
         if len(train_pairs) % 2 != 0:
@@ -97,10 +83,23 @@ class ClearMLDataManager:
         else:
             num_test_images = len(test_pairs) // 2
 
+        # Create a dataset instance and add files to it
+        print('Uploading dataset...\n')
+        dataset = Dataset.create(
+            dataset_name=self.dataset_name,
+            dataset_project=self.project_name,
+        )
+        dataset.add_files(
+            path=self.data_dir,
+            verbose=True,
+        )
+
         # Log dataset statistics
         dataset.get_logger().report_histogram(
             title='Dataset split',
             series='Images',
+            xaxis='Subset',
+            yaxis='Images',
             xlabels=['train', 'test'],
             values=[num_train_images, num_test_images],
         )
@@ -128,7 +127,8 @@ class ClearMLDataManager:
 
     @staticmethod
     def compute_dir_hash(
-        dir_path,
+        dir_path: str,
+        length: int = 8,
     ):
         sha_hash = hashlib.sha256()
         for root, _, files in os.walk(dir_path):
@@ -137,7 +137,10 @@ class ClearMLDataManager:
                 with open(file_path, 'rb') as f:
                     for chunk in iter(lambda: f.read(4096), b''):
                         sha_hash.update(chunk)
-        return sha_hash.hexdigest()
+
+        hash_value_ = sha_hash.hexdigest()
+        hash_value = hash_value_ if 0 > length > 64 else hash_value_[:length]
+        return hash_value
 
     @staticmethod
     def count_images(file_paths):
@@ -158,9 +161,10 @@ class ClearMLDataManager:
 
 
 if __name__ == '__main__':
-    processor = ClearMLDataManager(
+    processor = DataManager(
         data_dir='data/final',
         project_name='OCT segmentation',
     )
+    hash_value = processor.compute_dir_hash('data/final')
     processor.prepare_data()
     print('Complete')
