@@ -27,7 +27,11 @@ class ClearMLDataset:
             )
             num_local_images = len(local_image_paths)
             is_local_exist = True if num_local_images > 0 else False
-            hash_local = self.compute_dir_hash(dir_path=self.data_dir)
+            hash_local = (
+                self.compute_dir_hash(dir_path=self.data_dir)
+                if num_local_images > 0
+                else float('nan')
+            )
         except Exception:
             is_local_exist = False
             num_local_images = 0
@@ -38,52 +42,36 @@ class ClearMLDataset:
             clearml_dataset = Dataset.get(
                 dataset_name=self.dataset_name,
                 dataset_project=self.project_name,
-                # dataset_version='1.0.0',
+                dataset_version='1.0.0',
                 only_completed=True,
-            )
-            num_removed_files, num_added_files, num_modified_files = clearml_dataset.sync_folder(
-                local_path=self.data_dir,
-                verbose=True,
             )
             hash_remote = clearml_dataset.tags[0]
             is_remote_exist = True
         except Exception:
             is_remote_exist = False
-            num_removed_files, num_added_files, num_modified_files = 0, 0, 0
             hash_remote = float('nan')
 
         # Raise an error if both datasets do not exist
         assert is_local_exist or is_remote_exist, 'Neither local nor remote dataset exists'
 
-        # TODO: Complete
-        if (
-            sum([num_removed_files, num_added_files, num_modified_files]) > 1
-            and num_local_images != 0
-        ):
-            step = 'upload'
+        if num_local_images != 0 and not is_remote_exist:
+            self.upload_dataset(hash_value=hash_local)
         elif hash_local == hash_remote:
-            step = 'nothing'
+            print('\nDatasets on both sides are completely consistent\n')
         else:
-            step = 'download'
-
-        # Run one of three possible scenarios
-        if step == 'upload':
-            self.upload_dataset()
-        elif step == 'download':
             self.download_dataset()
-        elif step == 'nothing':
-            print('Datasets on both sides are completely consistent')
-        else:
-            raise ValueError('Unknown step')
 
-    def upload_dataset(self):
-        print('Uploading dataset...')
+    def upload_dataset(
+        self,
+        hash_value: str,
+    ):
+        print('Uploading dataset...\n')
 
         # Create a dataset instance and add files to it
         dataset = Dataset.create(
             dataset_name=self.dataset_name,
             dataset_project=self.project_name,
-            # dataset_version='1.0.0',
+            dataset_version='1.0.0',
         )
         dataset.add_files(
             path=self.data_dir,
@@ -118,20 +106,19 @@ class ClearMLDataset:
         )
 
         # Upload dataset
-        # TODO: set hash tag to the dataset
-        hash_value = self.compute_dir_hash(self.data_dir)
         dataset.add_tags(hash_value)
         dataset.upload(
             show_progress=True,
             verbose=True,
         )
         dataset.finalize(verbose=True)
-        print('Complete')
+        print('Upload complete')
 
     @staticmethod
     def download_dataset():
-        print('Downloading...')
-        print('Downloading...')
+        print('Downloading dataset...\n')
+
+        print('Download complete')
 
     @staticmethod
     def compute_dir_hash(
