@@ -3,7 +3,7 @@ defaults:
 - _self_
 
 project_name: OCT segmentation
-dataset_name: smp_dataset   # TODO: change to final or final_smp.
+data_dir: data/final
 classes: [Lipid core, Lumen, Fibrous cap, Vasa vasorum]
 classes_color:
   Lipid core: [0, 252, 124]
@@ -13,7 +13,9 @@ classes_color:
   Artifact: [152, 251, 152]
 architecture: unet
 encoder: resnet50
+optimizer: Adam
+lr: 0.001
 input_size: 448
-batch_size: 16
+batch_size: 4
 epochs: 75
-device: auto    # TODO: if GPU is not available, I get an error when device = cuda
+device: auto
