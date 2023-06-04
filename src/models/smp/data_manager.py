@@ -119,7 +119,7 @@ class DataManager:
     ):
         num_images = self.count_images(file_paths=dataset.list_files())
         num_pairs = num_images // 2
-        print(f'Downloading a dataset of {num_pairs} pairs')
+        print(f'Downloading a dataset of {num_pairs} images and masks')
         local_path = dataset.get_mutable_local_copy(
             target_folder=self.data_dir,
         )
