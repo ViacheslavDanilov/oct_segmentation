@@ -73,15 +73,15 @@ class DataManager:
             src_dirs=os.path.join(self.data_dir, 'test'),
             ext_list='.png',
         )
-        if len(train_pairs) % 2 != 0:
-            raise ValueError('Inconsistent number of train images and masks.')
-        else:
+        if len(train_pairs) % 2 == 0:
             num_train_images = len(train_pairs) // 2
-
-        if len(test_pairs) % 2 != 0:
-            raise ValueError('Inconsistent number of test images and masks.')
         else:
+            raise ValueError('Inconsistent number of train images and masks.')
+
+        if len(test_pairs) % 2 == 0:
             num_test_images = len(test_pairs) // 2
+        else:
+            raise ValueError('Inconsistent number of test images and masks.')
 
         # Create a dataset instance and add files to it
         print('Uploading dataset...\n')
