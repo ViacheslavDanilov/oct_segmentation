@@ -32,7 +32,7 @@ class DataManager:
                 if num_local_images > 0
                 else float('nan')
             )
-        except Exception:
+        except ValueError:
             is_local_exist = False
             num_local_images = 0
             hash_local = float('nan')
@@ -46,7 +46,7 @@ class DataManager:
             )
             hash_remote = dataset.tags[0]
             is_remote_exist = True
-        except Exception:
+        except ValueError:
             is_remote_exist = False
             hash_remote = float('nan')
 
