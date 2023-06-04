@@ -17,7 +17,7 @@ log.setLevel(logging.INFO)
 
 @hydra.main(
     config_path=os.path.join(os.getcwd(), 'configs'),
-    config_name='train_smp_model',
+    config_name='train_smp',
     version_base=None,
 )
 def main(cfg: DictConfig) -> None:
@@ -45,8 +45,9 @@ def main(cfg: DictConfig) -> None:
 
     # Initialize data module
     oct_data_module = OCTDataModule(
-        input_size=cfg.input_size,
+        data_dir=cfg.data_dir,
         classes=cfg.classes,
+        input_size=cfg.input_size,
         batch_size=cfg.batch_size,
         num_workers=os.cpu_count(),
     )
@@ -69,8 +70,10 @@ def main(cfg: DictConfig) -> None:
 
     # Initialize model
     model = OCTSegmentationModel(
-        arch=cfg.architecture,
+        architecture=cfg.architecture,
         encoder_name=cfg.encoder,
+        optimizer=cfg.optimizer,
+        lr=cfg.lr,
         in_channels=3,
         classes=cfg.classes,
         colors=cfg.classes_color,
