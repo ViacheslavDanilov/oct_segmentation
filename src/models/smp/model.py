@@ -1,4 +1,4 @@
-from typing import Tuple
+from typing import List, Tuple
 
 import cv2
 import numpy as np
@@ -29,25 +29,28 @@ def get_img_mask_union(
 class OCTSegmentationModel(pl.LightningModule):
     """The model dedicated to the segmentation of OCT images."""
 
-    # TODO: input and output types?
     def __init__(
         self,
-        arch,
-        encoder_name,
-        in_channels,
-        classes,
-        colors,
+        architecture: str,
+        encoder_name: str,
+        optimizer: str,
+        lr: float,
+        in_channels: int,
+        classes: List[str],
+        colors: List[Tuple[int, int, int]],
         **kwargs,
     ):
         super().__init__()
         self.model = smp.create_model(
-            arch=arch,
+            arch=architecture,
             encoder_name=encoder_name,
             in_channels=in_channels,
             classes=len(classes),
             **kwargs,
         )
 
+        self.optimizer = optimizer
+        self.lr = lr
         self.classes = classes
         self.colors = colors
         self.epoch = -1
@@ -64,22 +67,19 @@ class OCTSegmentationModel(pl.LightningModule):
 
         self.my_logger = Logger.current_logger()
 
-    # TODO: input and output types?
     def forward(
         self,
-        image,
-    ):
-        # normalize image here
-        # TODO: Should you move the normalization to the OCTDataModule?
+        image: torch.Tensor,
+    ) -> torch.Tensor:
         image = (image - self.mean) / self.std
         mask = self.model(image)
         return mask
 
-    # TODO: input and output types?
+    # TODO: ClearML logging should be a separate method or class.
     def training_step(
         self,
         batch,
-        batch_idx,
+        batch_idx: int,
     ):
         if batch_idx == 0:
             if self.epoch > 0:
@@ -117,29 +117,35 @@ class OCTSegmentationModel(pl.LightningModule):
             mode='multilabel',
             num_classes=len(self.classes),
         )
-        # TODO: please add other metrics like dice, accuracy, sensitivity and specificity
-        # TODO: additional method to compute these metrics for both train and test subsets is also needed
-        iou = smp.metrics.iou_score(tp, fp, fn, tn)
+
+        # TODO: Track all metrics
+        smp.metrics.accuracy(tp, fp, fn, tn)
+        smp.metrics.f1_score(tp, fp, fn, tn)
+        iou_score = smp.metrics.iou_score(tp, fp, fn, tn)
+        smp.metrics.positive_predictive_value(tp, fp, fn, tn)
+        smp.metrics.sensitivity(tp, fp, fn, tn)
+        smp.metrics.sensitivity(tp, fp, fn, tn)
+        smp.metrics.specificity(tp, fp, fn, tn)
 
         self.log('train/loss', loss, prog_bar=True, on_epoch=True)
 
         for num, cl in enumerate(self.classes):
-            self.training_histogram[num] += iou[:, num].mean().cpu().numpy()
+            self.training_histogram[num] += iou_score[:, num].mean().cpu().numpy()
             if batch_idx != 0:
                 self.training_histogram[num] /= 2
 
         metrics = {
-            'train/IOU (mean)': iou.mean(),
+            'train/IOU (mean)': iou_score.mean(),
         }
         for num, cl in enumerate(self.classes):
-            metrics[f'train/IOU ({cl})'] = iou[:, num].mean()
+            metrics[f'train/IOU ({cl})'] = iou_score[:, num].mean()
         self.log_dict(metrics, on_epoch=True)
 
         return {
             'loss': loss,
         }
 
-    # TODO: input and output types?
+    # TODO: ClearML logging should be a separate method or class.
     def validation_step(
         self,
         batch,
@@ -157,12 +163,21 @@ class OCTSegmentationModel(pl.LightningModule):
             mode='multilabel',
             num_classes=len(self.classes),
         )
-        iou = smp.metrics.iou_score(tp, fp, fn, tn)
+
+        # TODO: Track all metrics
+        smp.metrics.accuracy(tp, fp, fn, tn)
+        smp.metrics.f1_score(tp, fp, fn, tn)
+        iou_score = smp.metrics.iou_score(tp, fp, fn, tn)
+        smp.metrics.positive_predictive_value(tp, fp, fn, tn)
+        smp.metrics.sensitivity(tp, fp, fn, tn)
+        smp.metrics.sensitivity(tp, fp, fn, tn)
+        smp.metrics.specificity(tp, fp, fn, tn)
+
         metrics = {
-            'test/IOU (mean)': iou.mean(),
+            'test/IOU (mean)': iou_score.mean(),
         }
         for num, cl in enumerate(self.classes):
-            metrics[f'test/IOU ({cl})'] = iou[:, num].mean()
+            metrics[f'test/IOU ({cl})'] = iou_score[:, num].mean()
         self.log_dict(metrics, on_epoch=True)
         self.log('test/loss', loss, prog_bar=True, on_epoch=True)
 
@@ -252,10 +267,18 @@ class OCTSegmentationModel(pl.LightningModule):
                 )
 
         for num, cl in enumerate(self.classes):
-            self.validation_histogram[num] += iou[:, num].mean().cpu().numpy()
+            self.validation_histogram[num] += iou_score[:, num].mean().cpu().numpy()
             if batch_idx != 0:
                 self.validation_histogram[num] /= 2
 
-    # TODO: input and output types?
     def configure_optimizers(self):
-        return torch.optim.Adam(self.parameters(), lr=0.0001)
+        if self.optimizer == 'SGD':
+            return torch.optim.SGD(self.parameters(), lr=self.lr)
+        elif self.optimizer == 'RMSprop':
+            return torch.optim.RMSprop(self.parameters(), lr=self.lr)
+        elif self.optimizer == 'Adam':
+            return torch.optim.Adam(self.parameters(), lr=self.lr)
+        elif self.optimizer == 'RAdam':
+            return torch.optim.Adam(self.parameters(), lr=self.lr)
+        else:
+            raise ValueError(f'Unknown optimizer: {self.optimizer}')
