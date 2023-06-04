@@ -1,16 +1,13 @@
-import logging
-import multiprocessing
 import os
-from glob import glob
-from typing import List, Tuple, Union
+from typing import List
 
 import albumentations as albu
 import cv2
 import numpy as np
 import pytorch_lightning as pl
-from joblib import Parallel, delayed
 from torch.utils.data import DataLoader, Dataset
-from tqdm import tqdm
+
+from src.data.utils import get_file_list
 
 
 class OCTDataset(Dataset):
@@ -18,34 +15,32 @@ class OCTDataset(Dataset):
 
     def __init__(
         self,
-        data_dir: str,
+        subset_dir: str,
         classes: List[str],
-        input_size: int = 224,
+        input_size: int = 448,
         use_augmentation: bool = False,
     ):
-        self.classes = classes
-        self.ids = glob(f'{data_dir}/mask/*.png')
         self.input_size = input_size
-
-        num_cores = multiprocessing.cpu_count()
-        check_list = Parallel(n_jobs=num_cores, backend='threading')(
-            delayed(self.data_check)(f'{data_dir}/img', mask_id)
-            for mask_id in tqdm(self.ids, desc='image load')
-        )
-
-        self.images_idx = list(np.array(check_list)[:, 1])
-        self.masks_idx = list(np.array(check_list)[:, 0])
-        self.class_values = [idx + 1 for idx, _ in enumerate(self.classes)]
-
+        self.classes = classes
+        self.classes_idx = [idx + 1 for idx, _ in enumerate(self.classes)]
+        self.samples = self.get_list_of_samples(subset_dir)
         self.use_augmentation = use_augmentation
 
-    def __getitem__(self, i: int):
-        image = cv2.imread(self.images_idx[i])
-        image = cv2.resize(image, (self.input_size, self.input_size))
-        mask = cv2.imread(self.masks_idx[i], 0)
+    def __getitem__(
+        self,
+        idx: int,
+    ):
+        img_path, mask_path = self.samples[idx]
+        image = cv2.imread(img_path)
+        image = cv2.resize(
+            image,
+            (self.input_size, self.input_size),
+            interpolation=cv2.INTER_LANCZOS4,
+        )
+        mask = cv2.imread(mask_path, cv2.IMREAD_GRAYSCALE)
         mask = cv2.resize(mask, (self.input_size, self.input_size), interpolation=cv2.INTER_NEAREST)
 
-        masks = [(mask == v) for v in self.class_values]
+        masks = [(mask == v) for v in self.classes_idx]
         mask = np.stack(masks, axis=-1).astype('float')
 
         if self.use_augmentation:
@@ -58,19 +53,28 @@ class OCTDataset(Dataset):
         return image, mask
 
     def __len__(self):
-        return len(self.images_idx)
+        return len(self.samples)
 
     @staticmethod
-    def data_check(
-        img_dir: str,
-        ann_id: str,
-    ) -> Union[Tuple[str, str], None]:
-        img_path = f'{img_dir}/{os.path.basename(ann_id)}'
-        if os.path.exists(img_path):
-            return ann_id, img_path
-        else:
-            logging.warning(f'Img path: {img_path} not exist')
-            return None
+    def get_list_of_samples(
+        data_dir: str,
+    ) -> List[List[str]]:
+        img_dir = os.path.join(data_dir, 'img')
+        mask_dir = os.path.join(data_dir, 'mask')
+        image_paths = get_file_list(src_dirs=img_dir, ext_list='.png')
+        mask_paths = get_file_list(src_dirs=mask_dir, ext_list='.png')
+        assert len(image_paths) == len(
+            mask_paths,
+        ), f'Number of images is not equal to the number of masks ({len(image_paths)} vs {len(mask_paths)})'
+
+        sample_list = []
+
+        for image_path in image_paths:
+            mask_path = image_path.replace('img', 'mask')
+            if mask_path in mask_paths:
+                sample_list.append([image_path, mask_path])
+
+        return sample_list
 
     @staticmethod
     def to_tensor(
@@ -139,29 +143,33 @@ class OCTDataModule(pl.LightningDataModule):
 
     def __init__(
         self,
+        data_dir: str,
         classes: List[str],
-        input_size: int = 224,
+        input_size: int = 448,
         batch_size: int = 2,
         num_workers: int = 2,
     ):
         super().__init__()
-        self.data_dir = None
+        self.data_dir = data_dir
         self.classes = classes
         self.input_size = input_size
         self.batch_size = batch_size
         self.num_workers = num_workers
 
-    def setup(self, stage: str = 'fit'):
+    def setup(
+        self,
+        stage: str = 'fit',
+    ):
         if stage == 'fit':
             self.train_dataloader_set = OCTDataset(
                 input_size=self.input_size,
-                data_dir=f'{self.data_dir}/train',
+                subset_dir=f'{self.data_dir}/train',
                 classes=self.classes,
                 use_augmentation=True,
             )
             self.val_dataloader_set = OCTDataset(
                 input_size=self.input_size,
-                data_dir=f'{self.data_dir}/val',
+                subset_dir=f'{self.data_dir}/test',
                 classes=self.classes,
                 use_augmentation=False,
             )
@@ -185,3 +193,14 @@ class OCTDataModule(pl.LightningDataModule):
             shuffle=False,
             num_workers=self.num_workers,
         )
+
+
+if __name__ == '__main__':
+    oct_dataset = OCTDataset(
+        subset_dir='data/final/train',
+        classes=['Lipid core', 'Lumen', 'Fibrous cap', 'Vasa vasorum'],
+        input_size=448,
+        use_augmentation=False,
+    )
+    sample = oct_dataset[0]
+    print('Complete')
