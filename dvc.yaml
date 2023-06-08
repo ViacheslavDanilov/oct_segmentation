@@ -1,48 +1,47 @@
 stages:
 
+  # STAGE I
   extract_metadata:
     cmd:
+    - echo "STAGE I"
+    - rm data/raw_metadata.xlsx || true
     - python src/data/extract_metadata.py
     deps:
     - src/data/extract_metadata.py
+    - data/raw
     outs:
-    - data/raw_metadata.xlsx:
-        cache: true
-        persist: false
+    - data/raw_metadata.xlsx
 
   dicoms_to_rgb:
     cmd:
+    - rm -rf data/sly_input_rgb || true
     - python src/data/convert_dicoms.py to_gray=false save_dir=data/sly_input_rgb
     deps:
     - src/data/convert_dicoms.py
     - data/raw_metadata.xlsx
     outs:
-    - data/sly_input_rgb:
-        cache: true
-        persist: false
+    - data/sly_input_rgb
 
   dicoms_to_grayscale:
     cmd:
+    - rm -rf data/sly_input_gray || true
     - python src/data/convert_dicoms.py to_gray=true save_dir=data/sly_input_gray
     deps:
     - src/data/convert_dicoms.py
     - data/raw_metadata.xlsx
     outs:
-    - data/sly_input_gray:
-        cache: true
-        persist: false
+    - data/sly_input_gray
 
   stack_images:
     cmd:
+    - rm -rf data/sly_input || true
     - python src/data/stack_images.py output_type=video save_dir=data/sly_input
     deps:
     - src/data/stack_images.py
     - data/sly_input_rgb
     - data/sly_input_gray
     outs:
-    - data/sly_input:
-        cache: true
-        persist: false
+    - data/sly_input
 
   remove_images:
     deps:
@@ -51,3 +50,27 @@ stages:
     - rm -rf data/sly_input_rgb || true
     - rm -rf data/sly_input_gray || true
     always_changed: true
+
+  # STAGE II
+  sly_to_int:
+    cmd:
+    - echo "STAGE II"
+    - rm -rf data/interim || true
+    - python src/data/convert_sly_to_int.py
+    deps:
+    - src/data/convert_sly_to_int.py
+    - data/sly_output
+    - data/sly_input    # Used to keep the stages in a strict order
+    outs:
+    - data/interim
+
+  int_to_final:
+    cmd:
+    - rm -rf data/final || true
+    - python src/data/convert_int_to_final.py
+    deps:
+    - src/data/convert_int_to_final.py
+    - data/interim
+    - data/interim/metadata.xlsx
+    outs:
+    - data/final

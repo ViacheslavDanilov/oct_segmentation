@@ -2,25 +2,32 @@ schema: '2.0'
 stages:
   extract_metadata:
     cmd:
+    - echo "STAGE I"
+    - rm data/raw_metadata.xlsx || true
     - python src/data/extract_metadata.py
     deps:
+    - path: data/raw
+      md5: dae1c4f519742a506a0844c82dd8ad8f.dir
+      size: 21355781638
+      nfiles: 117
     - path: src/data/extract_metadata.py
-      md5: 063022648bcd39a902bd4015d2f5eef8
-      size: 4068
+      md5: 704b2c1e901c98be0b9b546837022b79
+      size: 4063
     outs:
     - path: data/raw_metadata.xlsx
-      md5: 81a65e0be91250493b44abd4b989ac68
-      size: 12489
+      md5: 6fcede7ddc8aa7755ce3043c18b0eaa7
+      size: 12490
   dicoms_to_rgb:
     cmd:
+    - rm -rf data/sly_input_rgb || true
     - python src/data/convert_dicoms.py to_gray=false save_dir=data/sly_input_rgb
     deps:
     - path: data/raw_metadata.xlsx
-      md5: 81a65e0be91250493b44abd4b989ac68
-      size: 12489
+      md5: 6fcede7ddc8aa7755ce3043c18b0eaa7
+      size: 12490
     - path: src/data/convert_dicoms.py
-      md5: c7cddb3baf6bc9a4c53409e5b2e9c20b
-      size: 4411
+      md5: fd16e4f09df6b792599beb93c14dad41
+      size: 4327
     outs:
     - path: data/sly_input_rgb
       md5: 03d24fbe8a74fc67a9c097ab6a2a1e69.dir
@@ -28,14 +35,15 @@ stages:
       nfiles: 14363
   dicoms_to_grayscale:
     cmd:
+    - rm -rf data/sly_input_gray || true
     - python src/data/convert_dicoms.py to_gray=true save_dir=data/sly_input_gray
     deps:
     - path: data/raw_metadata.xlsx
-      md5: 81a65e0be91250493b44abd4b989ac68
-      size: 12489
+      md5: 6fcede7ddc8aa7755ce3043c18b0eaa7
+      size: 12490
     - path: src/data/convert_dicoms.py
-      md5: c7cddb3baf6bc9a4c53409e5b2e9c20b
-      size: 4411
+      md5: fd16e4f09df6b792599beb93c14dad41
+      size: 4327
     outs:
     - path: data/sly_input_gray
       md5: cde6ae30ce8602f3b46f84bbfd78deb2.dir
@@ -43,6 +51,7 @@ stages:
       nfiles: 14363
   stack_images:
     cmd:
+    - rm -rf data/sly_input || true
     - python src/data/stack_images.py output_type=video save_dir=data/sly_input
     deps:
     - path: data/sly_input_gray
@@ -54,8 +63,8 @@ stages:
       size: 13247360699
       nfiles: 14363
     - path: src/data/stack_images.py
-      md5: 0d01627ccdf79f668ba2983a2dd42ae2
-      size: 4879
+      md5: 72f001c3e0758d0d93f89d4dc5e03978
+      size: 4802
     outs:
     - path: data/sly_input
       md5: ca53b3d8cc7c4d6e55160771440161c4.dir
@@ -70,3 +79,45 @@ stages:
       md5: ca53b3d8cc7c4d6e55160771440161c4.dir
       size: 1178481901
       nfiles: 58
+  sly_to_int:
+    cmd:
+    - echo "STAGE II"
+    - rm -rf data/interim || true
+    - python src/data/convert_sly_to_int.py
+    deps:
+    - path: data/sly_input
+      md5: ca53b3d8cc7c4d6e55160771440161c4.dir
+      size: 1178481901
+      nfiles: 58
+    - path: data/sly_output
+      md5: c18178b619054fa83c5b02116ba416e7.dir
+      size: 1005017055
+      nfiles: 55
+    - path: src/data/convert_sly_to_int.py
+      md5: c4ea81e40c9e5e4763fd4c22527632b9
+      size: 8033
+    outs:
+    - path: data/interim
+      md5: a14f21baf79f9134b1efa54d617620b1.dir
+      size: 5538218763
+      nfiles: 6210
+  int_to_final:
+    cmd:
+    - rm -rf data/final || true
+    - python src/data/convert_int_to_final.py
+    deps:
+    - path: data/interim
+      md5: a14f21baf79f9134b1efa54d617620b1.dir
+      size: 5538218763
+      nfiles: 6210
+    - path: data/interim/metadata.xlsx
+      md5: 570d22c14faced5388df1a585161f6a4
+      size: 3558333
+    - path: src/data/convert_int_to_final.py
+      md5: 31525ba66dbe4461bb4dfa61ac902650
+      size: 4716
+    outs:
+    - path: data/final
+      md5: 6426d817ac637c246dae39ff4bfd5539.dir
+      size: 740487008
+      nfiles: 1599
