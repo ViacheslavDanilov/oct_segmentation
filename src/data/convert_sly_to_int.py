@@ -130,7 +130,7 @@ def parse_single_annotation(
                     result_dict['box_width'] = bbox[1][0] - bbox[0][0] + 1
                     result_dict['box_height'] = bbox[1][1] - bbox[0][1] + 1
                     result_dict['area'] = int(contour.area)
-                    result_dict['mask_b64'] = encoded_mask
+                    result_dict['mask'] = encoded_mask
                     df_ann = pd.concat([df_ann, pd.DataFrame(result_dict, index=[0])])
 
             # Save empty annotation if ann is None
@@ -217,7 +217,7 @@ def main(cfg: DictConfig) -> None:
     log.info(f'Config:\n\n{OmegaConf.to_yaml(cfg)}')
     meta = json.load(open(os.path.join(cfg.data_dir, 'meta.json')))
     project_sly = sly.VideoProject(cfg.data_dir, sly.OpenMode.READ)
-    class_ids = {value['title']: id for (id, value) in enumerate(meta['classes'])}
+    class_ids = {value['title']: id + 1 for (id, value) in enumerate(meta['classes'])}
     img_dir = os.path.join(cfg.save_dir, 'img')
 
     # 1. Video parsing
