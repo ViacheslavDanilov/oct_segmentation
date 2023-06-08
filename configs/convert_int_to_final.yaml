@@ -2,8 +2,9 @@ defaults:
 - main
 - _self_
 
-df_path: data/interim/metadata.xlsx
-save_dir: data/final
+data_dir: data/interim
 train_size: 0.80
 seed: 11
-classes: [Lipid core, Lumen, Fibrous cap, Vasa vasorum]
+# Available classes: Lipid core, Lumen, Fibrous cap, Vasa vasorum
+exclude_classes: []
+save_dir: data/final

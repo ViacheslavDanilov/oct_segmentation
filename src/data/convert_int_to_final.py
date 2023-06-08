@@ -17,20 +17,96 @@ log = logging.getLogger(__name__)
 log.setLevel(logging.INFO)
 
 
-def get_mask(
-    img_path: str,
-    classes: List[str],
-    data: pd.DataFrame,
+def process_metadata(
+    data_dir: str,
+    exclude_classes: List[str] = None,
+) -> pd.DataFrame:
+    """Extract additional meta.
+
+    Args:
+        data_dir: path to directory containing images and metadata
+        exclude_classes: a list of classes to exclude from the dataset
+    Returns:
+        meta: data frame derived from a meta file
+    """
+    df_path = os.path.join(data_dir, 'metadata.xlsx')
+    df = pd.read_excel(df_path)
+    df.drop('id', axis=1, inplace=True)
+    df = df[~df['class_name'].isin(exclude_classes)]
+    df = df.dropna(subset=['class_name'])
+
+    assert len(df) > 0, 'All items have been excluded or dropped'
+
+    return df
+
+
+def split_dataset(
+    df: pd.DataFrame,
+    train_size: float = 0.80,
+    seed: int = 11,
+) -> pd.DataFrame:
+    # Split dataset by studies
+    df_unique_studies = np.unique(df.study.values)
+    train_studies, test_studies = train_test_split(
+        df_unique_studies,
+        train_size=train_size,
+        shuffle=True,
+        random_state=seed,
+    )
+
+    # Extract training and testing subsets by indexes
+    df_train = df[df['study'].isin(train_studies)]
+    df_test = df[df['study'].isin(test_studies)]
+    df_train = df_train.assign(split='train')
+    df_test = df_test.assign(split='test')
+
+    # Get list of train and test paths
+    log.info('Split..........: Studies / Images')
+    log.info(f'Train..........: {len(df_train["study"].unique())} / {len(df_train)}')
+    log.info(f'Test images....: {len(df_test["study"].unique())} / {len(df_test)}')
+
+    df_out = pd.concat([df_train, df_test])
+
+    return df_out
+
+
+def process_mask(
+    df: pd.DataFrame,
     save_dir: str,
 ) -> None:
-    if len(data) > 0 and len(list(set(classes) & set(data.class_name.unique()))) > 0:
-        mask = np.zeros((int(data.image_width.mean()), int(data.image_height.mean())))
-        for _, row in data.iterrows():
-            if row.class_name in classes:
-                figure_data = sly.Bitmap.base64_2_data(row.mask_b64)
-                mask[figure_data is True] = row.class_id + 1
-        cv2.imwrite(f'{save_dir}/mask/{os.path.basename(img_path)}', mask)
-        shutil.copy(img_path, f'{save_dir}/img/{os.path.basename(img_path)}')
+    img_path = df.image_path.unique()[0]
+
+    assert len(df.image_width.unique()) == 1, f'Image with more than one width found: {img_path}'
+    assert len(df.image_height.unique()) == 1, f'Image with more than one height found: {img_path}'
+    img_width = df.image_width.unique()[0]
+    img_height = df.image_height.unique()[0]
+
+    mask = np.zeros((img_height, img_width))
+    for _, row in df.iterrows():
+        obj_mask = sly.Bitmap.base64_2_data(row['mask'])
+        mask[obj_mask is True] = int(row.class_id)
+    cv2.imwrite(f'{save_dir}/mask/{os.path.basename(img_path)}', mask)
+    shutil.copy(img_path, f'{save_dir}/img/{os.path.basename(img_path)}')
+
+
+def save_metadata(
+    df: pd.DataFrame,
+    save_dir: str,
+) -> None:
+    df['image_path'] = df.apply(
+        func=lambda row: os.path.join(save_dir, row['split'], 'img', row['image_name']),
+        axis=1,
+    )
+    df.sort_values(by=['image_path'], inplace=True)
+    df.reset_index(drop=True, inplace=True)
+    df.index += 1
+    save_path = os.path.join(save_dir, 'metadata.xlsx')
+    df.to_excel(
+        save_path,
+        sheet_name='Metadata',
+        index=True,
+        index_label='id',
+    )
 
 
 @hydra.main(
@@ -45,39 +121,45 @@ def main(cfg: DictConfig) -> None:
         for dir_type in ['img', 'mask']:
             os.makedirs(f'{cfg.save_dir}/{subset}/{dir_type}', exist_ok=True)
 
-    df = pd.read_excel(cfg.df_path)
-    studies = np.unique(df.study.values)
-    train_studies, test_studies = train_test_split(
-        studies,
+    # Read and process data frame
+    df = process_metadata(
+        data_dir=cfg.data_dir,
+        exclude_classes=cfg.exclude_classes,
+    )
+
+    # Split dataset by studies
+    df = split_dataset(
+        df=df,
         train_size=cfg.train_size,
-        shuffle=True,
-        random_state=cfg.seed,
+        seed=cfg.seed,
     )
 
-    train_img_paths = df[df['study'].isin(train_studies)].image_path.values
-    test_img_paths = df[df['study'].isin(test_studies)].image_path.values
-    log.info(f'Train images...: {len(train_img_paths)}')
-    log.info(f'Test images....: {len(train_img_paths)}')
+    # Process images and masks
+    train_groups = df[df['split'] == 'train'].groupby('image_path')
+    test_groups = df[df['split'] == 'test'].groupby('image_path')
 
     Parallel(n_jobs=-1, backend='threading')(
-        delayed(get_mask)(
-            img_path=img_path,
-            classes=cfg.classes,
-            data=df.loc[df['image_path'] == img_path],
-            save_dir=f'{cfg.save_dir}/train',
+        delayed(process_mask)(
+            df=train_group,
+            save_dir=os.path.join(cfg.save_dir, 'train'),
         )
-        for img_path in tqdm(train_img_paths, desc='Preparing the training subset')
+        for _, train_group in tqdm(train_groups, desc='Preparation of training subset')
+    )
+    Parallel(n_jobs=-1, backend='threading')(
+        delayed(process_mask)(
+            df=test_group,
+            save_dir=os.path.join(cfg.save_dir, 'test'),
+        )
+        for _, test_group in tqdm(test_groups, desc='Preparation of testing subset')
     )
 
-    Parallel(n_jobs=-1, backend='threading')(
-        delayed(get_mask)(
-            img_path=img_path,
-            classes=cfg.classes,
-            data=df.loc[df['image_path'] == img_path],
-            save_dir=f'{cfg.save_dir}/test',
-        )
-        for img_path in tqdm(test_img_paths, desc='Preparing the testing subset')
+    # Save dataset metadata
+    save_metadata(
+        df=df,
+        save_dir=cfg.save_dir,
     )
+
+    log.info('Complete')
 
 
 if __name__ == '__main__':
