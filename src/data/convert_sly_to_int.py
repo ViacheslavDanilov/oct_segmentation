@@ -101,7 +101,7 @@ def parse_single_annotation(
                 'box_width': None,
                 'box_height': None,
                 'area': None,
-                'mask_b64': None,
+                'mask': None,
             }
 
             if len(ann_frame) != 0:
@@ -127,8 +127,8 @@ def parse_single_annotation(
                     result_dict['y2'] = bbox[1][1]
                     result_dict['xc'] = int(np.mean([bbox[0][0], bbox[1][0]]))
                     result_dict['yc'] = int(np.mean([bbox[0][1], bbox[1][1]]))
-                    result_dict['box_width'] = bbox[1][0] - bbox[0][0]
-                    result_dict['box_height'] = bbox[1][1] - bbox[0][1]
+                    result_dict['box_width'] = bbox[1][0] - bbox[0][0] + 1
+                    result_dict['box_height'] = bbox[1][1] - bbox[0][1] + 1
                     result_dict['area'] = int(contour.area)
                     result_dict['mask_b64'] = encoded_mask
                     df_ann = pd.concat([df_ann, pd.DataFrame(result_dict, index=[0])])
