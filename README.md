@@ -25,7 +25,7 @@ Installation guide: https://docs.conda.io/projects/miniconda/en/latest/index.htm
 
 **Step 2: Set up an environment and install the necessary packages**
 ``` bash
-conda create -f environment.yaml -n oct -v
+conda env create --file environment.yaml --verbose
 ```
 
 **Step 3: Activate environment**
