@@ -1,58 +1,40 @@
 # Segmentation and analysis of OCT images
 This repository is dedicated to the segmentation of [optical coherence tomography](https://en.wikipedia.org/wiki/Optical_coherence_tomography) (OCT) images and the analysis of the plaques that appear on them.
 
-## Requirements
+<a name="table-of-contents"></a>
+## 📖 Table of Contents
+- [Requirements](#requirements)
+- [Installation](#installation)
 
-- Linux or macOS (Windows has not been officially tested)
-- Python 3.8.x
+<a name="requirements"></a>
+## 💻 Requirements
 
-## Installation
+- Operating System
+  - [x] macOS
+  - [x] Linux
+  - [x] Windows (limited testing carried out)
+- Python 3.11.x
+- Required core libraries: [environment.yaml](https://github.com/ViacheslavDanilov/histology_segmentation/blob/main/environment.yaml)
 
-Step 1: Download and install Miniconda
+<a name="installation"></a>
+## ⚙ Installation
+
+**Step 1: Install Miniconda**
+
+Installation guide: https://docs.conda.io/projects/miniconda/en/latest/index.html#quick-command-line-install
+
+**Step 2: Set up an environment and install the necessary packages**
 ``` bash
-wget https://repo.anaconda.com/miniconda/Miniconda3-py38_22.11.1-1-Linux-x86_64.sh
-chmod +x Miniconda3-latest-Linux-x86_64.sh
-./Miniconda3-latest-Linux-x86_64.sh
+conda create -f environment.yaml -n oct -v
 ```
 
-Step 2: Install FFmpeg and verify that the installation is correct
-
-- Linux
+**Step 3: Activate environment**
 ``` bash
-sudo apt update
-sudo apt upgrade
-sudo apt install ffmpeg -u
-ffmpeg -version
+conda activate oct
 ```
 
-- macOS
-``` bash
-brew update
-brew upgrade
-brew install ffmpeg
-ffmpeg
-```
-
-Step 3: Clone the repository, create a conda environment, and install the requirements for the repository
-``` bash
-git clone https://github.com/ViacheslavDanilov/oct_segmentation.git
-cd oct_segmentation
-chmod +x create_env.sh
-source create_env.sh
-```
-
-Step 4: Initialize git hooks using the pre-commit framework
-``` bash
-pre-commit install
-```
-
-Step 5 (optional): Download a raw dataset using DVC
-``` bash
-dvc pull dvc/data/raw.dvc
-```
-NOTE: Since data storage is organized through Google Drive, you should first request access to the [DVC repository](https://drive.google.com/drive/folders/1SnUrqIBS60UR5l9HUMCiyxFFeBPM7LL4?usp=share_link).
-
-## Data
+<a name="data"></a>
+## 📂 Data
 
 |  ![Source image](media/source_img.png "Source image")  |  ![Pre-processed image](media/gray_img.png "Pre-processed image")  |
 |:------------------------------------------------------:|:------------------------------------------------------------------:|
