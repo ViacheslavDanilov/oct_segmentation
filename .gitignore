@@ -128,12 +128,6 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
-# Dataset
-/data/
-
-# Models
-*.pth
-
 # PyCharm settings
 .idea
 
@@ -160,6 +154,12 @@ logs/
 .dvc/config.local
 .dvc/tmp
 .dvc/cache
+
+# Dataset
+/data/raw
+
+# Models
+*.pth
 
 # Directory with temporary files
 temp/
