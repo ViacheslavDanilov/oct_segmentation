@@ -156,7 +156,12 @@ logs/
 .dvc/cache
 
 # Dataset
-/data/raw
+data/raw*/
+data/raw_metadata.xlsx
+data/sly_input*/
+data/sly_output*/
+data/interim*/
+data/final*/
 
 # Models
 *.pth
