@@ -165,6 +165,3 @@ data/final*/
 
 # Models
 *.pth
-
-# Directory with temporary files
-temp/
