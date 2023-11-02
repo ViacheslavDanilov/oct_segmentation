@@ -20,7 +20,8 @@ stages:
     - src/data/convert_dicoms.py
     - data/raw_metadata.xlsx
     outs:
-    - data/sly_input_rgb
+    - data/sly_input_rgb:
+        cache: false
 
   dicoms_to_grayscale:
     cmd:
@@ -30,7 +31,8 @@ stages:
     - src/data/convert_dicoms.py
     - data/raw_metadata.xlsx
     outs:
-    - data/sly_input_gray
+    - data/sly_input_gray:
+        cache: false
 
   stack_images:
     cmd:
