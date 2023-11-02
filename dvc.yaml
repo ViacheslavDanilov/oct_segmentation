@@ -43,6 +43,14 @@ stages:
     outs:
     - data/sly_input
 
+  remove_images:
+    deps:
+    - data/sly_input
+    cmd:
+    - rm -rf data/sly_input_rgb || true
+    - rm -rf data/sly_input_gray || true
+    always_changed: true
+
   # STAGE II
   sly_to_int:
     cmd:
