@@ -1,6 +1,5 @@
 import json
 import logging
-import multiprocessing
 import os
 from typing import Any, List, Tuple
 
@@ -18,6 +17,7 @@ log = logging.getLogger(__name__)
 log.setLevel(logging.INFO)
 
 
+# TODO: implement mask_processor
 def get_mask_properties(
     figure: dict,
     mask: np.ndarray,
@@ -59,7 +59,7 @@ def get_mask_properties(
     return encoded_mask, contour, bbox
 
 
-def parse_single_annotation(
+def process_single_annotation(
     dataset: sly.VideoDataset,
     class_ids: dict,
     crop: List[List[int]],
@@ -140,7 +140,7 @@ def parse_single_annotation(
     return df_ann
 
 
-def parse_single_video(
+def process_single_video(
     dataset: sly.VideoDataset,
     src_dir: str,
     img_dir: str,
@@ -149,62 +149,38 @@ def parse_single_video(
     study = dataset.name
     for video_name in dataset:
         series = video_name.split('_')[1]
-        vid = cv2.VideoCapture(
-            f'{src_dir}/{study}/{dataset.item_dir_name}/{video_name}',
-        )
+        video_path = os.path.join(src_dir, study, dataset.item_dir_name, video_name)
+        vid = cv2.VideoCapture(video_path)
+
         idx = 1
         while True:
             _, img = vid.read()
             if _:
-                img = img[
-                    crop[0][1] : crop[1][1],
-                    crop[0][0] : crop[1][0],
-                    :,
-                ]
+                img = img[crop[0][1] : crop[1][1], crop[0][0] : crop[1][0], :]
                 img_name = f'{study}_{series}_{idx:03d}.png'
-                cv2.imwrite(os.path.join(img_dir, img_name), img)
+                img_path = os.path.join(img_dir, img_name)
+                cv2.imwrite(img_path, img)
                 idx += 1
             else:
                 break
 
-
-def annotation_parsing(
-    datasets: sly.Project.DatasetDict,
-    class_ids: dict,
-    crop: List[List[int]],
-    img_dir: str,
-):
-    num_cores = multiprocessing.cpu_count()
-    annotation = Parallel(n_jobs=num_cores, backend='threading')(
-        delayed(parse_single_annotation)(
-            dataset=dataset,
-            class_ids=class_ids,
-            crop=crop,
-            img_dir=img_dir,
-        )
-        for dataset in tqdm(datasets, desc='Annotation parsing')
-    )
-
-    return annotation
+        vid.release()
 
 
-def video_parsing(
-    datasets,
-    img_dir: str,
-    src_dir: str,
-    crop: List[List[int]],
+def save_metadata(
+    df_list: sly.Project.DatasetDict,
+    save_dir: str,
 ) -> None:
-    os.makedirs(img_dir, exist_ok=True)
-
-    num_cores = multiprocessing.cpu_count()
-    Parallel(n_jobs=num_cores, backend='threading')(
-        delayed(parse_single_video)(
-            dataset=dataset,
-            src_dir=src_dir,
-            img_dir=img_dir,
-            crop=crop,
-        )
-        for dataset in tqdm(datasets, desc='Video parsing')
+    df = pd.concat(df_list)
+    df.sort_values(['image_path', 'class_id'], inplace=True)
+    df.reset_index(drop=True, inplace=True)
+    df.index += 1
+    save_path = os.path.join(save_dir, 'metadata.xlsx')
+    df.to_excel(
+        save_path,
+        sheet_name='Metadata',
+        index=True,
+        index_label='id',
     )
 
 
@@ -215,39 +191,42 @@ def video_parsing(
 )
 def main(cfg: DictConfig) -> None:
     log.info(f'Config:\n\n{OmegaConf.to_yaml(cfg)}')
+
     meta = json.load(open(os.path.join(cfg.data_dir, 'meta.json')))
     project_sly = sly.VideoProject(cfg.data_dir, sly.OpenMode.READ)
     class_ids = {value['title']: id + 1 for (id, value) in enumerate(meta['classes'])}
     img_dir = os.path.join(cfg.save_dir, 'img')
+    os.makedirs(img_dir, exist_ok=True)
 
-    # 1. Video parsing
-    video_parsing(
-        datasets=project_sly.datasets,
-        img_dir=img_dir,
-        src_dir=cfg.data_dir,
-        crop=cfg.crop,
+    # Process video
+    Parallel(n_jobs=-1)(
+        delayed(process_single_video)(
+            dataset=dataset,
+            src_dir=cfg.data_dir,
+            img_dir=img_dir,
+            crop=cfg.crop,
+        )
+        for dataset in tqdm(project_sly.datasets, desc='Process video')
     )
 
-    # 2. Annotation parsing
-    df_list = annotation_parsing(
-        img_dir=img_dir,
-        datasets=project_sly.datasets,
-        class_ids=class_ids,
-        crop=cfg.crop,
+    # Process annotations
+    df_list = Parallel(n_jobs=-1)(
+        delayed(process_single_annotation)(
+            dataset=dataset,
+            img_dir=img_dir,
+            class_ids=class_ids,
+            crop=cfg.crop,
+        )
+        for dataset in tqdm(project_sly.datasets, desc='Process annotations')
     )
 
-    # 3. Save annotation data frame
-    df = pd.concat(df_list)
-    df.sort_values(['image_path', 'class_id'], inplace=True)
-    df.reset_index(drop=True, inplace=True)
-    df.index += 1
-    save_path = os.path.join(cfg.save_dir, 'metadata.xlsx')
-    df.to_excel(
-        save_path,
-        sheet_name='Metadata',
-        index=True,
-        index_label='id',
+    # Save annotation metadata
+    save_metadata(
+        df_list=df_list,
+        save_dir=cfg.save_dir,
     )
+
+    log.info('Complete')
 
 
 if __name__ == '__main__':
