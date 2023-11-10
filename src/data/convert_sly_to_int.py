@@ -13,8 +13,40 @@ from omegaconf import DictConfig, OmegaConf
 from supervisely import Polygon
 from tqdm import tqdm
 
+from src import MaskProcessor
+
 log = logging.getLogger(__name__)
 log.setLevel(logging.INFO)
+
+
+def polygon_to_mask(
+    polygon: List,
+) -> Tuple[int, int, np.ndarray]:
+    # Find the top-left and bottom-right corners of the bounding box
+    x_min = min(vertex[0] for vertex in polygon)
+    x_max = max(vertex[0] for vertex in polygon)
+    y_min = min(vertex[1] for vertex in polygon)
+    y_max = max(vertex[1] for vertex in polygon)
+
+    # Compute mask height and width
+    mask_height = y_max - y_min
+    mask_width = x_max - x_min
+
+    # Create a mask using polygon vertices
+    polygon_np = np.array(polygon, dtype=np.int32)
+    points = [polygon_np - (x_min, y_min)]
+    mask = np.zeros((mask_height, mask_width), dtype=np.uint8)
+    cv2.fillPoly(mask, pts=points, color=255)
+
+    return x_min, y_min, mask
+
+
+def bitmap_to_mask(
+    encoded_bitmap: str,
+) -> np.ndarray:
+    mask = sly.Bitmap.base64_2_data(encoded_bitmap)
+
+    return mask
 
 
 # TODO: implement mask_processor
@@ -25,29 +57,30 @@ def get_mask_properties(
 ) -> Tuple[str, Polygon, List[List[Any]]]:
     if figure['geometryType'] == 'polygon':
         polygon = figure['geometry']['points']['exterior']
-        cv2.fillPoly(mask, np.array([polygon]), 1)
-        mask = mask[
-            crop[0][1] : crop[1][1],
-            crop[0][0] : crop[1][0],
-        ]
-        mask = mask.astype(bool)
+        x_min, y_min, obj_mask = polygon_to_mask(polygon)
     elif figure['geometryType'] == 'bitmap':
-        mask = mask.astype(bool)
         bitmap = figure['geometry']['bitmap']['data']
-        mask_ = sly.Bitmap.base64_2_data(bitmap)
-        mask[
-            figure['geometry']['bitmap']['origin'][1] : figure['geometry']['bitmap']['origin'][1]
-            + mask_.shape[0],
-            figure['geometry']['bitmap']['origin'][0] : figure['geometry']['bitmap']['origin'][0]
-            + mask_.shape[1],
-        ] = mask_[:, :]
+        y_min, x_min = figure['geometry']['bitmap']['origin']
+        obj_mask = bitmap_to_mask(bitmap)
     else:
         return None, None, None
 
+    # TODO: add boolean variable
+    if True:
+        mask_processor = MaskProcessor()
+        obj_mask = mask_processor.smooth_mask(mask=obj_mask)
+        obj_mask = mask_processor.remove_artifacts(mask=obj_mask)
+
+    # Paste the mask of the object into the source mask
+    mask[y_min : y_min + obj_mask.shape[0], x_min : x_min + obj_mask.shape[1]] = obj_mask[:, :]
+
+    # Crop the resulting mask using the specified coordinates
     mask = mask[
         crop[0][1] : crop[1][1],
         crop[0][0] : crop[1][0],
     ]
+
+    # Extract final information from the mask
     encoded_mask = sly.Bitmap.data_2_base64(mask)
     mask = sly.Bitmap(mask)
     contour = mask.to_contours()[0]
@@ -109,7 +142,7 @@ def process_single_annotation(
                     # Extract figure features
                     obj = objects[objects['key'] == figure['objectKey']]
                     class_title = obj.classTitle.values[0]
-                    mask = np.zeros((ann['size']['width'], ann['size']['height']))
+                    mask = np.zeros((ann['size']['height'], ann['size']['width']))
                     encoded_mask, contour, bbox = get_mask_properties(
                         figure=figure,
                         mask=mask,
@@ -199,18 +232,18 @@ def main(cfg: DictConfig) -> None:
     os.makedirs(img_dir, exist_ok=True)
 
     # Process video
-    Parallel(n_jobs=-1)(
-        delayed(process_single_video)(
-            dataset=dataset,
-            src_dir=cfg.data_dir,
-            img_dir=img_dir,
-            crop=cfg.crop,
-        )
-        for dataset in tqdm(project_sly.datasets, desc='Process video')
-    )
+    # Parallel(n_jobs=-1)(
+    #     delayed(process_single_video)(
+    #         dataset=dataset,
+    #         src_dir=cfg.data_dir,
+    #         img_dir=img_dir,
+    #         crop=cfg.crop,
+    #     )
+    #     for dataset in tqdm(project_sly.datasets, desc='Process video')
+    # )
 
     # Process annotations
-    df_list = Parallel(n_jobs=-1)(
+    df_list = Parallel(n_jobs=1)(  # TODO: set this to -1
         delayed(process_single_annotation)(
             dataset=dataset,
             img_dir=img_dir,
