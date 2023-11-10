@@ -49,24 +49,35 @@ def bitmap_to_mask(
     return mask
 
 
-# TODO: implement mask_processor
+def process_polygon_geometry(
+    polygon: dict,
+) -> Tuple[int, int, np.ndarray]:
+    x_min, y_min, obj_mask = polygon_to_mask(polygon['exterior'])
+    return x_min, y_min, obj_mask
+
+
+def process_bitmap_geometry(
+    bitmap: dict,
+) -> Tuple[int, int, np.ndarray]:
+    y_min, x_min = bitmap['origin']
+    obj_mask = bitmap_to_mask(bitmap['data'])
+    return x_min, y_min, obj_mask
+
+
 def get_mask_properties(
     figure: dict,
     mask: np.ndarray,
     crop: List[List[int]],
+    smooth_mask: bool,
 ) -> Tuple[str, Polygon, List[List[Any]]]:
     if figure['geometryType'] == 'polygon':
-        polygon = figure['geometry']['points']['exterior']
-        x_min, y_min, obj_mask = polygon_to_mask(polygon)
+        x_min, y_min, obj_mask = process_polygon_geometry(figure['geometry']['points'])
     elif figure['geometryType'] == 'bitmap':
-        bitmap = figure['geometry']['bitmap']['data']
-        y_min, x_min = figure['geometry']['bitmap']['origin']
-        obj_mask = bitmap_to_mask(bitmap)
+        x_min, y_min, obj_mask = process_bitmap_geometry(figure['geometry']['bitmap'])
     else:
         return None, None, None
 
-    # TODO: add boolean variable
-    if True:
+    if smooth_mask:
         mask_processor = MaskProcessor()
         obj_mask = mask_processor.smooth_mask(mask=obj_mask)
         obj_mask = mask_processor.remove_artifacts(mask=obj_mask)
@@ -94,9 +105,10 @@ def get_mask_properties(
 
 def process_single_annotation(
     dataset: sly.VideoDataset,
+    img_dir: str,
     class_ids: dict,
     crop: List[List[int]],
-    img_dir: str,
+    smooth_mask: bool,
 ) -> pd.DataFrame:
     df_ann = pd.DataFrame()
     study = dataset.name
@@ -147,6 +159,7 @@ def process_single_annotation(
                         figure=figure,
                         mask=mask,
                         crop=crop,
+                        smooth_mask=smooth_mask,
                     )
                     if encoded_mask is None:
                         break
@@ -232,23 +245,24 @@ def main(cfg: DictConfig) -> None:
     os.makedirs(img_dir, exist_ok=True)
 
     # Process video
-    # Parallel(n_jobs=-1)(
-    #     delayed(process_single_video)(
-    #         dataset=dataset,
-    #         src_dir=cfg.data_dir,
-    #         img_dir=img_dir,
-    #         crop=cfg.crop,
-    #     )
-    #     for dataset in tqdm(project_sly.datasets, desc='Process video')
-    # )
+    Parallel(n_jobs=-1)(
+        delayed(process_single_video)(
+            dataset=dataset,
+            src_dir=cfg.data_dir,
+            img_dir=img_dir,
+            crop=cfg.crop,
+        )
+        for dataset in tqdm(project_sly.datasets, desc='Process video')
+    )
 
     # Process annotations
-    df_list = Parallel(n_jobs=1)(  # TODO: set this to -1
+    df_list = Parallel(n_jobs=-1)(
         delayed(process_single_annotation)(
             dataset=dataset,
             img_dir=img_dir,
             class_ids=class_ids,
             crop=cfg.crop,
+            smooth_mask=cfg.smooth_mask,
         )
         for dataset in tqdm(project_sly.datasets, desc='Process annotations')
     )
