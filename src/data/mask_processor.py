@@ -12,6 +12,7 @@ class MaskProcessor:
     def smooth_mask(
         mask: np.ndarray,
     ) -> np.ndarray:
+        mask = mask.astype(np.uint8)
         min_dim = min(mask.shape)
         kernel_size = max(int(0.01 * min_dim), 1)
         kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (kernel_size, kernel_size))
@@ -25,6 +26,7 @@ class MaskProcessor:
     def remove_artifacts(
         mask: np.ndarray,
     ) -> np.ndarray:
+        mask = mask.astype(np.uint8)
         contours, _ = cv2.findContours(mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
         areas = [cv2.contourArea(cnt) for cnt in contours]
         sorted_areas = sorted(areas, reverse=True)[:3]
