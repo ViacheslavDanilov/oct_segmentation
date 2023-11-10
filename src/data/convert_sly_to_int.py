@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+import re
 from typing import Any, List, Tuple
 
 import cv2
@@ -36,7 +37,7 @@ def polygon_to_mask(
     polygon_np = np.array(polygon, dtype=np.int32)
     points = [polygon_np - (x_min, y_min)]
     mask = np.zeros((mask_height, mask_width), dtype=np.uint8)
-    cv2.fillPoly(mask, pts=points, color=255)
+    cv2.fillPoly(mask, pts=points, color=1)
 
     return x_min, y_min, mask
 
@@ -103,6 +104,20 @@ def get_mask_properties(
     return encoded_mask, contour, bbox
 
 
+def get_series_id(
+    filename: str,
+) -> int:
+    # Extract the value between '_' and '.mp4'
+    match = re.search(r'_(\d+)\.mp4', filename)
+
+    if match:
+        series_id = int(match.group(1))
+    else:
+        raise ValueError('No match found')
+
+    return series_id
+
+
 def process_single_annotation(
     dataset: sly.VideoDataset,
     img_dir: str,
@@ -113,7 +128,7 @@ def process_single_annotation(
     df_ann = pd.DataFrame()
     study = dataset.name
     for video_name in dataset:
-        series = video_name.split('_')[1]
+        series = get_series_id(video_name)
         ann_path = os.path.join(dataset.ann_dir, f'{video_name}.json')
         ann = json.load(open(ann_path))
         ann_frames = pd.DataFrame(ann['frames'])
@@ -194,7 +209,7 @@ def process_single_video(
 ) -> None:
     study = dataset.name
     for video_name in dataset:
-        series = video_name.split('_')[1]
+        series = get_series_id(video_name)
         video_path = os.path.join(src_dir, study, dataset.item_dir_name, video_name)
         vid = cv2.VideoCapture(video_path)
 
