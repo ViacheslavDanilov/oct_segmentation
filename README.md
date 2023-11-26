@@ -23,14 +23,16 @@ This repository is dedicated to the segmentation of [optical coherence tomograph
 
 Installation guide: https://docs.conda.io/projects/miniconda/en/latest/index.html#quick-command-line-install
 
-**Step 2: Set up an environment and install the necessary packages**
+**Step 2: Clone the repository and change the current working directory**
 ``` bash
-conda env create --file environment.yaml --verbose
+git clone https://github.com/ViacheslavDanilov/oct_segmentation.git
+cd oct_segmentation
 ```
 
-**Step 3: Activate environment**
+**Step 3: Set up an environment and install the necessary packages**
 ``` bash
-conda activate oct
+chmod +x make_env.sh
+./make_env.sh
 ```
 
 <a name="data"></a>
