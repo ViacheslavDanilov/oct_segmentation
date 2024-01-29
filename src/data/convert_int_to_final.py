@@ -7,11 +7,12 @@ import cv2
 import hydra
 import numpy as np
 import pandas as pd
-import supervisely_lib as sly
 from joblib import Parallel, delayed
 from omegaconf import DictConfig, OmegaConf
 from sklearn.model_selection import train_test_split
 from tqdm import tqdm
+
+from src.data.utils import CLASS_COLOR, CLASS_ID, convert_base64_to_numpy
 
 log = logging.getLogger(__name__)
 log.setLevel(logging.INFO)
@@ -74,19 +75,20 @@ def process_mask(
     df: pd.DataFrame,
     save_dir: str,
 ) -> None:
-    img_path = df.image_path.unique()[0]
+    if len(df) > 0:
+        obj_ = df.iloc[0]
+        img_name = os.path.basename(obj_.image_path)
+        mask = np.zeros((obj_.image_height, obj_.image_width))
+        mask_color = np.zeros((obj_.image_height, obj_.image_width, 3), dtype='uint8')
+        mask_color[:, :] = (128, 128, 128)
+        for _, obj in df.iterrows():
+            obj_mask = convert_base64_to_numpy(obj.encoded_mask).astype('uint8')
+            mask[obj_mask == 1] = CLASS_ID[obj.class_name]
+            mask_color[mask == CLASS_ID[obj.class_name]] = CLASS_COLOR[obj.class_name]
 
-    assert len(df.image_width.unique()) == 1, f'Image with more than one width found: {img_path}'
-    assert len(df.image_height.unique()) == 1, f'Image with more than one height found: {img_path}'
-    img_width = df.image_width.unique()[0]
-    img_height = df.image_height.unique()[0]
-
-    mask = np.zeros((img_height, img_width))
-    for _, row in df.iterrows():
-        obj_mask = sly.Bitmap.base64_2_data(row['mask'])
-        mask[obj_mask is True] = int(row.class_id)
-    cv2.imwrite(f'{save_dir}/mask/{os.path.basename(img_path)}', mask)
-    shutil.copy(img_path, f'{save_dir}/img/{os.path.basename(img_path)}')
+        cv2.imwrite(f'{save_dir}/mask/{img_name}', mask)
+        cv2.imwrite(f'{save_dir}/mask_color/{img_name}', mask_color)
+        shutil.copy(obj_.image_path, f'{save_dir}/img/{img_name}')
 
 
 def save_metadata(
@@ -118,7 +120,7 @@ def main(cfg: DictConfig) -> None:
     log.info(f'Config:\n\n{OmegaConf.to_yaml(cfg)}')
 
     for subset in ['train', 'test']:
-        for dir_type in ['img', 'mask']:
+        for dir_type in ['img', 'mask', 'mask_color']:
             os.makedirs(f'{cfg.save_dir}/{subset}/{dir_type}', exist_ok=True)
 
     # Read and process data frame

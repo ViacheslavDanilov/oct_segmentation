@@ -191,7 +191,7 @@ def process_single_annotation(
                     result_dict['box_width'] = bbox[1][0] - bbox[0][0] + 1
                     result_dict['box_height'] = bbox[1][1] - bbox[0][1] + 1
                     result_dict['area'] = int(contour.area)
-                    result_dict['mask'] = encoded_mask
+                    result_dict['encoded_mask'] = encoded_mask
                     df_ann = pd.concat([df_ann, pd.DataFrame(result_dict, index=[0])])
 
             # Save empty annotation if ann is None
