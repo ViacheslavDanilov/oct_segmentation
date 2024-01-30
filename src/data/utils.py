@@ -1,11 +1,42 @@
+import base64
 import logging
 import os
+import zlib
 from glob import glob
 from pathlib import Path
 from typing import List, Union
 
 import cv2
 import numpy as np
+
+CLASS_MAP = {
+    'Lipid core': {
+        'id': 1,
+        'color': [0, 252, 124],
+    },
+    'Lumen': {
+        'id': 2,
+        'color': [133, 21, 199],
+    },
+    'Fibrous cap': {
+        'id': 3,
+        'color': [170, 178, 32],
+    },
+    'Vasa vasorum': {
+        'id': 4,
+        'color': [34, 34, 178],
+    },
+    'Artifact': {
+        'id': 5,
+        'color': [152, 251, 152],
+    },
+}
+
+CLASS_COLOR = {
+    class_name: tuple(class_info['color']) for class_name, class_info in CLASS_MAP.items()  # type: ignore
+}
+
+CLASS_ID = {class_name: class_info['id'] for class_name, class_info in CLASS_MAP.items()}
 
 
 def get_file_list(
@@ -97,3 +128,29 @@ def get_series_name(
     series_name_ = dcm_name.replace('IMG', '')
     series_name = str(int(series_name_))
     return series_name
+
+
+def convert_base64_to_numpy(
+    s: str,
+) -> np.ndarray:
+    """Convert base64 encoded string to numpy array.
+
+    import supervisely as sly
+    encoded_string = 'eJzrDPBz5+WS4mJgYOD19HAJAtLMIMwIInOeqf8BUmwBPiGuQPr///9Lb86/C2QxlgT5BTM4PLuRBuTwebo4hlTMSa44sKHhISMDuxpTYrr03F6gDIOnq5/LOqeEJgDM5ht6'
+    figure_data = sly.Bitmap.base64_2_data(encoded_string)
+    print(figure_data)
+    #  [[ True  True  True]
+    #   [ True False  True]
+    #   [ True  True  True]]
+    """
+    z = zlib.decompress(base64.b64decode(s))
+    n = np.frombuffer(z, np.uint8)
+
+    img_decoded = cv2.imdecode(n, cv2.IMREAD_UNCHANGED)
+    if (len(img_decoded.shape) == 3) and (img_decoded.shape[2] >= 4):
+        mask = img_decoded[:, :, 3].astype(bool)  # 4-channel images
+    elif len(img_decoded.shape) == 2:
+        mask = img_decoded.astype(bool)  # flat 2D mask
+    else:
+        raise RuntimeError('Wrong internal mask format')
+    return mask

@@ -1,6 +1,7 @@
 import json
-import multiprocessing
+import logging
 import os
+import re
 from typing import Any, List, Tuple
 
 import cv2
@@ -9,41 +10,89 @@ import numpy as np
 import pandas as pd
 import supervisely_lib as sly
 from joblib import Parallel, delayed
-from omegaconf import DictConfig
+from omegaconf import DictConfig, OmegaConf
 from supervisely import Polygon
 from tqdm import tqdm
+
+from src import MaskProcessor
+
+log = logging.getLogger(__name__)
+log.setLevel(logging.INFO)
+
+
+def polygon_to_mask(
+    polygon: List,
+) -> Tuple[int, int, np.ndarray]:
+    # Find the top-left and bottom-right corners of the bounding box
+    x_min = min(vertex[0] for vertex in polygon)
+    x_max = max(vertex[0] for vertex in polygon)
+    y_min = min(vertex[1] for vertex in polygon)
+    y_max = max(vertex[1] for vertex in polygon)
+
+    # Compute mask height and width
+    mask_height = y_max - y_min
+    mask_width = x_max - x_min
+
+    # Create a mask using polygon vertices
+    polygon_np = np.array(polygon, dtype=np.int32)
+    points = [polygon_np - (x_min, y_min)]
+    mask = np.zeros((mask_height, mask_width), dtype=np.uint8)
+    cv2.fillPoly(mask, pts=points, color=1)
+
+    return x_min, y_min, mask
+
+
+def bitmap_to_mask(
+    encoded_bitmap: str,
+) -> np.ndarray:
+    mask = sly.Bitmap.base64_2_data(encoded_bitmap)
+
+    return mask
+
+
+def process_polygon_geometry(
+    polygon: dict,
+) -> Tuple[int, int, np.ndarray]:
+    x_min, y_min, obj_mask = polygon_to_mask(polygon['exterior'])
+    return x_min, y_min, obj_mask
+
+
+def process_bitmap_geometry(
+    bitmap: dict,
+) -> Tuple[int, int, np.ndarray]:
+    y_min, x_min = bitmap['origin']
+    obj_mask = bitmap_to_mask(bitmap['data'])
+    return x_min, y_min, obj_mask
 
 
 def get_mask_properties(
     figure: dict,
     mask: np.ndarray,
     crop: List[List[int]],
+    smooth_mask: bool,
 ) -> Tuple[str, Polygon, List[List[Any]]]:
     if figure['geometryType'] == 'polygon':
-        polygon = figure['geometry']['points']['exterior']
-        cv2.fillPoly(mask, np.array([polygon]), 1)
-        mask = mask[
-            crop[0][1] : crop[1][1],
-            crop[0][0] : crop[1][0],
-        ]
-        mask = mask.astype(bool)
+        x_min, y_min, obj_mask = process_polygon_geometry(figure['geometry']['points'])
     elif figure['geometryType'] == 'bitmap':
-        mask = mask.astype(bool)
-        bitmap = figure['geometry']['bitmap']['data']
-        mask_ = sly.Bitmap.base64_2_data(bitmap)
-        mask[
-            figure['geometry']['bitmap']['origin'][1] : figure['geometry']['bitmap']['origin'][1]
-            + mask_.shape[0],
-            figure['geometry']['bitmap']['origin'][0] : figure['geometry']['bitmap']['origin'][0]
-            + mask_.shape[1],
-        ] = mask_[:, :]
+        x_min, y_min, obj_mask = process_bitmap_geometry(figure['geometry']['bitmap'])
     else:
         return None, None, None
 
+    if smooth_mask:
+        mask_processor = MaskProcessor()
+        obj_mask = mask_processor.smooth_mask(mask=obj_mask)
+        obj_mask = mask_processor.remove_artifacts(mask=obj_mask)
+
+    # Paste the mask of the object into the source mask
+    mask[y_min : y_min + obj_mask.shape[0], x_min : x_min + obj_mask.shape[1]] = obj_mask[:, :]
+
+    # Crop the resulting mask using the specified coordinates
     mask = mask[
         crop[0][1] : crop[1][1],
         crop[0][0] : crop[1][0],
     ]
+
+    # Extract final information from the mask
     encoded_mask = sly.Bitmap.data_2_base64(mask)
     mask = sly.Bitmap(mask)
     contour = mask.to_contours()[0]
@@ -55,16 +104,31 @@ def get_mask_properties(
     return encoded_mask, contour, bbox
 
 
-def parse_single_annotation(
+def get_series_id(
+    filename: str,
+) -> int:
+    # Extract the value between '_' and '.mp4'
+    match = re.search(r'_(\d+)\.mp4', filename)
+
+    if match:
+        series_id = int(match.group(1))
+    else:
+        raise ValueError('No match found')
+
+    return series_id
+
+
+def process_single_annotation(
     dataset: sly.VideoDataset,
+    img_dir: str,
     class_ids: dict,
     crop: List[List[int]],
-    img_dir: str,
+    smooth_mask: bool,
 ) -> pd.DataFrame:
     df_ann = pd.DataFrame()
     study = dataset.name
     for video_name in dataset:
-        series = video_name.split('_')[1]
+        series = get_series_id(video_name)
         ann_path = os.path.join(dataset.ann_dir, f'{video_name}.json')
         ann = json.load(open(ann_path))
         ann_frames = pd.DataFrame(ann['frames'])
@@ -79,25 +143,25 @@ def parse_single_annotation(
 
             # Initializing the dictionary with annotations
             result_dict = {
-                'Image path': os.path.join(img_dir, img_name),
-                'Image name': img_name,
-                'Study': study,
-                'Series': series,
-                'Slice': slice,
-                'Image width': crop[1][0] - crop[0][0],
-                'Image height': crop[1][1] - crop[0][1],
-                'Class ID': None,
-                'Class': None,
+                'image_path': os.path.join(img_dir, img_name),
+                'image_name': img_name,
+                'study': study,
+                'series': series,
+                'slice': slice,
+                'image_width': crop[1][0] - crop[0][0],
+                'image_height': crop[1][1] - crop[0][1],
+                'class_id': None,
+                'class_name': None,
                 'x1': None,
                 'y1': None,
                 'x2': None,
                 'y2': None,
                 'xc': None,
                 'yc': None,
-                'Box width': None,
-                'Box height': None,
-                'Area': None,
-                'Mask': None,
+                'box_width': None,
+                'box_height': None,
+                'area': None,
+                'mask': None,
             }
 
             if len(ann_frame) != 0:
@@ -105,28 +169,29 @@ def parse_single_annotation(
                     # Extract figure features
                     obj = objects[objects['key'] == figure['objectKey']]
                     class_title = obj.classTitle.values[0]
-                    mask = np.zeros((ann['size']['width'], ann['size']['height']))
+                    mask = np.zeros((ann['size']['height'], ann['size']['width']))
                     encoded_mask, contour, bbox = get_mask_properties(
                         figure=figure,
                         mask=mask,
                         crop=crop,
+                        smooth_mask=smooth_mask,
                     )
                     if encoded_mask is None:
                         break
 
                     # Fill the result dictionary with the figure properties
-                    result_dict['Class ID'] = class_ids[class_title]
-                    result_dict['Class'] = class_title
+                    result_dict['class_id'] = class_ids[class_title]
+                    result_dict['class_name'] = class_title
                     result_dict['x1'] = bbox[0][0]
                     result_dict['y1'] = bbox[0][1]
                     result_dict['x2'] = bbox[1][0]
                     result_dict['y2'] = bbox[1][1]
                     result_dict['xc'] = int(np.mean([bbox[0][0], bbox[1][0]]))
                     result_dict['yc'] = int(np.mean([bbox[0][1], bbox[1][1]]))
-                    result_dict['Box width'] = bbox[1][0] - bbox[0][0]
-                    result_dict['Box height'] = bbox[1][1] - bbox[0][1]
-                    result_dict['Area'] = int(contour.area)
-                    result_dict['Mask'] = encoded_mask
+                    result_dict['box_width'] = bbox[1][0] - bbox[0][0] + 1
+                    result_dict['box_height'] = bbox[1][1] - bbox[0][1] + 1
+                    result_dict['area'] = int(contour.area)
+                    result_dict['encoded_mask'] = encoded_mask
                     df_ann = pd.concat([df_ann, pd.DataFrame(result_dict, index=[0])])
 
             # Save empty annotation if ann is None
@@ -136,7 +201,7 @@ def parse_single_annotation(
     return df_ann
 
 
-def parse_single_video(
+def process_single_video(
     dataset: sly.VideoDataset,
     src_dir: str,
     img_dir: str,
@@ -144,63 +209,39 @@ def parse_single_video(
 ) -> None:
     study = dataset.name
     for video_name in dataset:
-        series = video_name.split('_')[1]
-        vid = cv2.VideoCapture(
-            f'{src_dir}/{study}/{dataset.item_dir_name}/{video_name}',
-        )
+        series = get_series_id(video_name)
+        video_path = os.path.join(src_dir, study, dataset.item_dir_name, video_name)
+        vid = cv2.VideoCapture(video_path)
+
         idx = 1
         while True:
             _, img = vid.read()
             if _:
-                img = img[
-                    crop[0][1] : crop[1][1],
-                    crop[0][0] : crop[1][0],
-                    :,
-                ]
+                img = img[crop[0][1] : crop[1][1], crop[0][0] : crop[1][0], :]
                 img_name = f'{study}_{series}_{idx:03d}.png'
-                cv2.imwrite(os.path.join(img_dir, img_name), img)
+                img_path = os.path.join(img_dir, img_name)
+                cv2.imwrite(img_path, img)
                 idx += 1
             else:
                 break
 
-
-def annotation_parsing(
-    datasets: sly.Project.DatasetDict,
-    class_ids: dict,
-    crop: List[List[int]],
-    img_dir: str,
-):
-    num_cores = multiprocessing.cpu_count()
-    annotation = Parallel(n_jobs=num_cores, backend='threading')(
-        delayed(parse_single_annotation)(
-            dataset=dataset,
-            class_ids=class_ids,
-            crop=crop,
-            img_dir=img_dir,
-        )
-        for dataset in tqdm(datasets, desc='Annotation parsing')
-    )
-
-    return annotation
+        vid.release()
 
 
-def video_parsing(
-    datasets,
-    img_dir: str,
-    src_dir: str,
-    crop: List[List[int]],
+def save_metadata(
+    df_list: sly.Project.DatasetDict,
+    save_dir: str,
 ) -> None:
-    os.makedirs(img_dir, exist_ok=True)
-
-    num_cores = multiprocessing.cpu_count()
-    Parallel(n_jobs=num_cores, backend='threading')(
-        delayed(parse_single_video)(
-            dataset=dataset,
-            src_dir=src_dir,
-            img_dir=img_dir,
-            crop=crop,
-        )
-        for dataset in tqdm(datasets, desc='Video parsing')
+    df = pd.concat(df_list)
+    df.sort_values(['image_path', 'class_id'], inplace=True)
+    df.reset_index(drop=True, inplace=True)
+    df.index += 1
+    save_path = os.path.join(save_dir, 'metadata.xlsx')
+    df.to_excel(
+        save_path,
+        sheet_name='Metadata',
+        index=True,
+        index_label='id',
     )
 
 
@@ -209,42 +250,45 @@ def video_parsing(
     config_name='convert_sly_to_int',
     version_base=None,
 )
-def main(
-    cfg: DictConfig,
-) -> None:
+def main(cfg: DictConfig) -> None:
+    log.info(f'Config:\n\n{OmegaConf.to_yaml(cfg)}')
+
     meta = json.load(open(os.path.join(cfg.data_dir, 'meta.json')))
     project_sly = sly.VideoProject(cfg.data_dir, sly.OpenMode.READ)
-    class_ids = {value['title']: id for (id, value) in enumerate(meta['classes'])}
+    class_ids = {value['title']: id + 1 for (id, value) in enumerate(meta['classes'])}
     img_dir = os.path.join(cfg.save_dir, 'img')
+    os.makedirs(img_dir, exist_ok=True)
 
-    # 1. Video parsing
-    video_parsing(
-        datasets=project_sly.datasets,
-        img_dir=img_dir,
-        src_dir=cfg.data_dir,
-        crop=cfg.crop,
+    # Process video
+    Parallel(n_jobs=-1)(
+        delayed(process_single_video)(
+            dataset=dataset,
+            src_dir=cfg.data_dir,
+            img_dir=img_dir,
+            crop=cfg.crop,
+        )
+        for dataset in tqdm(project_sly.datasets, desc='Process video')
     )
 
-    # 2. Annotation parsing
-    df_list = annotation_parsing(
-        img_dir=img_dir,
-        datasets=project_sly.datasets,
-        class_ids=class_ids,
-        crop=cfg.crop,
+    # Process annotations
+    df_list = Parallel(n_jobs=-1)(
+        delayed(process_single_annotation)(
+            dataset=dataset,
+            img_dir=img_dir,
+            class_ids=class_ids,
+            crop=cfg.crop,
+            smooth_mask=cfg.smooth_mask,
+        )
+        for dataset in tqdm(project_sly.datasets, desc='Process annotations')
     )
 
-    # 3. Save annotation data frame
-    df = pd.concat(df_list)
-    df.sort_values(['Image path', 'Class ID'], inplace=True)
-    df.reset_index(drop=True, inplace=True)
-    df.index += 1
-    save_path = os.path.join(cfg.save_dir, 'metadata.xlsx')
-    df.to_excel(
-        save_path,
-        sheet_name='Metadata',
-        index=True,
-        index_label='ID',
+    # Save annotation metadata
+    save_metadata(
+        df_list=df_list,
+        save_dir=cfg.save_dir,
     )
+
+    log.info('Complete')
 
 
 if __name__ == '__main__':

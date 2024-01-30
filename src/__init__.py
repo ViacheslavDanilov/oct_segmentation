@@ -1,5 +1,4 @@
-import os
-import sys
-
-file_dir = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(file_dir)
+from .data.mask_processor import MaskProcessor  # noqa: F401
+from .models.smp.data_manager import DataManager  # noqa: F401
+from .models.smp.dataset import OCTDataModule, OCTDataset  # noqa: F401
+from .models.smp.model import OCTSegmentationModel  # noqa: F401

@@ -2,71 +2,94 @@ schema: '2.0'
 stages:
   extract_metadata:
     cmd:
+    - echo "STAGE I"
+    - rm data/raw_metadata.xlsx || true
     - python src/data/extract_metadata.py
     deps:
+    - path: data/raw
+      hash: md5
+      md5: 776e4b24b55ef408ffd324a3e6cfcd57.dir
+      size: 51636608570
+      nfiles: 210
     - path: src/data/extract_metadata.py
-      md5: 063022648bcd39a902bd4015d2f5eef8
-      size: 4068
+      hash: md5
+      md5: 704b2c1e901c98be0b9b546837022b79
+      size: 4063
     outs:
     - path: data/raw_metadata.xlsx
-      md5: 81a65e0be91250493b44abd4b989ac68
-      size: 12489
+      hash: md5
+      md5: e0188b2e190e1327aac98f8838cda94d
+      size: 17908
   dicoms_to_rgb:
     cmd:
+    - rm -rf data/sly_input_rgb || true
     - python src/data/convert_dicoms.py to_gray=false save_dir=data/sly_input_rgb
     deps:
     - path: data/raw_metadata.xlsx
-      md5: 81a65e0be91250493b44abd4b989ac68
-      size: 12489
+      hash: md5
+      md5: e0188b2e190e1327aac98f8838cda94d
+      size: 17908
     - path: src/data/convert_dicoms.py
-      md5: c7cddb3baf6bc9a4c53409e5b2e9c20b
-      size: 4411
+      hash: md5
+      md5: fd16e4f09df6b792599beb93c14dad41
+      size: 4327
     outs:
     - path: data/sly_input_rgb
-      md5: 03d24fbe8a74fc67a9c097ab6a2a1e69.dir
-      size: 13247360699
-      nfiles: 14363
+      hash: md5
+      md5: 405e97e95a7138500e771dd69d56519b.dir
+      size: 23240758188
+      nfiles: 25698
   dicoms_to_grayscale:
     cmd:
+    - rm -rf data/sly_input_gray || true
     - python src/data/convert_dicoms.py to_gray=true save_dir=data/sly_input_gray
     deps:
     - path: data/raw_metadata.xlsx
-      md5: 81a65e0be91250493b44abd4b989ac68
-      size: 12489
+      hash: md5
+      md5: e0188b2e190e1327aac98f8838cda94d
+      size: 17908
     - path: src/data/convert_dicoms.py
-      md5: c7cddb3baf6bc9a4c53409e5b2e9c20b
-      size: 4411
+      hash: md5
+      md5: fd16e4f09df6b792599beb93c14dad41
+      size: 4327
     outs:
     - path: data/sly_input_gray
-      md5: cde6ae30ce8602f3b46f84bbfd78deb2.dir
-      size: 3878583354
-      nfiles: 14363
+      hash: md5
+      md5: df209b549a4c8d5726c2ac792a9c0c2e.dir
+      size: 6279185933
+      nfiles: 25698
   stack_images:
     cmd:
+    - rm -rf data/sly_input || true
     - python src/data/stack_images.py output_type=video save_dir=data/sly_input
     deps:
     - path: data/sly_input_gray
-      md5: cde6ae30ce8602f3b46f84bbfd78deb2.dir
-      size: 3878583354
-      nfiles: 14363
+      hash: md5
+      md5: df209b549a4c8d5726c2ac792a9c0c2e.dir
+      size: 6279185933
+      nfiles: 25698
     - path: data/sly_input_rgb
-      md5: 03d24fbe8a74fc67a9c097ab6a2a1e69.dir
-      size: 13247360699
-      nfiles: 14363
+      hash: md5
+      md5: 405e97e95a7138500e771dd69d56519b.dir
+      size: 23240758188
+      nfiles: 25698
     - path: src/data/stack_images.py
-      md5: 0d01627ccdf79f668ba2983a2dd42ae2
-      size: 4879
+      hash: md5
+      md5: 72f001c3e0758d0d93f89d4dc5e03978
+      size: 4802
     outs:
     - path: data/sly_input
-      md5: ca53b3d8cc7c4d6e55160771440161c4.dir
-      size: 1178481901
-      nfiles: 58
+      hash: md5
+      md5: 6a9dd1489fd0c7b0bd87cfc52288c3b7.dir
+      size: 2161497267
+      nfiles: 103
   remove_images:
     cmd:
     - rm -rf data/sly_input_rgb || true
     - rm -rf data/sly_input_gray || true
     deps:
     - path: data/sly_input
-      md5: ca53b3d8cc7c4d6e55160771440161c4.dir
-      size: 1178481901
-      nfiles: 58
+      hash: md5
+      md5: 6a9dd1489fd0c7b0bd87cfc52288c3b7.dir
+      size: 2161497267
+      nfiles: 103

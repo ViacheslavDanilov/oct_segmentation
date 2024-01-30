@@ -1,0 +1,10 @@
+defaults:
+- main
+- _self_
+
+data_dir: data/interim
+train_size: 0.80
+seed: 11
+# Available classes: Lipid core, Lumen, Fibrous cap, Vasa vasorum
+exclude_classes: []
+save_dir: data/final
