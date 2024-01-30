@@ -106,7 +106,7 @@ def extract_metadata(
 
         log.info(f'Processed DICOM: {dcm_path}')
 
-    except Exception as e:
+    except Exception:
         log.warning(f'Broken DICOM: {dcm_path}')
 
     return meta

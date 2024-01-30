@@ -4,4 +4,5 @@ defaults:
 
 data_dir: data/sly_output
 crop: [[0, 0], [1000, 1000]]
+smooth_mask: true
 save_dir: data/interim

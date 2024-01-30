@@ -1,7 +1,5 @@
 import logging
-import multiprocessing
 import os
-from functools import partial
 from glob import glob
 from pathlib import Path
 from typing import List
@@ -11,9 +9,9 @@ import ffmpeg
 import hydra
 import imutils
 import numpy as np
+from joblib import Parallel, delayed
 from omegaconf import DictConfig, OmegaConf
 from tqdm import tqdm
-from tqdm.contrib.concurrent import process_map
 
 from src.data.utils import get_dir_list, get_file_list
 
@@ -131,20 +129,18 @@ def main(cfg: DictConfig) -> None:
     assert len(study_list_rgb) == len(study_list_gray), 'Mismatch number of series'
     series_list = [[series_dirs_rgb[i], series_dirs_gray[i]] for i in range(len(series_dirs_rgb))]
 
-    num_cores = multiprocessing.cpu_count()
-    processing_func = partial(
-        process_single_series,
-        img_height=cfg.output_size[0],
-        img_width=cfg.output_size[1],
-        output_type=cfg.output_type,
-        fps=cfg.fps,
-        save_dir=cfg.save_dir,
+    Parallel(n_jobs=-1, backend='threading')(
+        delayed(process_single_series)(
+            series_dirs=series_dirs,
+            img_height=cfg.output_size[0],
+            img_width=cfg.output_size[1],
+            output_type=cfg.output_type,
+            fps=cfg.fps,
+            save_dir=cfg.save_dir,
+        )
+        for series_dirs in tqdm(series_list, desc='Stacking series', unit=' series')
     )
-    process_map(
-        processing_func,
-        tqdm(series_list, desc='Stacking series', unit=' series'),
-        max_workers=num_cores,
-    )
+
     log.info('Complete')
 
 

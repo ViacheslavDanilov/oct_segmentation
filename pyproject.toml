@@ -1,6 +1,14 @@
+[project]
+name = 'oct_segmentation'
+version = '0.0.1'
+
+[tool.setuptools.packages]
+find = {}   # Scan the project directory with the default parameters
+
 [tool.black]
 line_length = 100
 skip_string_normalization = true
+verbose = true
 
 [tool.pycln]
 all = true
@@ -12,6 +20,41 @@ force_grid_wrap = 0
 include_trailing_comma = true
 use_parentheses = true
 ensure_newline_before_comments = true
+
+[tool.ruff]
+line-length = 100
+ignore=['E501']
+# Enable pycodestyle (`E`) and Pyflakes (`F`) codes by default
+select = ['E', 'F']
+# Allow unused variables when underscore-prefixed
+dummy-variable-rgx = '^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$'
+# Exclude a variety of commonly ignored directories
+exclude = [
+    '.bzr',
+    '.direnv',
+    '.eggs',
+    '.git',
+    '.git-rewrite',
+    '.hg',
+    '.mypy_cache',
+    '.nox',
+    '.pants.d',
+    '.pytype',
+    '.ruff_cache',
+    '.svn',
+    '.tox',
+    '.venv',
+    '__pypackages__',
+    '_build',
+    'buck-out',
+    'build',
+    'dist',
+    'node_modules',
+    'venv',
+]
+
+[tool.ruff.mccabe]
+max-complexity = 10
 
 [tool.pydocstyle]
 convention = 'google'

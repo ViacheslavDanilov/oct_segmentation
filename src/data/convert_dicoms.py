@@ -1,7 +1,5 @@
 import logging
-import multiprocessing
 import os
-from functools import partial
 from typing import Tuple
 
 import cv2
@@ -9,9 +7,9 @@ import ffmpeg
 import hydra
 import imutils
 import pydicom
+from joblib import Parallel, delayed
 from omegaconf import DictConfig, OmegaConf
 from tqdm import tqdm
-from tqdm.contrib.concurrent import process_map
 
 from src.data.utils import (
     convert_to_grayscale,
@@ -125,20 +123,18 @@ def main(cfg: DictConfig) -> None:
         exclude_dirs=cfg.exclude_dirs,
     )
 
-    num_cores = multiprocessing.cpu_count()
-    conversion_func = partial(
-        convert_single_study,
-        output_type=cfg.output_type,
-        output_size=cfg.output_size,
-        to_gray=cfg.to_gray,
-        fps=cfg.fps,
-        save_dir=cfg.save_dir,
+    Parallel(n_jobs=-1, backend='threading')(
+        delayed(convert_single_study)(
+            data_dir=study_dir,
+            output_type=cfg.output_type,
+            output_size=cfg.output_size,
+            to_gray=cfg.to_gray,
+            fps=cfg.fps,
+            save_dir=cfg.save_dir,
+        )
+        for study_dir in tqdm(study_list, desc='Convert studies', unit=' study')
     )
-    process_map(
-        conversion_func,
-        tqdm(study_list, desc='Convert studies', unit=' study'),
-        max_workers=num_cores,
-    )
+
     log.info('Complete')
 
 
