@@ -131,7 +131,7 @@ def get_series_name(
 
 
 def convert_base64_to_numpy(
-        s: str,
+    s: str,
 ) -> np.ndarray:
     """Convert base64 encoded string to numpy array.
 
