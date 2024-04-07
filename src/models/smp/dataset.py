@@ -189,7 +189,7 @@ class OCTDataModule(pl.LightningDataModule):
 
 if __name__ == '__main__':
     dataset = OCTDataset(
-        subset_dir='data/final/train',
+        data_dir='data/final/train',
         classes=['Lipid core', 'Lumen', 'Fibrous cap', 'Vasa vasorum'],
         input_size=448,
         use_augmentation=False,
