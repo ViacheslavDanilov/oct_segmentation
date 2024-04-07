@@ -11,6 +11,7 @@ from joblib import Parallel, delayed
 from omegaconf import DictConfig, OmegaConf
 from tqdm import tqdm
 
+from src import PROJECT_DIR
 from src.data.utils import (
     convert_to_grayscale,
     get_dir_list,
@@ -110,15 +111,19 @@ def convert_single_study(
 
 
 @hydra.main(
-    config_path=os.path.join(os.getcwd(), 'configs'),
+    config_path=os.path.join(PROJECT_DIR, 'configs'),
     config_name='convert_dicoms',
     version_base=None,
 )
 def main(cfg: DictConfig) -> None:
     log.info(f'Config:\n\n{OmegaConf.to_yaml(cfg)}')
 
+    # Define absolute paths
+    data_dir = os.path.join(PROJECT_DIR, cfg.data_dir)
+    save_dir = os.path.join(PROJECT_DIR, cfg.save_dir)
+
     study_list = get_dir_list(
-        data_dir=cfg.data_dir,
+        data_dir=data_dir,
         include_dirs=cfg.include_dirs,
         exclude_dirs=cfg.exclude_dirs,
     )
@@ -130,7 +135,7 @@ def main(cfg: DictConfig) -> None:
             output_size=cfg.output_size,
             to_gray=cfg.to_gray,
             fps=cfg.fps,
-            save_dir=cfg.save_dir,
+            save_dir=save_dir,
         )
         for study_dir in tqdm(study_list, desc='Convert studies', unit=' study')
     )

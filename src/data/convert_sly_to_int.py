@@ -14,7 +14,8 @@ from omegaconf import DictConfig, OmegaConf
 from supervisely import Polygon
 from tqdm import tqdm
 
-from src import MaskProcessor
+from src import PROJECT_DIR
+from src.data.mask_processor import MaskProcessor
 
 log = logging.getLogger(__name__)
 log.setLevel(logging.INFO)
@@ -246,24 +247,28 @@ def save_metadata(
 
 
 @hydra.main(
-    config_path=os.path.join(os.getcwd(), 'configs'),
+    config_path=os.path.join(PROJECT_DIR, 'configs'),
     config_name='convert_sly_to_int',
     version_base=None,
 )
 def main(cfg: DictConfig) -> None:
     log.info(f'Config:\n\n{OmegaConf.to_yaml(cfg)}')
 
-    meta = json.load(open(os.path.join(cfg.data_dir, 'meta.json')))
-    project_sly = sly.VideoProject(cfg.data_dir, sly.OpenMode.READ)
+    # Define absolute paths
+    data_dir = os.path.join(PROJECT_DIR, cfg.data_dir)
+    save_dir = os.path.join(PROJECT_DIR, cfg.save_dir)
+
+    meta = json.load(open(os.path.join(data_dir, 'meta.json')))
+    project_sly = sly.VideoProject(data_dir, sly.OpenMode.READ)
     class_ids = {value['title']: id + 1 for (id, value) in enumerate(meta['classes'])}
-    img_dir = os.path.join(cfg.save_dir, 'img')
+    img_dir = os.path.join(save_dir, 'img')
     os.makedirs(img_dir, exist_ok=True)
 
     # Process video
     Parallel(n_jobs=-1)(
         delayed(process_single_video)(
             dataset=dataset,
-            src_dir=cfg.data_dir,
+            src_dir=data_dir,
             img_dir=img_dir,
             crop=cfg.crop,
         )
@@ -285,7 +290,7 @@ def main(cfg: DictConfig) -> None:
     # Save annotation metadata
     save_metadata(
         df_list=df_list,
-        save_dir=cfg.save_dir,
+        save_dir=save_dir,
     )
 
     log.info('Complete')

@@ -12,6 +12,7 @@ from omegaconf import DictConfig, OmegaConf
 from sklearn.model_selection import train_test_split
 from tqdm import tqdm
 
+from src import PROJECT_DIR
 from src.data.utils import CLASS_COLOR, CLASS_ID, convert_base64_to_numpy
 
 log = logging.getLogger(__name__)
@@ -112,20 +113,24 @@ def save_metadata(
 
 
 @hydra.main(
-    config_path=os.path.join(os.getcwd(), 'configs'),
-    config_name='convert_int_to_final',
+    config_path=os.path.join(PROJECT_DIR, 'configs'),
+    config_name='convert_int_to_cv',
     version_base=None,
 )
 def main(cfg: DictConfig) -> None:
     log.info(f'Config:\n\n{OmegaConf.to_yaml(cfg)}')
 
+    # Define absolute paths
+    data_dir = os.path.join(PROJECT_DIR, cfg.data_dir)
+    save_dir = os.path.join(PROJECT_DIR, cfg.save_dir)
+
     for subset in ['train', 'test']:
         for dir_type in ['img', 'mask', 'mask_color']:
-            os.makedirs(f'{cfg.save_dir}/{subset}/{dir_type}', exist_ok=True)
+            os.makedirs(f'{save_dir}/{subset}/{dir_type}', exist_ok=True)
 
     # Read and process data frame
     df = process_metadata(
-        data_dir=cfg.data_dir,
+        data_dir=data_dir,
         exclude_classes=cfg.exclude_classes,
     )
 
@@ -143,14 +148,14 @@ def main(cfg: DictConfig) -> None:
     Parallel(n_jobs=-1, backend='threading')(
         delayed(process_mask)(
             df=train_group,
-            save_dir=os.path.join(cfg.save_dir, 'train'),
+            save_dir=os.path.join(save_dir, 'train'),
         )
         for _, train_group in tqdm(train_groups, desc='Preparation of training subset')
     )
     Parallel(n_jobs=-1, backend='threading')(
         delayed(process_mask)(
             df=test_group,
-            save_dir=os.path.join(cfg.save_dir, 'test'),
+            save_dir=os.path.join(save_dir, 'test'),
         )
         for _, test_group in tqdm(test_groups, desc='Preparation of testing subset')
     )
@@ -158,7 +163,7 @@ def main(cfg: DictConfig) -> None:
     # Save dataset metadata
     save_metadata(
         df=df,
-        save_dir=cfg.save_dir,
+        save_dir=save_dir,
     )
 
     log.info('Complete')
