@@ -161,7 +161,7 @@ data/dcm*.csv
 data/sly_input*/
 data/sly_output*/
 data/interim*/
-data/final*/
+data/cv*/
 
 # Models
 *.pth
