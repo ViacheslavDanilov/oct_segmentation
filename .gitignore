@@ -158,8 +158,7 @@ logs/
 # Dataset
 data/dcm*/
 data/dcm*.csv
-data/sly_input*/
-data/sly_output*/
+data/sly*/
 data/interim*/
 data/cv*/
 
