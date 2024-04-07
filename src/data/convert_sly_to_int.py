@@ -238,7 +238,7 @@ def save_metadata(
     df.reset_index(drop=True, inplace=True)
     df.index += 1
     save_path = os.path.join(save_dir, 'metadata.csv')
-    df.to_excel(save_path, index_label='id')
+    df.to_csv(save_path, index_label='id')
 
 
 @hydra.main(
