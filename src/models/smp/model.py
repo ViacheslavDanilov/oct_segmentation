@@ -1,4 +1,4 @@
-from typing import List, Tuple
+from typing import List
 
 import numpy as np
 import pytorch_lightning as pl
@@ -66,7 +66,8 @@ class OCTSegmentationModel(pl.LightningModule):
         prob_mask = logits_mask.sigmoid()  # type: ignore
         pred_mask = (prob_mask > 0.5).float()
 
-        self.log('training/loss', loss, prog_bar=True, on_epoch=True)
+        # TODO: check if 'train/loss' is fine for you
+        self.log('train/loss', loss, prog_bar=True, on_epoch=True)
         self.training_step_outputs.append(
             get_metrics(
                 mask=mask,
