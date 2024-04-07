@@ -53,26 +53,26 @@ stages:
     - rm -rf data/sly_input_gray || true
     always_changed: true
 
-#  # STAGE II
-#  sly_to_int:
-#    cmd:
-#    - echo "STAGE II"
-#    - rm -rf data/interim || true
-#    - python src/data/convert_sly_to_int.py
-#    deps:
-#    - src/data/convert_sly_to_int.py
-#    - data/sly_output
-#    - data/sly_input    # Used to keep the stages in a strict order
-#    outs:
-#    - data/interim
-#
-#  int_to_final:
-#    cmd:
-#    - rm -rf data/final || true
-#    - python src/data/convert_int_to_final.py
-#    deps:
-#    - src/data/convert_int_to_final.py
-#    - data/interim
-#    - data/interim/metadata.xlsx
-#    outs:
-#    - data/final
+  # STAGE II
+  sly_to_int:
+    cmd:
+    - echo "STAGE II"
+    - rm -rf data/interim || true
+    - python src/data/convert_sly_to_int.py
+    deps:
+    - src/data/convert_sly_to_int.py
+    - data/sly_output
+    - data/sly_input    # Used to keep the stages in a strict order
+    outs:
+    - data/interim
+
+  int_to_cv:
+    cmd:
+    - rm -rf data/cv || true
+    - python src/data/convert_int_to_cv.py
+    deps:
+    - src/data/convert_int_to_cv.py
+    - data/interim
+    - data/interim/metadata.xlsx
+    outs:
+    - data/cv
