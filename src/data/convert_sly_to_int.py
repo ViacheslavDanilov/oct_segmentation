@@ -237,13 +237,8 @@ def save_metadata(
     df.sort_values(['image_path', 'class_id'], inplace=True)
     df.reset_index(drop=True, inplace=True)
     df.index += 1
-    save_path = os.path.join(save_dir, 'metadata.xlsx')
-    df.to_excel(
-        save_path,
-        sheet_name='Metadata',
-        index=True,
-        index_label='id',
-    )
+    save_path = os.path.join(save_dir, 'metadata.csv')
+    df.to_excel(save_path, index_label='id')
 
 
 @hydra.main(
