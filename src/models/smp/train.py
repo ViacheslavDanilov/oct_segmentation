@@ -9,7 +9,9 @@ from omegaconf import DictConfig, OmegaConf
 from pytorch_lightning import loggers as pl_loggers
 from pytorch_lightning.callbacks import LearningRateMonitor, ModelCheckpoint
 
-from src import DataManager, OCTDataModule, OCTSegmentationModel
+from src.models.smp.data_manager import DataManager
+from src.models.smp.dataset import OCTDataModule
+from src.models.smp.model import OCTSegmentationModel
 
 log = logging.getLogger(__name__)
 log.setLevel(logging.INFO)

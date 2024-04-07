@@ -2,5 +2,5 @@ defaults:
 - main
 - _self_
 
-data_dir: data/raw
+data_dir: data/dcm
 save_dir: data

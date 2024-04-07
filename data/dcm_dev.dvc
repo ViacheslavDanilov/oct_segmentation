@@ -3,4 +3,4 @@ outs:
   size: 961999248
   nfiles: 6
   hash: md5
-  path: raw_dev
+  path: dcm_dev
