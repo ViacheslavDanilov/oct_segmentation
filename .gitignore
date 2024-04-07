@@ -156,8 +156,8 @@ logs/
 .dvc/cache
 
 # Dataset
-data/raw*/
-data/raw_metadata.xlsx
+data/dcm*/
+data/dcm*.csv
 data/sly_input*/
 data/sly_output*/
 data/interim*/

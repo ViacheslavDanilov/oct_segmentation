@@ -8,9 +8,9 @@ stages:
     - python src/data/extract_metadata.py
     deps:
     - src/data/extract_metadata.py
-    - data/raw
+    - data/dcm
     outs:
-    - data/raw_metadata.xlsx
+    - data/dcm_metadata.csv
 
   convert_dicoms:
     cmd:
