@@ -31,8 +31,8 @@ def process_metadata(
     Returns:
         meta: data frame derived from a meta file
     """
-    df_path = os.path.join(data_dir, 'metadata.xlsx')
-    df = pd.read_excel(df_path)
+    df_path = os.path.join(data_dir, 'metadata.csv')
+    df = pd.read_csv(df_path)
     df.drop('id', axis=1, inplace=True)
     df = df[~df['class_name'].isin(exclude_classes)]
     df = df.dropna(subset=['class_name'])

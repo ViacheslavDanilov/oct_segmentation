@@ -67,6 +67,6 @@ stages:
     deps:
     - src/data/convert_int_to_cv.py
     - data/interim
-    - data/interim/metadata.xlsx
+    - data/interim/metadata.csv
     outs:
     - data/cv
