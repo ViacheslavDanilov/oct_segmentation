@@ -22,8 +22,10 @@ stages:
     - src/data/convert_dicoms.py
     - data/dcm_metadata.csv
     outs:
-    - data/sly_input_rgb
-    - data/sly_input_gray
+    - data/sly_input_rgb:
+        cache: false
+    - data/sly_input_gray:
+        cache: false
 
   stack_images:
     cmd:
