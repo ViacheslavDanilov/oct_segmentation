@@ -44,7 +44,6 @@ CLASS_ID_REVERSED = dict((v, k) for k, v in CLASS_ID.items())
 def get_file_list(
     src_dirs: Union[List[str], str],
     ext_list: Union[List[str], str],
-    dirname_template: str = '',
     filename_template: str = '',
 ) -> List[str]:
     """Get a list of files in the specified directory with specific extensions.
@@ -52,7 +51,6 @@ def get_file_list(
     Args:
         src_dirs: directory(s) with files inside
         ext_list: extension(s) used for a search
-        dirname_template: include directories with this template
         filename_template: include files with this template
     Returns:
         all_files: a list of file paths
@@ -65,12 +63,7 @@ def get_file_list(
             for file in files:
                 file_ext = Path(file).suffix
                 file_ext = file_ext.lower()
-                dir_name = os.path.basename(root)
-                if (
-                    file_ext in ext_list
-                    and dirname_template in dir_name
-                    and filename_template in file
-                ):
+                if file_ext in ext_list and filename_template in file:
                     file_path = os.path.join(root, file)
                     all_files.append(file_path)
     all_files.sort()
