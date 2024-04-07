@@ -38,6 +38,8 @@ CLASS_COLOR = {
 
 CLASS_ID = {class_name: class_info['id'] for class_name, class_info in CLASS_MAP.items()}
 
+CLASS_ID_REVERSED = dict((v, k) for k, v in CLASS_ID.items())
+
 
 def get_file_list(
     src_dirs: Union[List[str], str],

@@ -1,13 +1,20 @@
+import logging
+import multiprocessing
 import os
-from typing import List
+import random
+from glob import glob
+from pathlib import Path
+from typing import List, Tuple, Union
 
 import albumentations as albu
 import cv2
 import numpy as np
 import pytorch_lightning as pl
+from joblib import Parallel, delayed
 from torch.utils.data import DataLoader, Dataset
+from tqdm import tqdm
 
-from src.data.utils import get_file_list
+from src.data.utils import CLASS_ID
 
 
 class OCTDataset(Dataset):
@@ -15,69 +22,63 @@ class OCTDataset(Dataset):
 
     def __init__(
         self,
-        subset_dir: str,
+        data_dir: str,
         classes: List[str],
-        input_size: int = 448,
+        input_size: int = 512,
         use_augmentation: bool = False,
     ):
-        self.input_size = input_size
         self.classes = classes
-        self.classes_idx = [idx + 1 for idx, _ in enumerate(self.classes)]
-        self.samples = self.get_list_of_samples(subset_dir)
+        mask_paths = glob(f'{data_dir}/mask/*.[pj][np][pge]')
+        self.input_size = input_size
+
+        num_cores = multiprocessing.cpu_count()
+        check_list = Parallel(n_jobs=num_cores, backend='threading')(
+            delayed(self.data_check)(f'{data_dir}/img', mask_id)
+            for mask_id in tqdm(mask_paths, desc='image load')
+        )
+
+        self.img_paths = list(np.array(check_list)[:, 1])
+        self.mask_paths = list(np.array(check_list)[:, 0])
+        self.class_values = [CLASS_ID[cl] for _, cl in enumerate(self.classes)]
+
         self.use_augmentation = use_augmentation
 
-    def __getitem__(
-        self,
-        idx: int,
-    ):
-        img_path, mask_path = self.samples[idx]
-        image = cv2.imread(img_path)
-        image = cv2.resize(
-            image,
-            (self.input_size, self.input_size),
-            interpolation=cv2.INTER_LANCZOS4,
-        )
-        mask = cv2.imread(mask_path, cv2.IMREAD_GRAYSCALE)
+    def __getitem__(self, i: int):
+        img = cv2.imread(self.img_paths[i])
+        img = cv2.resize(img, (self.input_size, self.input_size))
+        mask = cv2.imread(self.mask_paths[i], 0)
         mask = cv2.resize(mask, (self.input_size, self.input_size), interpolation=cv2.INTER_NEAREST)
 
-        masks = [(mask == v) for v in self.classes_idx]
+        masks = [(mask == v) for v in self.class_values]
         mask = np.stack(masks, axis=-1).astype('float')
 
         if self.use_augmentation:
             transform = self.get_img_augmentation(input_size=self.input_size)
-            sample = transform(image=image, mask=mask)
-            image, mask = sample['image'], sample['mask']
+            sample = transform(image=img, mask=mask)
+            img, mask = sample['image'], sample['mask']
 
-        image, mask = self.to_tensor(np.array(image)), self.to_tensor(np.array(mask))
+        img, mask = self.to_tensor_shape(img), self.to_tensor_shape(mask)
 
-        return image, mask
+        return img, mask
 
     def __len__(self):
-        return len(self.samples)
+        return len(self.img_paths)
 
     @staticmethod
-    def get_list_of_samples(
-        data_dir: str,
-    ) -> List[List[str]]:
-        img_dir = os.path.join(data_dir, 'img')
-        mask_dir = os.path.join(data_dir, 'mask')
-        image_paths = get_file_list(src_dirs=img_dir, ext_list='.png')
-        mask_paths = get_file_list(src_dirs=mask_dir, ext_list='.png')
-        assert len(image_paths) == len(
-            mask_paths,
-        ), f'Number of images is not equal to the number of masks ({len(image_paths)} vs {len(mask_paths)})'
-
-        sample_list = []
-
-        for image_path in image_paths:
-            mask_path = image_path.replace('img', 'mask')
-            if mask_path in mask_paths:
-                sample_list.append([image_path, mask_path])
-
-        return sample_list
+    def data_check(
+        img_dir: str,
+        ann_id: str,
+    ) -> Union[Tuple[str, str], None]:
+        img_name = Path(ann_id).name
+        img_path = os.path.join(img_dir, img_name)
+        if os.path.exists(img_path):
+            return ann_id, img_path
+        else:
+            logging.warning(f'Img path: {img_path} not exist')
+            return None
 
     @staticmethod
-    def to_tensor(
+    def to_tensor_shape(
         x: np.ndarray,
     ) -> np.ndarray:
         return x.transpose([2, 0, 1]).astype('float32')
@@ -88,51 +89,45 @@ class OCTDataset(Dataset):
     ) -> albu.Compose:
         transform = [
             albu.HorizontalFlip(
-                p=0.5,
-            ),  # TODO: sure about the aggressiveness of this augmentation pipeline?
+                p=0.50,
+            ),
             albu.ShiftScaleRotate(
-                scale_limit=0.35,
-                rotate_limit=45,
-                shift_limit=0.1,
-                p=0.8,
+                p=0.20,
+                shift_limit=0.0625,
+                scale_limit=0.1,
+                rotate_limit=15,
                 border_mode=0,
             ),
+            albu.RandomCrop(
+                p=0.2,
+                height=int(random.uniform(0.8, 0.9) * input_size),
+                width=int(random.uniform(0.8, 0.9) * input_size),
+            ),
             albu.PadIfNeeded(
+                p=1.0,
                 min_height=input_size,
                 min_width=input_size,
                 always_apply=True,
                 border_mode=0,
             ),
-            albu.RandomCrop(
-                height=input_size,  # TODO: random(0.7; 0.9)*input_size, seed (https://github.com/open-mmlab/mmdetection/issues/2558)
-                width=input_size,  # TODO: random(0.7; 0.9)*input_size, seed (https://github.com/open-mmlab/mmdetection/issues/2558)
-                always_apply=True,
-                p=0.5,
+            albu.GaussNoise(
+                p=0.20,
+                var_limit=(3.0, 10.0),
             ),
-            albu.GaussNoise(p=0.25),
-            albu.Perspective(p=0.5),
-            albu.OneOf(
-                [
-                    albu.CLAHE(p=1),
-                    albu.RandomBrightnessContrast(p=1),
-                    albu.RandomGamma(p=1),
-                ],
-                p=0.9,
+            albu.Perspective(
+                p=0.20,
+                scale=(0.05, 0.1),
             ),
-            albu.OneOf(
-                [
-                    albu.Sharpen(p=1),
-                    albu.Blur(blur_limit=3, p=1),
-                    albu.MotionBlur(blur_limit=3, p=1),
-                ],
-                p=0.9,
+            albu.RandomBrightnessContrast(
+                p=0.20,
+                brightness_limit=0.2,
+                contrast_limit=0.2,
             ),
-            albu.OneOf(
-                [
-                    albu.RandomBrightnessContrast(p=1),
-                    albu.HueSaturationValue(p=1),
-                ],
-                p=0.9,
+            albu.HueSaturationValue(
+                p=0.20,
+                hue_shift_limit=20,
+                sat_shift_limit=30,
+                val_shift_limit=20,
             ),
         ]
         return albu.Compose(transform)
@@ -143,11 +138,11 @@ class OCTDataModule(pl.LightningDataModule):
 
     def __init__(
         self,
-        data_dir: str,
         classes: List[str],
         input_size: int = 448,
         batch_size: int = 2,
         num_workers: int = 2,
+        data_dir: str = 'data/final',
     ):
         super().__init__()
         self.data_dir = data_dir
@@ -156,20 +151,17 @@ class OCTDataModule(pl.LightningDataModule):
         self.batch_size = batch_size
         self.num_workers = num_workers
 
-    def setup(
-        self,
-        stage: str = 'fit',
-    ):
+    def setup(self, stage: str = 'fit'):
         if stage == 'fit':
             self.train_dataloader_set = OCTDataset(
                 input_size=self.input_size,
-                subset_dir=f'{self.data_dir}/train',
+                data_dir=f'{self.data_dir}/train',
                 classes=self.classes,
                 use_augmentation=True,
             )
             self.val_dataloader_set = OCTDataset(
                 input_size=self.input_size,
-                subset_dir=f'{self.data_dir}/test',
+                data_dir=f'{self.data_dir}/test',
                 classes=self.classes,
                 use_augmentation=False,
             )
@@ -196,11 +188,12 @@ class OCTDataModule(pl.LightningDataModule):
 
 
 if __name__ == '__main__':
-    oct_dataset = OCTDataset(
+    dataset = OCTDataset(
         subset_dir='data/final/train',
         classes=['Lipid core', 'Lumen', 'Fibrous cap', 'Vasa vasorum'],
         input_size=448,
         use_augmentation=False,
     )
-    sample = oct_dataset[0]
+    for i in range(30):
+        img, mask = dataset[i]
     print('Complete')

@@ -1,15 +1,20 @@
+import datetime
+import json
 import logging
 import os
-import time
+import ssl
 
 import hydra
 import pytorch_lightning as pl
-from clearml import Task
+import wandb
 from omegaconf import DictConfig, OmegaConf
 from pytorch_lightning import loggers as pl_loggers
 from pytorch_lightning.callbacks import LearningRateMonitor, ModelCheckpoint
 
-from src import DataManager, OCTDataModule, OCTSegmentationModel
+from src.models.smp.dataset import OCTDataModule
+from src.models.smp.model import OCTSegmentationModel
+
+ssl._create_default_https_context = ssl._create_unverified_context
 
 log = logging.getLogger(__name__)
 log.setLevel(logging.INFO)
@@ -22,47 +27,57 @@ log.setLevel(logging.INFO)
 )
 def main(cfg: DictConfig) -> None:
     log.info(f'Config:\n\n{OmegaConf.to_yaml(cfg)}')
+    today = datetime.datetime.today()
+    task_name = f'{cfg.architecture}_{cfg.encoder}_{today.strftime("%d%m_%H%M")}'
+    model_dir = os.path.join('models', f'{task_name}')
 
-    timestamp = time.strftime('%d%m_%H%M%S', time.localtime())
-    exp_name = f'{cfg.architecture}_{cfg.encoder}'
-    model_dir = os.path.join('models', f'{cfg.project_name}', f'{exp_name}_{timestamp}')
+    hyperparameters = {
+        'architecture': cfg.architecture,
+        'encoder': cfg.encoder,
+        'input_size': cfg.input_size,
+        'classes': list(cfg.classes),
+        'num_classes': len(cfg.classes),
+        'batch_size': cfg.batch_size,
+        'optimizer': cfg.optimizer,
+        'lr': cfg.lr,
+        'epochs': cfg.epochs,
+        'device': cfg.device,
+        'data_dir': cfg.data_dir,
+    }
 
-    # Initialize ClearML task
-    Task.init(
-        project_name=cfg.project_name,
-        task_name=exp_name,
-        auto_connect_frameworks={
-            'tensorboard': True,
-            'pytorch': True,
-        },
+    wandb.init(
+        config=hyperparameters,
+        project='oct_segmentation',
+        name=task_name
     )
 
-    # Synchronize dataset with ClearML workspace
-    data_manager = DataManager(
-        data_dir=cfg.data_dir,
-    )
-    data_manager.prepare_data()
+    callbacks = [
+        LearningRateMonitor(
+            logging_interval='epoch',
+            log_momentum=False,
+        ),
+    ]
+    if cfg.log_artifacts:
+        os.makedirs(f'{model_dir}/images_per_epoch', exist_ok=True)
+        callbacks.append(
+            ModelCheckpoint(
+                save_top_k=1,
+                monitor='val/loss',
+                mode='min',
+                dirpath=f'{model_dir}/',
+                filename='weights',
+            ),
+        )
+    else:
+        os.makedirs(f'{model_dir}', exist_ok=True)
 
     # Initialize data module
     oct_data_module = OCTDataModule(
-        data_dir=cfg.data_dir,
+        input_size=hyperparameters['input_size'],
         classes=cfg.classes,
-        input_size=cfg.input_size,
-        batch_size=cfg.batch_size,
+        batch_size=hyperparameters['batch_size'],
         num_workers=os.cpu_count(),
-    )
-
-    # Initialize callbacks
-    checkpoint = ModelCheckpoint(
-        save_top_k=5,
-        monitor='test/loss',
-        mode='min',
-        dirpath=f'{model_dir}/ckpt/',
-        filename='models_{epoch+1:03d}',
-    )
-    lr_monitor = LearningRateMonitor(
-        logging_interval='epoch',
-        log_momentum=False,
+        data_dir=cfg.data_dir,
     )
     tb_logger = pl_loggers.TensorBoardLogger(
         save_dir='logs/',
@@ -70,34 +85,45 @@ def main(cfg: DictConfig) -> None:
 
     # Initialize model
     model = OCTSegmentationModel(
-        architecture=cfg.architecture,
-        encoder_name=cfg.encoder,
-        optimizer=cfg.optimizer,
-        lr=cfg.lr,
+        arch=hyperparameters['architecture'],
+        encoder_name=hyperparameters['encoder'],
+        optimizer_name=hyperparameters['optimizer'],
         in_channels=3,
         classes=cfg.classes,
-        colors=cfg.classes_color,
+        model_name=task_name,
+        lr=hyperparameters['lr'],
+        save_img_per_epoch=5 if cfg.log_artifacts else None,
     )
+    with open(f'{model_dir}/config.json', 'w') as file:
+        json.dump(
+            {
+                "model_name": f'{cfg.architecture}_{cfg.encoder}',
+                "architecture": cfg.architecture,
+                "encoder": cfg.encoder,
+                "input_size": cfg.input_size,
+                "classes": list(cfg.classes),
+                "batch_size": cfg.batch_size,
+                "optimizer": cfg.optimizer,
+                "lr": cfg.lr,
+            },
+            file
+        )
 
     # Initialize and tun trainer
     trainer = pl.Trainer(
-        devices=-1,
+        devices=cfg.cuda_num,
         accelerator=cfg.device,
-        max_epochs=cfg.epochs,
+        max_epochs=hyperparameters['epochs'],
         logger=tb_logger,
-        callbacks=[
-            lr_monitor,
-            checkpoint,
-        ],
+        callbacks=callbacks,
         enable_checkpointing=True,
-        log_every_n_steps=cfg.batch_size,
+        log_every_n_steps=hyperparameters['batch_size'],
         default_root_dir=model_dir,
     )
     trainer.fit(
         model,
         datamodule=oct_data_module,
     )
-
     log.info('Complete')
 
 
