@@ -21,6 +21,6 @@ hydra:
         # relative to the job log directory
         filename: ${hydra.run.dir}/${now:%d-%m-%Y_%H-%M-%S}.log
     root:
-      level: DEBUG
-      handlers: [file]    # [console, file]
+      level: INFO
+      handlers: [console, file]    # [console, file]
     disable_existing_loggers: false

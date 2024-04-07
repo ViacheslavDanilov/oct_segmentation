@@ -4,33 +4,26 @@ stages:
   extract_metadata:
     cmd:
     - echo "STAGE I"
-    - rm data/raw_metadata.xlsx || true
+    - rm data/dcm_metadata.csv || true
     - python src/data/extract_metadata.py
     deps:
     - src/data/extract_metadata.py
-    - data/raw
+    - data/dcm
     outs:
-    - data/raw_metadata.xlsx
+    - data/dcm_metadata.csv
 
-  dicoms_to_rgb:
+  convert_dicoms:
     cmd:
     - rm -rf data/sly_input_rgb || true
-    - python src/data/convert_dicoms.py to_gray=false save_dir=data/sly_input_rgb
-    deps:
-    - src/data/convert_dicoms.py
-    - data/raw_metadata.xlsx
-    outs:
-    - data/sly_input_rgb:
-        cache: false
-
-  dicoms_to_grayscale:
-    cmd:
     - rm -rf data/sly_input_gray || true
+    - python src/data/convert_dicoms.py to_gray=false save_dir=data/sly_input_rgb
     - python src/data/convert_dicoms.py to_gray=true save_dir=data/sly_input_gray
     deps:
     - src/data/convert_dicoms.py
-    - data/raw_metadata.xlsx
+    - data/dcm_metadata.csv
     outs:
+    - data/sly_input_rgb:
+        cache: false
     - data/sly_input_gray:
         cache: false
 
@@ -45,34 +38,25 @@ stages:
     outs:
     - data/sly_input
 
-  remove_images:
-    deps:
-    - data/sly_input
+  # STAGE II
+  convert_sly_to_int:
     cmd:
-    - rm -rf data/sly_input_rgb || true
-    - rm -rf data/sly_input_gray || true
-    always_changed: true
+    - echo "STAGE II"
+    - rm -rf data/interim || true
+    - python src/data/convert_sly_to_int.py
+    deps:
+    - src/data/convert_sly_to_int.py
+    - data/sly_output
+    outs:
+    - data/interim
 
-#  # STAGE II
-#  sly_to_int:
-#    cmd:
-#    - echo "STAGE II"
-#    - rm -rf data/interim || true
-#    - python src/data/convert_sly_to_int.py
-#    deps:
-#    - src/data/convert_sly_to_int.py
-#    - data/sly_output
-#    - data/sly_input    # Used to keep the stages in a strict order
-#    outs:
-#    - data/interim
-#
-#  int_to_final:
-#    cmd:
-#    - rm -rf data/final || true
-#    - python src/data/convert_int_to_final.py
-#    deps:
-#    - src/data/convert_int_to_final.py
-#    - data/interim
-#    - data/interim/metadata.xlsx
-#    outs:
-#    - data/final
+  convert_int_to_cv:
+    cmd:
+    - rm -rf data/cv || true
+    - python src/data/convert_int_to_cv.py
+    deps:
+    - src/data/convert_int_to_cv.py
+    - data/interim
+    - data/interim/metadata.csv
+    outs:
+    - data/cv

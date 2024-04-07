@@ -3,8 +3,8 @@ defaults:
 - _self_
 
 data_dir: data/interim
-train_size: 0.80
-seed: 11
+train_size: 0.80  # TODO: add num folds
+seed: 11    # TODO: add num folds
 # Available classes: Lipid core, Lumen, Fibrous cap, Vasa vasorum
 exclude_classes: []
-save_dir: data/final
+save_dir: data/cv

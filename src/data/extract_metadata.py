@@ -8,6 +8,7 @@ import pydicom
 from omegaconf import DictConfig, OmegaConf
 from tqdm import tqdm
 
+from src import PROJECT_DIR
 from src.data.utils import get_file_list, get_series_name, get_study_name
 
 log = logging.getLogger(__name__)
@@ -120,8 +121,12 @@ def extract_metadata(
 def main(cfg: DictConfig) -> None:
     log.info(f'Config:\n\n{OmegaConf.to_yaml(cfg)}')
 
+    # Define absolute paths
+    data_dir = os.path.join(PROJECT_DIR, cfg.data_dir)
+    save_dir = os.path.join(PROJECT_DIR, cfg.save_dir)
+
     dcm_list = get_file_list(
-        src_dirs=cfg.data_dir,
+        src_dirs=data_dir,
         ext_list='',
         filename_template='IMG',
     )
@@ -134,18 +139,14 @@ def main(cfg: DictConfig) -> None:
         meta.append(dcm_meta)
 
     df = pd.DataFrame(meta)
-    df.sort_values(by='Path')
-    os.makedirs(cfg.save_dir, exist_ok=True)
-    save_path = os.path.join(cfg.save_dir, 'raw_metadata.xlsx')
+    df.sort_values(by='Path', inplace=True)
+    os.makedirs(save_dir, exist_ok=True)
+    save_path = os.path.join(save_dir, 'dcm_metadata.csv')
     df.index += 1
-    df.to_excel(
-        save_path,
-        sheet_name='Metadata',
-        index=True,
-        index_label='ID',
-    )
+    df.to_csv(save_path, index_label='ID')
 
     log.info(f'Metadata saved: {save_path}')
+    log.info('Complete')
 
 
 if __name__ == '__main__':

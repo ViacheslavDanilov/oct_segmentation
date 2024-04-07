@@ -2,7 +2,7 @@ defaults:
 - main
 - _self_
 
-data_dir: data/raw
+data_dir: data/dcm
 include_dirs: []
 exclude_dirs: []
 output_size: [1000, 1000]
