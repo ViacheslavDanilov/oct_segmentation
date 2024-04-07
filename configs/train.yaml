@@ -5,10 +5,10 @@ defaults:
 project_name: OCT segmentation
 data_dir: data/final
 classes:
-  - Lipid core
-  - Lumen
-  - Fibrous cap
-  - Vasa vasorum
+- Lipid core
+- Lumen
+- Fibrous cap
+- Vasa vasorum
 architecture: unet
 encoder: resnet50
 optimizer: Adam
@@ -19,3 +19,4 @@ epochs: 75
 device: cuda
 cuda_num: [0]
 log_artifacts: false
+save_dir: models
