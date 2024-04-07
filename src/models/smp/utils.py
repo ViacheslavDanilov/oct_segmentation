@@ -59,8 +59,8 @@ def get_metrics(
         'F1': f1.cpu().numpy(),
         'Recall': sensitivity.cpu().numpy(),
         'Precision': precision.cpu().numpy(),
-        'Sensitivity': sensitivity.cpu().numpy(),
-        'Specificity': specificity.cpu().numpy(),
+        'Sensitivity': sensitivity.cpu().numpy(),  # TODO: I think we don't need it
+        'Specificity': specificity.cpu().numpy(),  # TODO: I think we don't need it
     }
 
 
@@ -216,8 +216,9 @@ def log_predict_model_on_epoch(
         res = np.hstack((img_, color_mask_gr))
         res = np.hstack((res, color_mask_pred))
 
+        # TODO: verify the name of logged images
         cv2.imwrite(
-            f'models/{model_name}/images_per_epoch/Experiment_{str(idx).zfill(2)}_epoch_{str(epoch).zfill(3)}.png',
+            f'models/{model_name}/images_per_epoch/img_{str(idx+1).zfill(2)}_epoch_{str(epoch).zfill(3)}.png',
             cv2.cvtColor(res.astype('uint8'), cv2.COLOR_RGB2BGR),
         )
 
