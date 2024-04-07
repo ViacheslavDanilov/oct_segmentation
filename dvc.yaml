@@ -22,10 +22,8 @@ stages:
     - src/data/convert_dicoms.py
     - data/dcm_metadata.csv
     outs:
-    - data/sly_input_rgb:
-        cache: false
-    - data/sly_input_gray:
-        cache: false
+    - data/sly_input_rgb
+    - data/sly_input_gray
 
   stack_images:
     cmd:
@@ -38,15 +36,6 @@ stages:
     outs:
     - data/sly_input
 
-  # The pipeline is executed, regardless of whether its dependencies or outputs have actually changed
-#  remove_images:
-#    deps:
-#    - data/sly_input
-#    cmd:
-#    - rm -rf data/sly_input_rgb || true
-#    - rm -rf data/sly_input_gray || true
-#    always_changed: true
-
   # STAGE II
   convert_sly_to_int:
     cmd:
@@ -56,7 +45,6 @@ stages:
     deps:
     - src/data/convert_sly_to_int.py
     - data/sly_output
-#    - data/sly_input    # Used to keep the stages in a strict order
     outs:
     - data/interim
 
