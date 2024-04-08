@@ -162,7 +162,7 @@ def process_single_annotation(
                 'box_width': None,
                 'box_height': None,
                 'area': None,
-                'mask': None,
+                'encoded_mask': None,
             }
 
             if len(ann_frame) != 0:
