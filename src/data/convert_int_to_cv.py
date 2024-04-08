@@ -1,6 +1,7 @@
 import logging
 import os
 import shutil
+from pathlib import Path
 from typing import List
 
 import cv2
@@ -17,6 +18,17 @@ from src.data.utils import CLASS_COLOR, CLASS_ID, convert_base64_to_numpy
 
 log = logging.getLogger(__name__)
 log.setLevel(logging.INFO)
+
+
+def create_data_directories(
+    num_folds: int,
+    save_dir: str,
+) -> None:
+    for fold_idx in range(1, num_folds + 1):
+        fold_path = Path(save_dir) / f'fold_{fold_idx}'
+        for subset in ['train', 'test']:
+            for dir_type in ['img', 'mask', 'mask_color']:
+                (fold_path / subset / dir_type).mkdir(parents=True, exist_ok=True)
 
 
 def process_metadata(
@@ -119,9 +131,11 @@ def main(cfg: DictConfig) -> None:
     data_dir = os.path.join(PROJECT_DIR, cfg.data_dir)
     save_dir = os.path.join(PROJECT_DIR, cfg.save_dir)
 
-    for subset in ['train', 'test']:
-        for dir_type in ['img', 'mask', 'mask_color']:
-            os.makedirs(f'{save_dir}/{subset}/{dir_type}', exist_ok=True)
+    # Create directories for storing images and masks
+    create_data_directories(
+        num_folds=cfg.num_folds,
+        save_dir=save_dir,
+    )
 
     # Read and process data frame
     df = process_metadata(
