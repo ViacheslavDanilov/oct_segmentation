@@ -60,7 +60,7 @@ def process_polygon_geometry(
 def process_bitmap_geometry(
     bitmap: dict,
 ) -> Tuple[int, int, np.ndarray]:
-    y_min, x_min = bitmap['origin']
+    x_min, y_min = bitmap['origin']
     obj_mask = bitmap_to_mask(bitmap['data'])
     return x_min, y_min, obj_mask
 
