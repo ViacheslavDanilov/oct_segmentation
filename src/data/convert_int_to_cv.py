@@ -33,20 +33,22 @@ def create_data_directories(
 
 def process_metadata(
     data_dir: str,
-    exclude_classes: List[str] = None,
+    class_names: List[str] = None,
 ) -> pd.DataFrame:
     """Extract additional meta.
 
     Args:
         data_dir: path to directory containing images and metadata
-        exclude_classes: a list of classes to exclude from the dataset
+        class_names: a list of classes to include in the dataset
     Returns:
-        meta: data frame derived from a meta file
+        df: data frame derived from a meta file
     """
     df_path = os.path.join(data_dir, 'metadata.csv')
     df = pd.read_csv(df_path)
-    df.drop('id', axis=1, inplace=True)
-    df = df[~df['class_name'].isin(exclude_classes)]
+
+    if class_names is not None:
+        df = df[df['class_name'].isin(class_names)]
+
     df = df.dropna(subset=['class_name'])
 
     assert len(df) > 0, 'All items have been excluded or dropped'
@@ -140,7 +142,7 @@ def main(cfg: DictConfig) -> None:
     # Read and process data frame
     df = process_metadata(
         data_dir=data_dir,
-        exclude_classes=cfg.exclude_classes,
+        class_names=cfg.class_names,
     )
 
     # Split dataset by studies
