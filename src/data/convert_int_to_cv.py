@@ -2,7 +2,7 @@ import logging
 import os
 import shutil
 from pathlib import Path
-from typing import List
+from typing import List, Tuple
 
 import cv2
 import hydra
@@ -10,7 +10,7 @@ import numpy as np
 import pandas as pd
 from joblib import Parallel, delayed
 from omegaconf import DictConfig, OmegaConf
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import KFold
 from tqdm import tqdm
 
 from src import PROJECT_DIR
@@ -32,19 +32,17 @@ def create_data_directories(
 
 
 def process_metadata(
-    data_dir: str,
+    df: pd.DataFrame,
     class_names: List[str] = None,
 ) -> pd.DataFrame:
     """Extract additional meta.
 
     Args:
-        data_dir: path to directory containing images and metadata
+        df: path to directory containing images and metadata
         class_names: a list of classes to include in the dataset
     Returns:
         df: data frame derived from a meta file
     """
-    df_path = os.path.join(data_dir, 'metadata.csv')
-    df = pd.read_csv(df_path)
 
     if class_names is not None:
         df = df[df['class_name'].isin(class_names)]
@@ -56,34 +54,57 @@ def process_metadata(
     return df
 
 
-def split_dataset(
+def cross_validation_split(
     df: pd.DataFrame,
-    train_size: float = 0.80,
-    seed: int = 11,
-) -> pd.DataFrame:
-    # Split dataset by studies
-    df_unique_studies = np.unique(df.study.values)
-    train_studies, test_studies = train_test_split(
-        df_unique_studies,
-        train_size=train_size,
+    id_column: str,
+    num_folds: int,
+    seed: int,
+) -> List[Tuple[np.ndarray, np.ndarray]]:
+    ids = df[id_column].unique()
+    kf = KFold(
+        n_splits=num_folds,
         shuffle=True,
         random_state=seed,
     )
+    splits = []
+    for train_idx, test_idx in kf.split(ids):
+        train_ids = ids[train_idx]
+        test_ids = ids[test_idx]
+        df_train = df[df[id_column].isin(train_ids)]
+        df_test = df[df[id_column].isin(test_ids)]
+        splits.append((df_train, df_test))
 
-    # Extract training and testing subsets by indexes
-    df_train = df[df['study'].isin(train_studies)]
-    df_test = df[df['study'].isin(test_studies)]
-    df_train = df_train.assign(split='train')
-    df_test = df_test.assign(split='test')
+    return splits
 
-    # Get list of train and test paths
-    log.info('Split..........: Studies / Images')
-    log.info(f'Train..........: {len(df_train["study"].unique())} / {len(df_train)}')
-    log.info(f'Test images....: {len(df_test["study"].unique())} / {len(df_test)}')
 
-    df_out = pd.concat([df_train, df_test])
-
-    return df_out
+# def split_dataset(
+#     df: pd.DataFrame,
+#     train_size: float = 0.80,
+#     seed: int = 11,
+# ) -> pd.DataFrame:
+#     # Split dataset by studies
+#     df_unique_studies = np.unique(df.study.values)
+#     train_studies, test_studies = train_test_split(
+#         df_unique_studies,
+#         train_size=train_size,
+#         shuffle=True,
+#         random_state=seed,
+#     )
+#
+#     # Extract training and testing subsets by indexes
+#     df_train = df[df['study'].isin(train_studies)]
+#     df_test = df[df['study'].isin(test_studies)]
+#     df_train = df_train.assign(split='train')
+#     df_test = df_test.assign(split='test')
+#
+#     # Get list of train and test paths
+#     log.info('Split..........: Studies / Images')
+#     log.info(f'Train..........: {len(df_train["study"].unique())} / {len(df_train)}')
+#     log.info(f'Test images....: {len(df_test["study"].unique())} / {len(df_test)}')
+#
+#     df_out = pd.concat([df_train, df_test])
+#
+#     return df_out
 
 
 def process_mask(
@@ -140,15 +161,18 @@ def main(cfg: DictConfig) -> None:
     )
 
     # Read and process data frame
-    df = process_metadata(
-        data_dir=data_dir,
+    csv_path = os.path.join(data_dir, 'metadata.csv')
+    df = pd.read_csv(csv_path)
+    df_filtered = process_metadata(
+        df=df,
         class_names=cfg.class_names,
     )
 
-    # Split dataset by studies
-    df = split_dataset(
-        df=df,
-        train_size=cfg.train_size,
+    # Cross-validation split of the dataset
+    splits = cross_validation_split(
+        df=df_filtered,
+        id_column=cfg.split_column,
+        num_folds=cfg.num_folds,
         seed=cfg.seed,
     )
 
