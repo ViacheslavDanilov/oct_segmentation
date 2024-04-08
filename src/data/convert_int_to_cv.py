@@ -56,11 +56,11 @@ def process_metadata(
 
 def cross_validation_split(
     df: pd.DataFrame,
-    id_column: str,
+    split_column: str,
     num_folds: int,
     seed: int,
 ) -> List[Tuple[np.ndarray, np.ndarray]]:
-    ids = df[id_column].unique()
+    ids = df[split_column].unique()
     kf = KFold(
         n_splits=num_folds,
         shuffle=True,
@@ -70,41 +70,11 @@ def cross_validation_split(
     for train_idx, test_idx in kf.split(ids):
         train_ids = ids[train_idx]
         test_ids = ids[test_idx]
-        df_train = df[df[id_column].isin(train_ids)]
-        df_test = df[df[id_column].isin(test_ids)]
+        df_train = df[df[split_column].isin(train_ids)]
+        df_test = df[df[split_column].isin(test_ids)]
         splits.append((df_train, df_test))
 
     return splits
-
-
-# def split_dataset(
-#     df: pd.DataFrame,
-#     train_size: float = 0.80,
-#     seed: int = 11,
-# ) -> pd.DataFrame:
-#     # Split dataset by studies
-#     df_unique_studies = np.unique(df.study.values)
-#     train_studies, test_studies = train_test_split(
-#         df_unique_studies,
-#         train_size=train_size,
-#         shuffle=True,
-#         random_state=seed,
-#     )
-#
-#     # Extract training and testing subsets by indexes
-#     df_train = df[df['study'].isin(train_studies)]
-#     df_test = df[df['study'].isin(test_studies)]
-#     df_train = df_train.assign(split='train')
-#     df_test = df_test.assign(split='test')
-#
-#     # Get list of train and test paths
-#     log.info('Split..........: Studies / Images')
-#     log.info(f'Train..........: {len(df_train["study"].unique())} / {len(df_train)}')
-#     log.info(f'Test images....: {len(df_test["study"].unique())} / {len(df_test)}')
-#
-#     df_out = pd.concat([df_train, df_test])
-#
-#     return df_out
 
 
 def process_mask(
@@ -171,7 +141,7 @@ def main(cfg: DictConfig) -> None:
     # Cross-validation split of the dataset
     splits = cross_validation_split(
         df=df_filtered,
-        id_column=cfg.split_column,
+        split_column=cfg.split_column,
         num_folds=cfg.num_folds,
         seed=cfg.seed,
     )
