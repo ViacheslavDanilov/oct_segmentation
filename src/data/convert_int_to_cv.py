@@ -14,6 +14,7 @@ from sklearn.model_selection import KFold
 from tqdm import tqdm
 
 from src import PROJECT_DIR
+from src.data.mask_processor import MaskProcessor
 from src.data.utils import CLASS_COLOR, CLASS_ID, convert_base64_to_numpy
 
 log = logging.getLogger(__name__)
@@ -35,21 +36,34 @@ def process_metadata(
     df: pd.DataFrame,
     class_names: List[str] = None,
 ) -> pd.DataFrame:
-    """Extract additional meta.
-
-    Args:
-        df: path to directory containing images and metadata
-        class_names: a list of classes to include in the dataset
-    Returns:
-        df: data frame derived from a meta file
-    """
-
     if class_names is not None:
         df = df[df['class_name'].isin(class_names)]
 
     df = df.dropna(subset=['class_name'])
 
     assert len(df) > 0, 'All items have been excluded or dropped'
+
+    return df
+
+
+def update_metadata(
+    df_train: pd.DataFrame,
+    df_test: pd.DataFrame,
+    fold_idx: int,
+) -> pd.DataFrame:
+    df_train = df_train.copy()
+    df_test = df_test.copy()
+    df_train.loc[:, 'split'] = 'train'
+    df_test.loc[:, 'split'] = 'test'
+    df_train.loc[:, 'fold'] = fold_idx
+    df_test.loc[:, 'fold'] = fold_idx
+
+    df = pd.concat([df_train, df_test], ignore_index=True)
+    df.drop(columns=['id', 'encoded_mask'], inplace=True)
+
+    df.sort_values(['img_name', 'class_id'], inplace=True)
+    df.reset_index(drop=True, inplace=True)
+    df.index += 1
 
     return df
 
@@ -79,33 +93,34 @@ def cross_validation_split(
 
 def process_mask(
     df: pd.DataFrame,
+    smooth_mask: bool,
     save_dir: str,
 ) -> None:
     if len(df) > 0:
-        obj_ = df.iloc[0]
-        img_name = os.path.basename(obj_.image_path)
-        mask = np.zeros((obj_.image_height, obj_.image_width))
-        mask_color = np.zeros((obj_.image_height, obj_.image_width, 3), dtype='uint8')
+        first_row = df.iloc[0]
+        img_name = os.path.basename(first_row.img_path)
+        mask = np.zeros((first_row.img_height, first_row.img_width))
+        mask_color = np.zeros((first_row.img_height, first_row.img_width, 3), dtype='uint8')
         mask_color[:, :] = (128, 128, 128)
-        for _, obj in df.iterrows():
+        mask_processor = MaskProcessor() if smooth_mask else None
+        for obj in df.itertuples(index=False):
             obj_mask = convert_base64_to_numpy(obj.encoded_mask).astype('uint8')
+            if smooth_mask:
+                obj_mask = mask_processor.smooth_mask(mask=obj_mask)
+                obj_mask = mask_processor.remove_artifacts(mask=obj_mask)
             mask[obj_mask == 1] = CLASS_ID[obj.class_name]
             mask_color[mask == CLASS_ID[obj.class_name]] = CLASS_COLOR[obj.class_name]
 
         cv2.imwrite(f'{save_dir}/mask/{img_name}', mask)
         cv2.imwrite(f'{save_dir}/mask_color/{img_name}', mask_color)
-        shutil.copy(obj_.image_path, f'{save_dir}/img/{img_name}')
+        shutil.copy(first_row.img_path, f'{save_dir}/img/{img_name}')
 
 
 def save_metadata(
     df: pd.DataFrame,
     save_dir: str,
 ) -> None:
-    df['image_path'] = df.apply(
-        func=lambda row: os.path.join(save_dir, row['split'], 'img', row['image_name']),
-        axis=1,
-    )
-    df.sort_values(by=['image_path'], inplace=True)
+    df.sort_values(by=['img_path', 'class_id'], inplace=True)
     df.reset_index(drop=True, inplace=True)
     df.index += 1
     save_path = os.path.join(save_dir, 'metadata.csv')
@@ -146,24 +161,46 @@ def main(cfg: DictConfig) -> None:
         seed=cfg.seed,
     )
 
-    # Process images and masks
-    train_groups = df[df['split'] == 'train'].groupby('image_path')
-    test_groups = df[df['split'] == 'test'].groupby('image_path')
+    dfs = []
+    for fold_idx, (df_train, df_test) in enumerate(splits, start=1):
+        # Update metadata
+        df = update_metadata(
+            df_train=df_train,
+            df_test=df_test,
+            fold_idx=fold_idx,
+        )
+        dfs.append(df)
 
-    Parallel(n_jobs=-1, backend='threading')(
-        delayed(process_mask)(
-            df=train_group,
-            save_dir=os.path.join(save_dir, 'train'),
+        gb_train = df_train.groupby('img_path')
+        gb_test = df_test.groupby('img_path')
+        train_studies_count = df.loc[df['split'] == 'train', 'study'].nunique()
+        test_studies_count = df.loc[df['split'] == 'test', 'study'].nunique()
+        log.info('')
+        log.info(
+            f'Fold {fold_idx} - Train studies / images...: {train_studies_count} / {len(gb_train)}',
         )
-        for _, train_group in tqdm(train_groups, desc='Preparation of training subset')
-    )
-    Parallel(n_jobs=-1, backend='threading')(
-        delayed(process_mask)(
-            df=test_group,
-            save_dir=os.path.join(save_dir, 'test'),
+        log.info(
+            f'Fold {fold_idx} - Test studies / images....: {test_studies_count} / {len(gb_test)}',
         )
-        for _, test_group in tqdm(test_groups, desc='Preparation of testing subset')
-    )
+
+        # Process train and test subsets
+        Parallel(n_jobs=-1, backend='threading')(
+            delayed(process_mask)(
+                df=df,
+                smooth_mask=cfg.smooth_mask,
+                save_dir=f'{save_dir}/fold_{fold_idx}/train',
+            )
+            for _, df in tqdm(gb_train, desc=f'Process train subset - Fold {fold_idx}')
+        )
+
+        Parallel(n_jobs=-1, backend='threading')(
+            delayed(process_mask)(
+                df=df,
+                smooth_mask=cfg.smooth_mask,
+                save_dir=f'{save_dir}/fold_{fold_idx}/test',
+            )
+            for _, df in tqdm(gb_test, desc=f'Process test subset - Fold {fold_idx}')
+        )
 
     # Save dataset metadata
     save_metadata(
