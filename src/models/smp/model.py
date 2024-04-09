@@ -21,7 +21,7 @@ class OCTSegmentationModel(pl.LightningModule):
         lr: float = 0.0001,
         optimizer_name: str = 'Adam',
         save_img_per_epoch: int = None,
-            wandb_save_media: bool = False,
+        wandb_save_media: bool = False,
         **kwargs,
     ):
         super().__init__()
@@ -129,7 +129,7 @@ class OCTSegmentationModel(pl.LightningModule):
                     classes=self.classes,
                     epoch=self.epoch,
                     model_name=self.model_name,
-                    wandb_save_media=self.wandb_save_media
+                    wandb_save_media=self.wandb_save_media,
                 )
 
     def on_validation_epoch_end(self):

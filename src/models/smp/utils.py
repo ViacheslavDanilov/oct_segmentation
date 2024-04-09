@@ -172,7 +172,7 @@ def log_predict_model_on_epoch(
     classes,
     epoch,
     model_name,
-        wandb_save_media,
+    wandb_save_media,
 ):
     img = img.permute(0, 2, 3, 1)
     img = img.squeeze().cpu().numpy().round()
