@@ -143,6 +143,7 @@ def process_single_annotation(
                 'slice': slice,
                 'img_width': crop[1][0] - crop[0][0],
                 'img_height': crop[1][1] - crop[0][1],
+                'type': None,
                 'class_id': None,
                 'class_name': None,
                 'x1': None,
@@ -172,6 +173,7 @@ def process_single_annotation(
                         break
 
                     # Fill the result dictionary with the figure properties
+                    result_dict['type'] = figure['geometryType']
                     result_dict['class_id'] = class_ids[class_title]
                     result_dict['class_name'] = class_title
                     result_dict['x1'] = bbox[0][0]

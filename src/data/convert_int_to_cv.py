@@ -59,7 +59,7 @@ def update_metadata(
     df_test.loc[:, 'fold'] = fold_idx
 
     df = pd.concat([df_train, df_test], ignore_index=True)
-    df.drop(columns=['id', 'encoded_mask'], inplace=True)
+    df.drop(columns=['id', 'encoded_mask', 'type'], inplace=True)
 
     df.sort_values(['img_name', 'class_id'], inplace=True)
     df.reset_index(drop=True, inplace=True)
