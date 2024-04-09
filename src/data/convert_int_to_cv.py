@@ -24,11 +24,13 @@ log.setLevel(logging.INFO)
 def create_data_directories(
     num_folds: int,
     save_dir: str,
+    save_color_mask: bool = True,
 ) -> None:
+    dir_types = ['img', 'mask', 'mask_color'] if save_color_mask else ['img', 'mask']
     for fold_idx in range(1, num_folds + 1):
         fold_path = Path(save_dir) / f'fold_{fold_idx}'
         for subset in ['train', 'test']:
-            for dir_type in ['img', 'mask', 'mask_color']:
+            for dir_type in dir_types:
                 (fold_path / subset / dir_type).mkdir(parents=True, exist_ok=True)
 
 
@@ -73,7 +75,7 @@ def cross_validation_split(
     split_column: str,
     num_folds: int,
     seed: int,
-) -> List[Tuple[np.ndarray, np.ndarray]]:
+) -> List[Tuple[pd.DataFrame, pd.DataFrame]]:
     ids = df[split_column].unique()
     kf = KFold(
         n_splits=num_folds,
@@ -93,27 +95,40 @@ def cross_validation_split(
 
 def process_mask(
     df: pd.DataFrame,
-    smooth_mask: bool,
     save_dir: str,
+    smooth_mask: bool = True,
+    save_color_mask: bool = True,
 ) -> None:
-    if len(df) > 0:
-        first_row = df.iloc[0]
-        img_name = os.path.basename(first_row.img_path)
-        mask = np.zeros((first_row.img_height, first_row.img_width))
-        mask_color = np.zeros((first_row.img_height, first_row.img_width, 3), dtype='uint8')
-        mask_color[:, :] = (128, 128, 128)
-        mask_processor = MaskProcessor() if smooth_mask else None
-        for obj in df.itertuples(index=False):
-            obj_mask = convert_base64_to_numpy(obj.encoded_mask).astype('uint8')
-            if smooth_mask:
-                obj_mask = mask_processor.smooth_mask(mask=obj_mask)
-                obj_mask = mask_processor.remove_artifacts(mask=obj_mask)
-            mask[obj_mask == 1] = CLASS_ID[obj.class_name]
-            mask_color[mask == CLASS_ID[obj.class_name]] = CLASS_COLOR[obj.class_name]
+    if len(df) == 0:
+        return
 
-        cv2.imwrite(f'{save_dir}/mask/{img_name}', mask)
-        cv2.imwrite(f'{save_dir}/mask_color/{img_name}', mask_color)
-        shutil.copy(first_row.img_path, f'{save_dir}/img/{img_name}')
+    first_row = df.iloc[0]
+    img_name = os.path.basename(first_row.img_path)
+    img_height, img_width = first_row.img_height, first_row.img_width
+
+    mask = np.zeros((img_height, img_width))
+    mask_color = np.zeros((img_height, img_width, 3), dtype='uint8')
+    mask_color[:] = (128, 128, 128)
+
+    mask_processor = MaskProcessor() if smooth_mask else None
+
+    for idx, obj in enumerate(df.itertuples(index=False)):
+        obj_mask = convert_base64_to_numpy(obj.encoded_mask).astype('uint8')
+        if smooth_mask:
+            obj_mask = mask_processor.smooth_mask(mask=obj_mask)
+            obj_mask = mask_processor.remove_artifacts(mask=obj_mask)
+        mask[obj_mask == 1] = CLASS_ID[obj.class_name]
+        mask_color[mask == CLASS_ID[obj.class_name]] = CLASS_COLOR[obj.class_name]
+
+    # Save the indexed mask
+    cv2.imwrite(os.path.join(save_dir, 'mask', img_name), mask)
+
+    # Save the color mask only if save_color_mask is True
+    if save_color_mask:
+        cv2.imwrite(os.path.join(save_dir, 'mask_color', img_name), mask_color)
+
+    # Copy the image to the destination directory
+    shutil.copy(first_row.img_path, os.path.join(save_dir, 'img', img_name))
 
 
 def merge_and_save_metadata(
@@ -138,12 +153,13 @@ def main(cfg: DictConfig) -> None:
     log.info(f'Config:\n\n{OmegaConf.to_yaml(cfg)}')
 
     # Define absolute paths
-    data_dir = os.path.join(PROJECT_DIR, cfg.data_dir)
-    save_dir = os.path.join(PROJECT_DIR, cfg.save_dir)
+    data_dir = str(os.path.join(PROJECT_DIR, cfg.data_dir))
+    save_dir = str(os.path.join(PROJECT_DIR, cfg.save_dir))
 
     # Create directories for storing images and masks
     create_data_directories(
         num_folds=cfg.num_folds,
+        save_color_mask=cfg.save_color_mask,
         save_dir=save_dir,
     )
 
@@ -190,6 +206,7 @@ def main(cfg: DictConfig) -> None:
             delayed(process_mask)(
                 df=df,
                 smooth_mask=cfg.smooth_mask,
+                save_color_mask=cfg.save_color_mask,
                 save_dir=f'{save_dir}/fold_{fold_idx}/train',
             )
             for _, df in tqdm(gb_train, desc=f'Process train subset - Fold {fold_idx}')
@@ -199,6 +216,7 @@ def main(cfg: DictConfig) -> None:
             delayed(process_mask)(
                 df=df,
                 smooth_mask=cfg.smooth_mask,
+                save_color_mask=cfg.save_color_mask,
                 save_dir=f'{save_dir}/fold_{fold_idx}/test',
             )
             for _, df in tqdm(gb_test, desc=f'Process test subset - Fold {fold_idx}')

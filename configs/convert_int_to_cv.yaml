@@ -4,10 +4,11 @@ defaults:
 
 data_dir: data/interim
 save_dir: data/cv
+save_color_mask: true
+smooth_mask: true
 num_folds: 5
 seed: 11
 split_column: study
-smooth_mask: true
 class_names:
 - Lumen
 - Lipid core
