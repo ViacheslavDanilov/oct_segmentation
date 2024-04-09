@@ -9,7 +9,7 @@ import torchvision
 import wandb
 from PIL import Image
 
-from src.data.utils import CLASS_COLOR, CLASS_ID, CLASS_ID_REVERSED
+from src.data.utils import CLASS_COLOR_BGR, CLASS_ID, CLASS_ID_REVERSED
 
 
 def get_img_mask_union(
@@ -46,21 +46,14 @@ def get_metrics(
     dice = 2 * iou.cpu().numpy() / (iou.cpu().numpy() + 1)
     f1 = smp.metrics.f1_score(tp, fp, fn, tn)
     precision = smp.metrics.precision(tp, fp, fn, tn)
-    sensitivity = smp.metrics.sensitivity(tp, fp, fn, tn)
-    specificity = smp.metrics.specificity(tp, fp, fn, tn)
+    recall = smp.metrics.sensitivity(tp, fp, fn, tn)
     return {
         'loss': loss.detach().cpu().numpy(),
-        'tp': tp.cpu().numpy(),
-        'fp': fp.cpu().numpy(),
-        'fn': fn.cpu().numpy(),
-        'tn': tn.cpu().numpy(),
         'IoU': iou.cpu().numpy(),
         'Dice': dice,
         'F1': f1.cpu().numpy(),
-        'Recall': sensitivity.cpu().numpy(),
+        'Recall': recall.cpu().numpy(),
         'Precision': precision.cpu().numpy(),
-        'Sensitivity': sensitivity.cpu().numpy(),  # TODO: I think we don't need it
-        'Specificity': specificity.cpu().numpy(),  # TODO: I think we don't need it
     }
 
 
@@ -103,15 +96,11 @@ def save_metrics_on_epoch(
         f'{split}/Dice (mean)': metrics['Dice'].mean(),
         f'{split}/Precision (mean)': metrics['Precision'].mean(),
         f'{split}/Recall (mean)': metrics['Recall'].mean(),
-        f'{split}/Sensitivity (mean)': metrics['Sensitivity'].mean(),
-        f'{split}/Specificity (mean)': metrics['Specificity'].mean(),
         f'{split}/F1 (mean)': metrics['Specificity'].mean(),
         f'IoU {split}/mean': metrics['IoU'].mean(),
         f'Dice {split}/mean': metrics['Dice'].mean(),
         f'Precision {split}/mean': metrics['Precision'].mean(),
         f'Recall {split}/mean': metrics['Recall'].mean(),
-        f'Sensitivity {split}/mean': metrics['Sensitivity'].mean(),
-        f'Specificity {split}/mean': metrics['Specificity'].mean(),
         f'F1 {split}/mean': metrics['Specificity'].mean(),
     }
 
@@ -128,8 +117,6 @@ def save_metrics_on_epoch(
             'Dice',
             'Precision',
             'Recall',
-            'Sensitivity',
-            'Specificity',
             'F1',
             'Split',
             'Class',
@@ -157,8 +144,6 @@ def save_metrics_on_epoch(
                     'Dice': metrics['Dice'][num],
                     'Precision': metrics['Precision'][num],
                     'Recall': metrics['Recall'][num],
-                    'Sensitivity': metrics['Sensitivity'][num],
-                    'Specificity': metrics['Specificity'][num],
                     'F1': metrics['F1'][num],
                     'Split': split,
                     'Class': cl,
@@ -171,8 +156,6 @@ def save_metrics_on_epoch(
                 'Dice': metrics['Dice'].mean(),
                 'Precision': metrics['Precision'].mean(),
                 'Recall': metrics['Recall'].mean(),
-                'Sensitivity': metrics['Sensitivity'].mean(),
-                'Specificity': metrics['Specificity'].mean(),
                 'F1': metrics['F1'].mean(),
                 'Split': split,
                 'Class': 'Mean',
@@ -189,6 +172,7 @@ def log_predict_model_on_epoch(
     classes,
     epoch,
     model_name,
+        wandb_save_media,
 ):
     img = img.permute(0, 2, 3, 1)
     img = img.squeeze().cpu().numpy().round()
@@ -208,8 +192,8 @@ def log_predict_model_on_epoch(
         wandb_mask_inference = np.zeros((img_.shape[0], img_.shape[1]))
         wandb_mask_ground_truth = np.zeros((img_.shape[0], img_.shape[1]))
         for cl, m, m_p in zip(classes, mask_, pr_mask):
-            color_mask_gr[m[:, :] == 1] = CLASS_COLOR[cl]
-            color_mask_pred[m_p[:, :] == 1] = CLASS_COLOR[cl]
+            color_mask_gr[m[:, :] == 1] = CLASS_COLOR_BGR[cl]
+            color_mask_pred[m_p[:, :] == 1] = CLASS_COLOR_BGR[cl]
             wandb_mask_inference[m_p[:, :] == 1] = CLASS_ID[cl]
             wandb_mask_ground_truth[m[:, :] == 1] = CLASS_ID[cl]
 
@@ -222,25 +206,27 @@ def log_predict_model_on_epoch(
             cv2.cvtColor(res.astype('uint8'), cv2.COLOR_RGB2BGR),
         )
 
-        wandb_images.append(
-            wandb.Image(
-                img_,
-                masks={
-                    'predictions': {
-                        'mask_data': wandb_mask_inference,
-                        'class_labels': CLASS_ID_REVERSED,
+        if wandb_save_media:
+            wandb_images.append(
+                wandb.Image(
+                    img_,
+                    masks={
+                        'predictions': {
+                            'mask_data': wandb_mask_inference,
+                            'class_labels': CLASS_ID_REVERSED,
+                        },
+                        'ground_truth': {
+                            'mask_data': wandb_mask_ground_truth,
+                            'class_labels': CLASS_ID_REVERSED,
+                        },
                     },
-                    'ground_truth': {
-                        'mask_data': wandb_mask_ground_truth,
-                        'class_labels': CLASS_ID_REVERSED,
-                    },
-                },
-                caption=f'Example-{idx}',
-            ),
+                    caption=f'Example-{idx}',
+                ),
+            )
+    if wandb_save_media:
+        wandb.log(
+            {'Examples': wandb_images},
         )
-    wandb.log(
-        {'Examples': wandb_images},
-    )
 
 
 def get_img_mask_union_pil(

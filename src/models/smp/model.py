@@ -21,6 +21,7 @@ class OCTSegmentationModel(pl.LightningModule):
         lr: float = 0.0001,
         optimizer_name: str = 'Adam',
         save_img_per_epoch: int = None,
+            wandb_save_media: bool = False,
         **kwargs,
     ):
         super().__init__()
@@ -117,6 +118,8 @@ class OCTSegmentationModel(pl.LightningModule):
             prog_bar=True,
             on_epoch=True,
         )
+
+        # TODO: on_validation_epoch_end img_dir
         if self.save_img_per_epoch is not None:
             if batch_idx == 0 and self.epoch % self.save_img_per_epoch == 0:
                 log_predict_model_on_epoch(
@@ -126,6 +129,7 @@ class OCTSegmentationModel(pl.LightningModule):
                     classes=self.classes,
                     epoch=self.epoch,
                     model_name=self.model_name,
+                    wandb_save_media=self.wandb_save_media
                 )
 
     def on_validation_epoch_end(self):
