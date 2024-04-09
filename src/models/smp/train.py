@@ -30,8 +30,8 @@ def main(cfg: DictConfig) -> None:
     log.info(f'Config:\n\n{OmegaConf.to_yaml(cfg)}')
 
     # Define absolute paths
-    data_dir = f'{PROJECT_DIR}/{cfg.data_dir}'
-    save_dir = f'{PROJECT_DIR}/{cfg.save_dir}'
+    data_dir = str(os.path.join(PROJECT_DIR, cfg.data_dir))
+    save_dir = str(os.path.join(PROJECT_DIR, cfg.save_dir))
 
     today = datetime.datetime.today()
     task_name = f'{cfg.architecture}_{cfg.encoder}_{today.strftime("%d%m_%H%M")}'
