@@ -116,13 +116,15 @@ def process_mask(
         shutil.copy(first_row.img_path, f'{save_dir}/img/{img_name}')
 
 
-def save_metadata(
-    df: pd.DataFrame,
+def merge_and_save_metadata(
+    dfs: List[pd.DataFrame],
     save_dir: str,
 ) -> None:
-    df.sort_values(by=['img_path', 'class_id'], inplace=True)
-    df.reset_index(drop=True, inplace=True)
+    # Merge data frames
+    df = pd.concat(dfs).reset_index(drop=True)
     df.index += 1
+    # Save metadata
+    os.makedirs(save_dir, exist_ok=True)
     save_path = os.path.join(save_dir, 'metadata.csv')
     df.to_csv(save_path, index_label='id')
 
@@ -202,9 +204,9 @@ def main(cfg: DictConfig) -> None:
             for _, df in tqdm(gb_test, desc=f'Process test subset - Fold {fold_idx}')
         )
 
-    # Save dataset metadata
-    save_metadata(
-        df=df,
+    # Merge fold dataframes and save as a single CSV file
+    merge_and_save_metadata(
+        dfs=dfs,
         save_dir=save_dir,
     )
 
