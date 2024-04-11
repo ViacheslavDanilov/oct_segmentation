@@ -15,7 +15,7 @@ from tqdm import tqdm
 
 from src import PROJECT_DIR
 from src.data.mask_processor import MaskProcessor
-from src.data.utils import CLASS_COLOR, CLASS_ID, convert_base64_to_numpy
+from src.data.utils import CLASS_COLOR_BGR, CLASS_ID, convert_base64_to_numpy
 
 log = logging.getLogger(__name__)
 log.setLevel(logging.INFO)
@@ -118,7 +118,7 @@ def process_mask(
             obj_mask = mask_processor.smooth_mask(mask=obj_mask)
             obj_mask = mask_processor.remove_artifacts(mask=obj_mask)
         mask[obj_mask == 1] = CLASS_ID[obj.class_name]
-        mask_color[mask == CLASS_ID[obj.class_name]] = CLASS_COLOR[obj.class_name]
+        mask_color[mask == CLASS_ID[obj.class_name]] = CLASS_COLOR_BGR[obj.class_name]
 
     # Save the indexed mask
     cv2.imwrite(os.path.join(save_dir, 'mask', img_name), mask)
