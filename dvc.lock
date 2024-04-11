@@ -13,8 +13,8 @@ stages:
       nfiles: 210
     - path: src/data/extract_metadata.py
       hash: md5
-      md5: 64d0fd416d365516ec59b4f9e111800c
-      size: 4180
+      md5: 93221105e879233bdb1dd812630b7b9b
+      size: 4190
     outs:
     - path: data/dcm_metadata.csv
       hash: md5
@@ -33,8 +33,8 @@ stages:
       size: 35809
     - path: src/data/convert_dicoms.py
       hash: md5
-      md5: ea358e56de262f2b5024ab2d76bd3ce4
-      size: 4486
+      md5: 9bbc4995c7ea6c1b6c330f27d6783b2b
+      size: 4496
     outs:
     - path: data/sly_input_gray
       hash: md5
@@ -79,19 +79,19 @@ stages:
     deps:
     - path: data/sly_output
       hash: md5
-      md5: a29d96d39345f3997ab53a651629f663.dir
-      size: 2790693579
-      nfiles: 208
+      md5: 0b4ede09c74a5e0e936bebad557d1ad0.dir
+      size: 1367332522
+      nfiles: 82
     - path: src/data/convert_sly_to_int.py
       hash: md5
-      md5: 664cedaae93d2e486bf29b968ccc2721
-      size: 9257
+      md5: 7880c46138f3252cb1bdfcd2622d0197
+      size: 9125
     outs:
     - path: data/interim
       hash: md5
-      md5: 043df7cd42b7b99581389c2ca038cbd5.dir
-      size: 21956052411
-      nfiles: 25699
+      md5: 64e36114dff4674dac1662144fc3d79f.dir
+      size: 9000612457
+      nfiles: 10206
   convert_int_to_cv:
     cmd:
     - rm -rf data/cv || true
@@ -99,20 +99,20 @@ stages:
     deps:
     - path: data/interim
       hash: md5
-      md5: 043df7cd42b7b99581389c2ca038cbd5.dir
-      size: 21956052411
-      nfiles: 25699
+      md5: 64e36114dff4674dac1662144fc3d79f.dir
+      size: 9000612457
+      nfiles: 10206
     - path: data/interim/metadata.csv
       hash: md5
-      md5: c590732bde95c2a4d099176673ae621e
-      size: 49996366
+      md5: 523d717ee45b51f200564d26a1ebbbcd
+      size: 18283777
     - path: src/data/convert_int_to_cv.py
       hash: md5
-      md5: 2edc6986345bd41b0ce2bcb70d4c6049
-      size: 4929
+      md5: 9848b0b7404b3c9e3c65b8aed96c6839
+      size: 6959
     outs:
     - path: data/cv
       hash: md5
-      md5: fa236c785a4758f66955b5becb3340eb.dir
-      size: 16882251347
-      nfiles: 57868
+      md5: 8a501219b142a79e816c20c587bc3d15.dir
+      size: 32248942241
+      nfiles: 106621
