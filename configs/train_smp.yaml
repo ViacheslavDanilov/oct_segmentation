@@ -3,7 +3,7 @@ defaults:
 - _self_
 
 project_name: OCT segmentation
-data_dir: data/final
+data_dir: data/cv/fold_0
 classes:
 - Lipid core
 - Lumen
@@ -18,5 +18,5 @@ batch_size: 4
 epochs: 75
 device: cuda
 cuda_num: [0]
-log_artifacts: false
+log_artifacts: true
 save_dir: models

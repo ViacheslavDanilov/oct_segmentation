@@ -6,11 +6,11 @@ import ssl
 
 import hydra
 import pytorch_lightning as pl
-import wandb
 from omegaconf import DictConfig, OmegaConf
 from pytorch_lightning import loggers as pl_loggers
 from pytorch_lightning.callbacks import LearningRateMonitor, ModelCheckpoint
 
+import wandb
 from src import PROJECT_DIR
 from src.models.smp.dataset import OCTDataModule
 from src.models.smp.model import OCTSegmentationModel
@@ -94,11 +94,12 @@ def main(cfg: DictConfig) -> None:
         arch=hyperparameters['architecture'],
         encoder_name=hyperparameters['encoder'],
         optimizer_name=hyperparameters['optimizer'],
+        input_size=hyperparameters['input_size'],
         in_channels=3,
         classes=cfg.classes,
         model_name=task_name,
         lr=hyperparameters['lr'],
-        save_img_per_epoch=5 if cfg.log_artifacts else None,
+        save_img_per_epoch=1 if cfg.log_artifacts else None,
     )
     with open(f'{model_dir}/config.json', 'w') as file:
         json.dump(

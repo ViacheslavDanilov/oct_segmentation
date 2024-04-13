@@ -1,11 +1,15 @@
+from glob import glob
 from typing import List
 
+import cv2
 import numpy as np
 import pytorch_lightning as pl
 import segmentation_models_pytorch as smp
 import torch
 
-from src.models.smp.utils import get_metrics, log_predict_model_on_epoch, save_metrics_on_epoch
+import wandb
+from src.data.utils import CLASS_COLOR_BGR, CLASS_ID, CLASS_ID_REVERSED
+from src.models.smp.utils import get_metrics, save_metrics_on_epoch
 
 
 class OCTSegmentationModel(pl.LightningModule):
@@ -20,6 +24,7 @@ class OCTSegmentationModel(pl.LightningModule):
         classes: List[str],
         lr: float = 0.0001,
         optimizer_name: str = 'Adam',
+            input_size: int = 512,
         save_img_per_epoch: int = None,
         wandb_save_media: bool = False,
         **kwargs,
@@ -44,7 +49,10 @@ class OCTSegmentationModel(pl.LightningModule):
         self.model_name = model_name
         self.lr = lr
         self.optimizer = optimizer_name
+        self.input_size = input_size
         self.save_img_per_epoch = save_img_per_epoch
+        self.wandb_save_media = wandb_save_media
+        self.class_values = [CLASS_ID[cl] for _, cl in enumerate(self.classes)]
 
     def forward(
         self,
@@ -119,19 +127,6 @@ class OCTSegmentationModel(pl.LightningModule):
             on_epoch=True,
         )
 
-        # TODO: on_validation_epoch_end img_dir
-        if self.save_img_per_epoch is not None:
-            if batch_idx == 0 and self.epoch % self.save_img_per_epoch == 0:
-                log_predict_model_on_epoch(
-                    img=img,
-                    mask=mask,
-                    pred_mask=pred_mask,
-                    classes=self.classes,
-                    epoch=self.epoch,
-                    model_name=self.model_name,
-                    wandb_save_media=self.wandb_save_media,
-                )
-
     def on_validation_epoch_end(self):
         if self.epoch > 0:
             save_metrics_on_epoch(
@@ -142,6 +137,8 @@ class OCTSegmentationModel(pl.LightningModule):
                 epoch=self.epoch,
                 log_dict=self.log_dict,
             )
+            if self.save_img_per_epoch is not None and self.epoch % self.save_img_per_epoch == 0:
+                self.log_predict_model_on_epoch()
         self.validation_step_outputs.clear()
         self.epoch += 1
 
@@ -170,3 +167,72 @@ class OCTSegmentationModel(pl.LightningModule):
         masks = masks.permute(0, 2, 3, 1)
         masks = masks.numpy().round()
         return masks
+
+    @staticmethod
+    def to_tensor_shape(
+            x: np.ndarray,
+    ) -> np.ndarray:
+        return x.transpose([2, 0, 1]).astype('float32')
+
+    def log_predict_model_on_epoch(
+            self,
+    ):
+        for idx, img_path in enumerate(glob('data/visualization/img/*.[pj][np][pge]')):
+            img = cv2.imread(img_path)
+            img = cv2.resize(img, (self.input_size, self.input_size))
+            mask = cv2.imread(img_path.replace('img', 'mask'), 0)
+            mask = cv2.resize(
+                mask, (self.input_size, self.input_size), interpolation=cv2.INTER_NEAREST
+            )
+
+            masks = [(mask == v) for v in self.class_values]
+            mask = np.stack(masks, axis=-1).astype('float')
+
+            pred_mask = self.predict(
+                images=np.array([self.to_tensor_shape(img.copy())]),
+                device='cuda',
+            )[0]
+            wandb_images = []
+            img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+            color_mask_gr = np.zeros(img.shape)
+            color_mask_pred = np.zeros(img.shape)
+            color_mask_pred[:, :] = (128, 128, 128)
+            color_mask_gr[:, :] = (128, 128, 128)
+
+            wandb_mask_inference = np.zeros((img.shape[0], img.shape[1]))
+            wandb_mask_ground_truth = np.zeros((img.shape[0], img.shape[1]))
+            for idy, cl in enumerate(self.classes):
+                color_mask_gr[mask[:, :, idy] == 1] = CLASS_COLOR_BGR[cl]
+                color_mask_pred[pred_mask[:, :, idy] == 1] = CLASS_COLOR_BGR[cl]
+                wandb_mask_inference[pred_mask[:, :, idy] == 1] = CLASS_ID[cl]
+                wandb_mask_ground_truth[mask[:, :, idy] == 1] = CLASS_ID[cl]
+
+            res = np.hstack((img, color_mask_gr))
+            res = np.hstack((res, color_mask_pred))
+
+            cv2.imwrite(
+                f'models/{self.model_name}/images_per_epoch/img_{str(idx + 1).zfill(2)}_epoch_{str(self.epoch).zfill(3)}.png',
+                cv2.cvtColor(res.astype('uint8'), cv2.COLOR_RGB2BGR),
+            )
+
+            if self.wandb_save_media:
+                wandb_images.append(
+                    wandb.Image(
+                        img,
+                        masks={
+                            'predictions': {
+                                'mask_data': wandb_mask_inference,
+                                'class_labels': CLASS_ID_REVERSED,
+                            },
+                            'ground_truth': {
+                                'mask_data': wandb_mask_ground_truth,
+                                'class_labels': CLASS_ID_REVERSED,
+                            },
+                        },
+                        caption=f'Example-{idx}',
+                    ),
+                )
+        if self.wandb_save_media:
+            wandb.log(
+                {'Examples': wandb_images},
+            )
