@@ -15,7 +15,6 @@ from supervisely import Polygon
 from tqdm import tqdm
 
 from src import PROJECT_DIR
-from src.data.mask_processor import MaskProcessor
 
 log = logging.getLogger(__name__)
 log.setLevel(logging.INFO)
@@ -61,7 +60,7 @@ def process_polygon_geometry(
 def process_bitmap_geometry(
     bitmap: dict,
 ) -> Tuple[int, int, np.ndarray]:
-    y_min, x_min = bitmap['origin']
+    x_min, y_min = bitmap['origin']
     obj_mask = bitmap_to_mask(bitmap['data'])
     return x_min, y_min, obj_mask
 
@@ -70,7 +69,6 @@ def get_mask_properties(
     figure: dict,
     mask: np.ndarray,
     crop: List[List[int]],
-    smooth_mask: bool,
 ) -> Tuple[str, Polygon, List[List[Any]]]:
     if figure['geometryType'] == 'polygon':
         x_min, y_min, obj_mask = process_polygon_geometry(figure['geometry']['points'])
@@ -78,11 +76,6 @@ def get_mask_properties(
         x_min, y_min, obj_mask = process_bitmap_geometry(figure['geometry']['bitmap'])
     else:
         return None, None, None
-
-    if smooth_mask:
-        mask_processor = MaskProcessor()
-        obj_mask = mask_processor.smooth_mask(mask=obj_mask)
-        obj_mask = mask_processor.remove_artifacts(mask=obj_mask)
 
     # Paste the mask of the object into the source mask
     mask[y_min : y_min + obj_mask.shape[0], x_min : x_min + obj_mask.shape[1]] = obj_mask[:, :]
@@ -124,7 +117,6 @@ def process_single_annotation(
     img_dir: str,
     class_ids: dict,
     crop: List[List[int]],
-    smooth_mask: bool,
 ) -> pd.DataFrame:
     df_ann = pd.DataFrame()
     study = dataset.name
@@ -144,13 +136,14 @@ def process_single_annotation(
 
             # Initializing the dictionary with annotations
             result_dict = {
-                'image_path': os.path.join(img_dir, img_name),
-                'image_name': img_name,
+                'img_path': os.path.join(img_dir, img_name),
+                'img_name': img_name,
                 'study': study,
                 'series': series,
                 'slice': slice,
-                'image_width': crop[1][0] - crop[0][0],
-                'image_height': crop[1][1] - crop[0][1],
+                'img_width': crop[1][0] - crop[0][0],
+                'img_height': crop[1][1] - crop[0][1],
+                'type': None,
                 'class_id': None,
                 'class_name': None,
                 'x1': None,
@@ -162,7 +155,7 @@ def process_single_annotation(
                 'box_width': None,
                 'box_height': None,
                 'area': None,
-                'mask': None,
+                'encoded_mask': None,
             }
 
             if len(ann_frame) != 0:
@@ -175,12 +168,12 @@ def process_single_annotation(
                         figure=figure,
                         mask=mask,
                         crop=crop,
-                        smooth_mask=smooth_mask,
                     )
                     if encoded_mask is None:
                         break
 
                     # Fill the result dictionary with the figure properties
+                    result_dict['type'] = figure['geometryType']
                     result_dict['class_id'] = class_ids[class_title]
                     result_dict['class_name'] = class_title
                     result_dict['x1'] = bbox[0][0]
@@ -231,10 +224,12 @@ def process_single_video(
 
 def save_metadata(
     df_list: sly.Project.DatasetDict,
+    project_dir: str,
     save_dir: str,
 ) -> None:
     df = pd.concat(df_list)
-    df.sort_values(['image_path', 'class_id'], inplace=True)
+    df.sort_values(['img_path', 'class_id'], inplace=True)
+    df['img_path'] = df['img_path'].apply(lambda x: os.path.relpath(x, project_dir))
     df.reset_index(drop=True, inplace=True)
     df.index += 1
     save_path = os.path.join(save_dir, 'metadata.csv')
@@ -250,8 +245,8 @@ def main(cfg: DictConfig) -> None:
     log.info(f'Config:\n\n{OmegaConf.to_yaml(cfg)}')
 
     # Define absolute paths
-    data_dir = os.path.join(PROJECT_DIR, cfg.data_dir)
-    save_dir = os.path.join(PROJECT_DIR, cfg.save_dir)
+    data_dir = str(os.path.join(PROJECT_DIR, cfg.data_dir))
+    save_dir = str(os.path.join(PROJECT_DIR, cfg.save_dir))
 
     meta = json.load(open(os.path.join(data_dir, 'meta.json')))
     project_sly = sly.VideoProject(data_dir, sly.OpenMode.READ)
@@ -277,7 +272,6 @@ def main(cfg: DictConfig) -> None:
             img_dir=img_dir,
             class_ids=class_ids,
             crop=cfg.crop,
-            smooth_mask=cfg.smooth_mask,
         )
         for dataset in tqdm(project_sly.datasets, desc='Process annotations')
     )
@@ -285,6 +279,7 @@ def main(cfg: DictConfig) -> None:
     # Save annotation metadata
     save_metadata(
         df_list=df_list,
+        project_dir=PROJECT_DIR,
         save_dir=save_dir,
     )
 

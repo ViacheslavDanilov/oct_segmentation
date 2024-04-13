@@ -12,28 +12,32 @@ import numpy as np
 CLASS_MAP = {
     'Lipid core': {
         'id': 1,
-        'color': [0, 252, 124],
+        'color': [125, 227, 127],
     },
     'Lumen': {
         'id': 2,
-        'color': [133, 21, 199],
+        'color': [228, 30, 199],
     },
     'Fibrous cap': {
         'id': 3,
-        'color': [170, 178, 32],
+        'color': [123, 171, 226],
     },
     'Vasa vasorum': {
         'id': 4,
-        'color': [34, 34, 178],
+        'color': [208, 2, 27],
     },
     'Artifact': {
         'id': 5,
-        'color': [152, 251, 152],
+        'color': [80, 227, 194],
     },
 }
 
 CLASS_COLOR = {
     class_name: tuple(class_info['color']) for class_name, class_info in CLASS_MAP.items()  # type: ignore
+}
+
+CLASS_COLOR_BGR = {
+    class_name: tuple(class_info['color'][::-1]) for class_name, class_info in CLASS_MAP.items()  # type: ignore
 }
 
 CLASS_ID = {class_name: class_info['id'] for class_name, class_info in CLASS_MAP.items()}

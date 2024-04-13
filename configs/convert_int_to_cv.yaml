@@ -3,8 +3,14 @@ defaults:
 - _self_
 
 data_dir: data/interim
-train_size: 0.80  # TODO: add num folds
-seed: 11    # TODO: add num folds
-# Available classes: Lipid core, Lumen, Fibrous cap, Vasa vasorum
-exclude_classes: []
 save_dir: data/cv
+save_color_mask: true
+smooth_mask: true
+num_folds: 5
+seed: 11
+split_column: study
+class_names:
+- Lumen
+- Lipid core
+- Fibrous cap
+- Vasa vasorum
