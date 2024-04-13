@@ -6,8 +6,8 @@ import numpy as np
 import pytorch_lightning as pl
 import segmentation_models_pytorch as smp
 import torch
-
 import wandb
+
 from src.data.utils import CLASS_COLOR_BGR, CLASS_ID, CLASS_ID_REVERSED
 from src.models.smp.utils import get_metrics, save_metrics_on_epoch
 
@@ -24,7 +24,7 @@ class OCTSegmentationModel(pl.LightningModule):
         classes: List[str],
         lr: float = 0.0001,
         optimizer_name: str = 'Adam',
-            input_size: int = 512,
+        input_size: int = 512,
         save_img_per_epoch: int = None,
         wandb_save_media: bool = False,
         **kwargs,
@@ -170,19 +170,21 @@ class OCTSegmentationModel(pl.LightningModule):
 
     @staticmethod
     def to_tensor_shape(
-            x: np.ndarray,
+        x: np.ndarray,
     ) -> np.ndarray:
         return x.transpose([2, 0, 1]).astype('float32')
 
     def log_predict_model_on_epoch(
-            self,
+        self,
     ):
         for idx, img_path in enumerate(glob('data/visualization/img/*.[pj][np][pge]')):
             img = cv2.imread(img_path)
             img = cv2.resize(img, (self.input_size, self.input_size))
             mask = cv2.imread(img_path.replace('img', 'mask'), 0)
             mask = cv2.resize(
-                mask, (self.input_size, self.input_size), interpolation=cv2.INTER_NEAREST
+                mask,
+                (self.input_size, self.input_size),
+                interpolation=cv2.INTER_NEAREST,
             )
 
             masks = [(mask == v) for v in self.class_values]
