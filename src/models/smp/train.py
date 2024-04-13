@@ -25,7 +25,7 @@ os.environ['WANDB_API_KEY'] = '0a94ef68f2a7a8b709671d6ef76e61580d20da7f'
 
 @hydra.main(
     config_path=os.path.join(PROJECT_DIR, 'configs'),
-    config_name='train_smp',
+    config_name='train',
     version_base=None,
 )
 def main(cfg: DictConfig) -> None:
