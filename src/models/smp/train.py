@@ -20,6 +20,8 @@ ssl._create_default_https_context = ssl._create_unverified_context
 log = logging.getLogger(__name__)
 log.setLevel(logging.INFO)
 
+os.environ['WANDB_API_KEY'] = '0a94ef68f2a7a8b709671d6ef76e61580d20da7f'
+
 
 @hydra.main(
     config_path=os.path.join(PROJECT_DIR, 'configs'),
