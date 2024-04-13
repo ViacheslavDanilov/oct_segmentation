@@ -122,8 +122,8 @@ def main(cfg: DictConfig) -> None:
     log.info(f'Config:\n\n{OmegaConf.to_yaml(cfg)}')
 
     # Define absolute paths
-    data_dir = os.path.join(PROJECT_DIR, cfg.data_dir)
-    save_dir = os.path.join(PROJECT_DIR, cfg.save_dir)
+    data_dir = str(os.path.join(PROJECT_DIR, cfg.data_dir))
+    save_dir = str(os.path.join(PROJECT_DIR, cfg.save_dir))
 
     dcm_list = get_file_list(
         src_dirs=data_dir,
