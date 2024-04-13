@@ -14,7 +14,7 @@ class MaskProcessor:
     ) -> np.ndarray:
         mask = mask.astype(np.uint8)
         min_dim = min(mask.shape)
-        kernel_size = max(int(0.01 * min_dim), 1)
+        kernel_size = max(int(0.005 * min_dim), 1)
         kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (kernel_size, kernel_size))
         mask_open = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
         mask_close = cv2.morphologyEx(mask_open, cv2.MORPH_CLOSE, kernel)
