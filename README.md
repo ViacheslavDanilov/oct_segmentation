@@ -23,7 +23,7 @@
 <a name="data"></a>
 ## 📁 Data - TO BE UPDATED SOON
 
-|  ![Source image](media/source_img.png "Source image")  |  ![Pre-processed image](media/gray_img.png "Pre-processed image")  |
+|  ![Source image](.assets/source_img.png "Source image")  |  ![Pre-processed image](.assets/gray_img.png "Pre-processed image")  |
 |:------------------------------------------------------:|:------------------------------------------------------------------:|
 |                     *Source image*                     |                       *Pre-processed image*                        |
 
