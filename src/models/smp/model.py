@@ -1,4 +1,5 @@
 from glob import glob
+from pathlib import Path
 from typing import List
 
 import cv2
@@ -6,8 +7,8 @@ import numpy as np
 import pytorch_lightning as pl
 import segmentation_models_pytorch as smp
 import torch
-import wandb
 
+import wandb
 from src.data.utils import CLASS_COLOR_BGR, CLASS_ID, CLASS_ID_REVERSED
 from src.models.smp.utils import get_metrics, save_metrics_on_epoch
 
@@ -212,8 +213,9 @@ class OCTSegmentationModel(pl.LightningModule):
             res = np.hstack((img, color_mask_gr))
             res = np.hstack((res, color_mask_pred))
 
+            img_stem = Path(img_path).stem
             cv2.imwrite(
-                f'models/{self.model_name}/images_per_epoch/img_{str(idx + 1).zfill(2)}_epoch_{str(self.epoch).zfill(3)}.png',
+                f'models/{self.model_name}/images_per_epoch/{img_stem}_epoch_{str(self.epoch).zfill(3)}.png',
                 cv2.cvtColor(res.astype('uint8'), cv2.COLOR_RGB2BGR),
             )
 
