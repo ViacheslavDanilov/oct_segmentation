@@ -95,7 +95,6 @@ class OCTSegmentationModel(pl.LightningModule):
             model_name=self.model_name,
             classes=self.classes,
             epoch=self.epoch - 1,  # TODO: verify
-            # epoch=self.epoch,           # TODO: verify
             log_dict=self.log_dict,
         )
         self.training_step_outputs.clear()
@@ -196,20 +195,20 @@ class OCTSegmentationModel(pl.LightningModule):
             )[0]
             wandb_images = []
             img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-            color_mask_gr = np.zeros(img.shape)
+            color_mask_gt = np.zeros(img.shape)
             color_mask_pred = np.zeros(img.shape)
             color_mask_pred[:, :] = (128, 128, 128)
-            color_mask_gr[:, :] = (128, 128, 128)
+            color_mask_gt[:, :] = (128, 128, 128)
 
             wandb_mask_inference = np.zeros((img.shape[0], img.shape[1]))
             wandb_mask_ground_truth = np.zeros((img.shape[0], img.shape[1]))
-            for idy, cl in enumerate(self.classes):
-                color_mask_gr[mask[:, :, idy] == 1] = CLASS_COLOR_BGR[cl]
-                color_mask_pred[pred_mask[:, :, idy] == 1] = CLASS_COLOR_BGR[cl]
-                wandb_mask_inference[pred_mask[:, :, idy] == 1] = CLASS_ID[cl]
-                wandb_mask_ground_truth[mask[:, :, idy] == 1] = CLASS_ID[cl]
+            for idx, cl in enumerate(self.classes):
+                color_mask_gt[mask[:, :, idx] == 1] = CLASS_COLOR_BGR[cl]
+                color_mask_pred[pred_mask[:, :, idx] == 1] = CLASS_COLOR_BGR[cl]
+                wandb_mask_inference[pred_mask[:, :, idx] == 1] = CLASS_ID[cl]
+                wandb_mask_ground_truth[mask[:, :, idx] == 1] = CLASS_ID[cl]
 
-            res = np.hstack((img, color_mask_gr))
+            res = np.hstack((img, color_mask_gt))
             res = np.hstack((res, color_mask_pred))
 
             img_stem = Path(img_path).stem
