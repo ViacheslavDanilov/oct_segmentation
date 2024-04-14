@@ -194,9 +194,8 @@ class OCTSegmentationModel(pl.LightningModule):
                 device='cuda',
             )[0]
             wandb_images = []
-            img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-            color_mask_gt = np.zeros(img.shape)
-            color_mask_pred = np.zeros(img.shape)
+            color_mask_gt = np.zeros(img.shape, dtype=np.uint8)
+            color_mask_pred = np.zeros(img.shape, dtype=np.uint8)
             color_mask_pred[:, :] = (128, 128, 128)
             color_mask_gt[:, :] = (128, 128, 128)
 
@@ -214,7 +213,7 @@ class OCTSegmentationModel(pl.LightningModule):
             img_stem = Path(img_path).stem
             cv2.imwrite(
                 f'models/{self.model_name}/images_per_epoch/{img_stem}_epoch_{str(self.epoch).zfill(3)}.png',
-                cv2.cvtColor(res.astype('uint8'), cv2.COLOR_RGB2BGR),
+                res,
             )
 
             if self.wandb_save_media:
