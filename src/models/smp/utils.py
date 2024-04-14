@@ -105,7 +105,7 @@ def save_metrics_on_epoch(
     }
 
     metrics_l = metrics_log.copy()
-    metrics_l['epoch'] = epoch + 1
+    metrics_l['epoch'] = epoch
     wandb.log(metrics_l)  # type: ignore
 
     with open(f'models/{model_name}/metrics.csv', 'a', newline='') as f_object:
@@ -136,7 +136,7 @@ def save_metrics_on_epoch(
                 metrics_log[f'{metric_name} {split}/{cl}'] = metrics[metric_name][num]
             writer.writerow(
                 {
-                    'Epoch': epoch + 1,
+                    'Epoch': epoch,
                     'Loss': metrics['loss'],
                     'IoU': metrics['iou'][num],
                     'Dice': metrics['dice'][num],
@@ -149,7 +149,7 @@ def save_metrics_on_epoch(
             )
         writer.writerow(
             {
-                'Epoch': epoch + 1,
+                'Epoch': epoch,
                 'Loss': metrics['loss'],
                 'IoU': metrics['iou'].mean(),
                 'Dice': metrics['dice'].mean(),
