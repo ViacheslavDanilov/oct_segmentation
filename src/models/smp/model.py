@@ -76,7 +76,6 @@ class OCTSegmentationModel(pl.LightningModule):
         prob_mask = logits_mask.sigmoid()  # type: ignore
         pred_mask = (prob_mask > 0.5).float()
 
-        # TODO: check if 'train/loss' is fine for you
         self.log('train/loss', loss, prog_bar=True, on_epoch=True)
         self.training_step_outputs.append(
             get_metrics(
@@ -123,7 +122,7 @@ class OCTSegmentationModel(pl.LightningModule):
         )
         self.log(
             'val/f1',
-            np.mean(self.validation_step_outputs[-1]['F1']).mean(),
+            np.mean(self.validation_step_outputs[-1]['f1']).mean(),
             prog_bar=True,
             on_epoch=True,
         )

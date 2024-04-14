@@ -48,11 +48,11 @@ def get_metrics(
     recall = smp.metrics.sensitivity(tp, fp, fn, tn)
     return {
         'loss': loss.detach().cpu().numpy(),
-        'IoU': iou.cpu().numpy(),
-        'Dice': dice,
-        'F1': f1.cpu().numpy(),
-        'Recall': recall.cpu().numpy(),
-        'Precision': precision.cpu().numpy(),
+        'iou': iou.cpu().numpy(),
+        'dice': dice,
+        'recall': recall.cpu().numpy(),
+        'precision': precision.cpu().numpy(),
+        'f1': f1.cpu().numpy(),
     }
 
 
@@ -90,15 +90,18 @@ def save_metrics_on_epoch(
                         axis=0,
                     )
 
+    # TODO: why do we log them twice?
     metrics_log = {
-        f'{split}/IoU (mean)': metrics['IoU'].mean(),
-        f'{split}/Dice (mean)': metrics['Dice'].mean(),
-        f'{split}/Precision (mean)': metrics['Precision'].mean(),
-        f'{split}/Recall (mean)': metrics['Recall'].mean(),
-        f'IoU {split}/mean': metrics['IoU'].mean(),
-        f'Dice {split}/mean': metrics['Dice'].mean(),
-        f'Precision {split}/mean': metrics['Precision'].mean(),
-        f'Recall {split}/mean': metrics['Recall'].mean(),
+        f'{split}/loss_mean': metrics['loss'],
+        f'{split}/iou_mean': metrics['iou'].mean(),
+        f'{split}/dice_mean': metrics['dice'].mean(),
+        f'{split}/precision_mean': metrics['precision'].mean(),
+        f'{split}/recall_mean': metrics['recall'].mean(),
+        f'{split}/f1_mean': metrics['f1'].mean(),
+        # f'IoU {split}/mean': metrics['IoU'].mean(),
+        # f'Dice {split}/mean': metrics['Dice'].mean(),
+        # f'Precision {split}/mean': metrics['Precision'].mean(),
+        # f'Recall {split}/mean': metrics['Recall'].mean(),
     }
 
     metrics_l = metrics_log.copy()
@@ -108,6 +111,7 @@ def save_metrics_on_epoch(
     with open(f'models/{model_name}/metrics.csv', 'a', newline='') as f_object:
         fieldnames = [
             'Epoch',
+            'Loss',
             'IoU',
             'Dice',
             'Precision',
@@ -122,22 +126,23 @@ def save_metrics_on_epoch(
 
         for num, cl in enumerate(classes):
             for metric_name in [
-                'IoU',
-                'Dice',
-                'F1',
-                'Precision',
-                'Recall',
+                'iou',
+                'dice',
+                'precision',
+                'recall',
+                'f1',
             ]:
                 metrics_log[f'{split}/{metric_name} ({cl})'] = metrics[metric_name][num]
                 metrics_log[f'{metric_name} {split}/{cl}'] = metrics[metric_name][num]
             writer.writerow(
                 {
                     'Epoch': epoch + 1,
-                    'IoU': metrics['IoU'][num],
-                    'Dice': metrics['Dice'][num],
-                    'Precision': metrics['Precision'][num],
-                    'Recall': metrics['Recall'][num],
-                    'F1': metrics['F1'][num],
+                    'Loss': metrics['loss'],
+                    'IoU': metrics['iou'][num],
+                    'Dice': metrics['dice'][num],
+                    'Precision': metrics['precision'][num],
+                    'Recall': metrics['recall'][num],
+                    'F1': metrics['f1'][num],
                     'Split': split,
                     'Class': cl,
                 },
@@ -145,11 +150,12 @@ def save_metrics_on_epoch(
         writer.writerow(
             {
                 'Epoch': epoch + 1,
-                'IoU': metrics['IoU'].mean(),
-                'Dice': metrics['Dice'].mean(),
-                'Precision': metrics['Precision'].mean(),
-                'Recall': metrics['Recall'].mean(),
-                'F1': metrics['F1'].mean(),
+                'Loss': metrics['loss'],
+                'IoU': metrics['iou'].mean(),
+                'Dice': metrics['dice'].mean(),
+                'Precision': metrics['precision'].mean(),
+                'Recall': metrics['recall'].mean(),
+                'F1': metrics['f1'].mean(),
                 'Split': split,
                 'Class': 'Mean',
             },
