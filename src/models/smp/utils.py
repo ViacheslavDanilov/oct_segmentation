@@ -6,8 +6,9 @@ import cv2
 import numpy as np
 import segmentation_models_pytorch as smp
 import torchvision
-import wandb
 from PIL import Image
+
+import wandb
 
 
 def get_img_mask_union(
@@ -101,10 +102,8 @@ def save_metrics_on_epoch(
     }
 
     metrics_l = metrics_log.copy()
-    metrics_l['epoch'] = epoch
-    wandb.log(
-        metrics_l,
-    )
+    metrics_l['epoch'] = epoch + 1
+    wandb.log(metrics_l)  # type: ignore
 
     with open(f'models/{model_name}/metrics.csv', 'a', newline='') as f_object:
         fieldnames = [
@@ -133,7 +132,7 @@ def save_metrics_on_epoch(
                 metrics_log[f'{metric_name} {split}/{cl}'] = metrics[metric_name][num]
             writer.writerow(
                 {
-                    'Epoch': epoch,
+                    'Epoch': epoch + 1,
                     'IoU': metrics['IoU'][num],
                     'Dice': metrics['Dice'][num],
                     'Precision': metrics['Precision'][num],
@@ -145,7 +144,7 @@ def save_metrics_on_epoch(
             )
         writer.writerow(
             {
-                'Epoch': epoch,
+                'Epoch': epoch + 1,
                 'IoU': metrics['IoU'].mean(),
                 'Dice': metrics['Dice'].mean(),
                 'Precision': metrics['Precision'].mean(),
