@@ -90,7 +90,6 @@ def save_metrics_on_epoch(
                         axis=0,
                     )
 
-    # TODO: why do we log them twice?
     metrics_log = {
         f'{split}/loss_mean': metrics['loss'],
         f'{split}/iou_mean': metrics['iou'].mean(),
@@ -98,15 +97,11 @@ def save_metrics_on_epoch(
         f'{split}/precision_mean': metrics['precision'].mean(),
         f'{split}/recall_mean': metrics['recall'].mean(),
         f'{split}/f1_mean': metrics['f1'].mean(),
-        # f'IoU {split}/mean': metrics['IoU'].mean(),
-        # f'Dice {split}/mean': metrics['Dice'].mean(),
-        # f'Precision {split}/mean': metrics['Precision'].mean(),
-        # f'Recall {split}/mean': metrics['Recall'].mean(),
     }
 
     metrics_l = metrics_log.copy()
     metrics_l['epoch'] = epoch
-    wandb.log(metrics_l)  # type: ignore
+    wandb.log(metrics_l, step=epoch)  # type: ignore
 
     with open(f'models/{model_name}/metrics.csv', 'a', newline='') as f_object:
         fieldnames = [

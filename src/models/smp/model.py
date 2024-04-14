@@ -40,7 +40,7 @@ class OCTSegmentationModel(pl.LightningModule):
         )
 
         self.classes = classes
-        self.epoch = 1
+        self.epoch = 0
         params = smp.encoders.get_preprocessing_params(encoder_name)
         self.register_buffer('std', torch.tensor(params['std']).view(1, 3, 1, 1))
         self.register_buffer('mean', torch.tensor(params['mean']).view(1, 3, 1, 1))
@@ -128,17 +128,19 @@ class OCTSegmentationModel(pl.LightningModule):
         )
 
     def on_validation_epoch_end(self):
-        if self.epoch > 1:
+        if self.epoch > 0:
             save_metrics_on_epoch(
                 metrics_epoch=self.validation_step_outputs,
                 split='test',
                 model_name=self.model_name,
                 classes=self.classes,
-                epoch=self.epoch - 1,
+                epoch=self.epoch,
                 log_dict=self.log_dict,
             )
             if self.save_img_per_epoch is not None and self.epoch % self.save_img_per_epoch == 0:
                 self.log_predict_model_on_epoch()
+        else:
+            self.epoch += 1
         self.validation_step_outputs.clear()
 
     def configure_optimizers(self):
@@ -236,4 +238,5 @@ class OCTSegmentationModel(pl.LightningModule):
         if self.wandb_save_media:
             wandb.log(
                 {'Examples': wandb_images},
+                step=self.epoch,
             )
