@@ -7,8 +7,8 @@ import numpy as np
 import pytorch_lightning as pl
 import segmentation_models_pytorch as smp
 import torch
-import wandb
 
+import wandb
 from src.data.utils import CLASS_COLOR_BGR, CLASS_ID, CLASS_ID_REVERSED
 from src.models.smp.utils import get_metrics, save_metrics_on_epoch
 
