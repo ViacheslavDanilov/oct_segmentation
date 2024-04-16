@@ -1,6 +1,5 @@
 import logging
 import os
-import shutil
 from pathlib import Path
 from typing import List, Tuple
 
@@ -93,18 +92,20 @@ def cross_validation_split(
     return splits
 
 
-def process_mask(
+def process_pair(
     df: pd.DataFrame,
     save_dir: str,
+    crop: List[List[int]],
     smooth_mask: bool = True,
     save_color_mask: bool = True,
 ) -> None:
     if len(df) == 0:
         return
 
-    first_row = df.iloc[0]
-    img_name = os.path.basename(first_row.img_path)
-    img_height, img_width = first_row.img_height, first_row.img_width
+    img_path = df.iloc[0].img_path
+    img = cv2.imread(img_path)
+    img_name = os.path.basename(img_path)
+    img_height, img_width, _ = img.shape
 
     mask = np.zeros((img_height, img_width))
     mask_color = np.zeros((img_height, img_width, 3), dtype='uint8')
@@ -120,15 +121,17 @@ def process_mask(
         mask[obj_mask == 1] = CLASS_ID[obj.class_name]
         mask_color[mask == CLASS_ID[obj.class_name]] = CLASS_COLOR_BGR[obj.class_name]
 
-    # Save the indexed mask
-    cv2.imwrite(os.path.join(save_dir, 'mask', img_name), mask)
+    # Crop image and masks
+    if crop is not None:
+        img = img[crop[0][1] : crop[1][1], crop[0][0] : crop[1][0], :]
+        mask = mask[crop[0][1] : crop[1][1], crop[0][0] : crop[1][0]]
+        mask_color = mask_color[crop[0][1] : crop[1][1], crop[0][0] : crop[1][0], :]
 
-    # Save the color mask only if save_color_mask is True
+    # Save image and masks
+    cv2.imwrite(os.path.join(save_dir, 'img', img_name), img)
+    cv2.imwrite(os.path.join(save_dir, 'mask', img_name), mask)
     if save_color_mask:
         cv2.imwrite(os.path.join(save_dir, 'mask_color', img_name), mask_color)
-
-    # Copy the image to the destination directory
-    shutil.copy(first_row.img_path, os.path.join(save_dir, 'img', img_name))
 
 
 def merge_and_save_metadata(
@@ -203,20 +206,22 @@ def main(cfg: DictConfig) -> None:
 
         # Process train and test subsets
         Parallel(n_jobs=-1, backend='threading')(
-            delayed(process_mask)(
+            delayed(process_pair)(
                 df=df,
                 smooth_mask=cfg.smooth_mask,
                 save_color_mask=cfg.save_color_mask,
+                crop=cfg.crop,
                 save_dir=f'{save_dir}/fold_{fold_idx}/train',
             )
             for _, df in tqdm(gb_train, desc=f'Process train subset - Fold {fold_idx}')
         )
 
         Parallel(n_jobs=-1, backend='threading')(
-            delayed(process_mask)(
+            delayed(process_pair)(
                 df=df,
                 smooth_mask=cfg.smooth_mask,
                 save_color_mask=cfg.save_color_mask,
+                crop=cfg.crop,
                 save_dir=f'{save_dir}/fold_{fold_idx}/test',
             )
             for _, df in tqdm(gb_test, desc=f'Process test subset - Fold {fold_idx}')

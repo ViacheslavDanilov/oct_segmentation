@@ -163,4 +163,8 @@ data/interim*/
 data/cv*/
 
 # Models
+/models/*/
 *.pth
+
+# W&B
+/wandb/
