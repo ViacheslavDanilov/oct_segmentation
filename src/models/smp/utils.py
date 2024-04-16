@@ -5,36 +5,16 @@ from typing import List, Tuple
 import cv2
 import numpy as np
 import segmentation_models_pytorch as smp
-import torchvision
-from PIL import Image
-
 import wandb
-
-
-def get_img_mask_union(
-    img_0: np.ndarray,
-    alpha_0: float,
-    img_1: np.ndarray,
-    alpha_1: float,
-    color: Tuple[int, int, int],
-) -> np.ndarray:
-    return cv2.addWeighted(
-        np.array(img_0).astype('uint8'),
-        alpha_0,
-        (cv2.cvtColor(np.array(img_1).astype('uint8'), cv2.COLOR_GRAY2RGB) * color).astype(
-            np.uint8,
-        ),
-        alpha_1,
-        0,
-    )
+from PIL import Image
 
 
 def get_metrics(
     mask,
     pred_mask,
     loss,
+    eps: float = 1e-7,
 ):
-    eps = 1e-7
     tp, fp, fn, tn = smp.metrics.get_stats(
         pred_mask.long(),
         mask.long(),
@@ -158,6 +138,33 @@ def save_metrics_on_epoch(
         f_object.close()
 
 
+def calculate_iou(gt_mask, pred_mask):
+    gt_mask[gt_mask > 0] = 1
+    pred_mask[pred_mask > 0] = 1
+    overlap = pred_mask * gt_mask
+    union = (pred_mask + gt_mask) > 0
+    iou = overlap.sum() / float(union.sum())
+    return iou
+
+
+def get_img_mask_union(
+    img_0: np.ndarray,
+    alpha_0: float,
+    img_1: np.ndarray,
+    alpha_1: float,
+    color: Tuple[int, int, int],
+) -> np.ndarray:
+    return cv2.addWeighted(
+        np.array(img_0).astype('uint8'),
+        alpha_0,
+        (cv2.cvtColor(np.array(img_1).astype('uint8'), cv2.COLOR_GRAY2RGB) * color).astype(
+            np.uint8,
+        ),
+        alpha_1,
+        0,
+    )
+
+
 def get_img_mask_union_pil(
     img: Image,
     mask: np.ndarray,
@@ -169,15 +176,6 @@ def get_img_mask_union_pil(
     class_img = Image.new('RGB', size=img.size, color=color)
     img.paste(class_img, (0, 0), Image.fromarray(mask.astype('uint8')))
     return img
-
-
-def calculate_iou(gt_mask, pred_mask):
-    gt_mask[gt_mask > 0] = 1
-    pred_mask[pred_mask > 0] = 1
-    overlap = pred_mask * gt_mask
-    union = (pred_mask + gt_mask) > 0
-    iou = overlap.sum() / float(union.sum())
-    return iou
 
 
 def get_img_color_mask(
@@ -202,9 +200,6 @@ def to_tensor(
     x: np.ndarray,
 ) -> np.ndarray:
     return x.transpose([2, 0, 1]).astype('float32')
-
-
-get_tensor = torchvision.transforms.ToTensor()
 
 
 def preprocessing_img(
