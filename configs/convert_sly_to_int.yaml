@@ -3,5 +3,5 @@ defaults:
 - _self_
 
 data_dir: data/sly_output
-crop: [[0, 0], [1000, 1000]]
+crop: [[0, 0], [1000, 1000]]  # [[x1,y1], [x2,y2]]
 save_dir: data/interim

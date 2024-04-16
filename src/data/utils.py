@@ -35,12 +35,17 @@ CLASS_MAP = {
 CLASS_COLOR = {
     class_name: tuple(class_info['color']) for class_name, class_info in CLASS_MAP.items()  # type: ignore
 }
+CLASS_COLOR_BGR = {
+    class_name: tuple(class_info['color'][::-1]) for class_name, class_info in CLASS_MAP.items()  # type: ignore
+}
 
 CLASS_COLOR_BGR = {
     class_name: tuple(class_info['color'][::-1]) for class_name, class_info in CLASS_MAP.items()  # type: ignore
 }
 
 CLASS_ID = {class_name: class_info['id'] for class_name, class_info in CLASS_MAP.items()}
+
+CLASS_ID_REVERSED = dict((v, k) for k, v in CLASS_ID.items())
 
 
 def get_file_list(
