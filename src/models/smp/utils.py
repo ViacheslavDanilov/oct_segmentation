@@ -33,19 +33,18 @@ def get_metrics(
     mask,
     pred_mask,
     loss,
-    classes,
 ):
+    eps = 1e-7
     tp, fp, fn, tn = smp.metrics.get_stats(
         pred_mask.long(),
         mask.long(),
         mode='multilabel',
-        num_classes=len(classes),
     )
-    iou = smp.metrics.iou_score(tp, fp, fn, tn)
+    iou = smp.metrics.iou_score(tp, fp, fn, tn, zero_division=eps)
     dice = 2 * iou.cpu().numpy() / (iou.cpu().numpy() + 1)
-    f1 = smp.metrics.f1_score(tp, fp, fn, tn)
-    precision = smp.metrics.precision(tp, fp, fn, tn)
-    recall = smp.metrics.sensitivity(tp, fp, fn, tn)
+    f1 = smp.metrics.f1_score(tp, fp, fn, tn, zero_division=eps)
+    precision = smp.metrics.precision(tp, fp, fn, tn, zero_division=eps)
+    recall = smp.metrics.sensitivity(tp, fp, fn, tn, zero_division=eps)
     return {
         'loss': loss.detach().cpu().numpy(),
         'iou': iou.cpu().numpy(),

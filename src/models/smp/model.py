@@ -81,7 +81,6 @@ class OCTSegmentationModel(pl.LightningModule):
                 mask=mask,
                 pred_mask=pred_mask,
                 loss=loss,
-                classes=self.classes,
             ),
         )
         return {
@@ -117,7 +116,6 @@ class OCTSegmentationModel(pl.LightningModule):
                 mask=mask,
                 pred_mask=pred_mask,
                 loss=loss,
-                classes=self.classes,
             ),
         )
         self.log(
