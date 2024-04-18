@@ -1,5 +1,4 @@
 import logging
-import multiprocessing
 import os
 import random
 from glob import glob
@@ -14,7 +13,7 @@ from joblib import Parallel, delayed
 from torch.utils.data import DataLoader, Dataset
 from tqdm import tqdm
 
-from src.data.utils import CLASS_ID
+from src.data.utils import CLASS_IDS
 
 
 class OCTDataset(Dataset):
@@ -28,21 +27,36 @@ class OCTDataset(Dataset):
         use_augmentation: bool = False,
     ):
         self.classes = classes
+        self.class_values = [CLASS_IDS[cl] for _, cl in enumerate(self.classes)]
+
         mask_paths = glob(f'{data_dir}/mask/*.[pj][np][pge]')
+
+        # TODO: Сделать фильтрацию масок и изображений
+        # TODO: если classes = Lumen, то mask_paths должен содержать пути, где есть класс Lumen. Причём на этих масках могут быть и другие классы
+        # TODO: если classes = [Lumen, Vasa Vasorum], то mask_paths должен содержать пути, где маске есть хотя бы один из перечисленных классов т.е. Lumen или Vasa Vasorum.
+        mask_paths = self.update_mask_paths(mask_paths)
+
         self.input_size = input_size
-
-        num_cores = multiprocessing.cpu_count()
-        check_list = Parallel(n_jobs=num_cores, backend='threading')(
-            delayed(self.data_check)(f'{data_dir}/img', mask_id)
-            for mask_id in tqdm(mask_paths, desc='image load')
+        pair_list = Parallel(n_jobs=-1)(
+            delayed(self.verify_pairs)(
+                img_dir=f'{data_dir}/img',
+                mask_path=mask_path,
+            )
+            for mask_path in tqdm(mask_paths, desc='Check image-mask pairs')
         )
-
-        self.img_paths = list(np.array(check_list)[:, 1])
-        self.mask_paths = list(np.array(check_list)[:, 0])
-        self.class_values = [CLASS_ID[cl] for _, cl in enumerate(self.classes)]
+        self.img_paths = [pair[1] for pair in pair_list]
+        self.mask_paths = [pair[0] for pair in pair_list]
 
         self.use_augmentation = use_augmentation
 
+    def update_mask_paths(
+        self,
+        mask_paths: List[str],
+    ) -> List[str]:
+        print('Debug')
+        return mask_paths
+
+    # TODO: Адаптировать код под мультиканальные маски
     def __getitem__(self, i: int):
         img = cv2.imread(self.img_paths[i])
         img = cv2.resize(img, (self.input_size, self.input_size))
@@ -65,16 +79,15 @@ class OCTDataset(Dataset):
         return len(self.img_paths)
 
     @staticmethod
-    def data_check(
+    def verify_pairs(
         img_dir: str,
-        ann_id: str,
+        mask_path: str,
     ) -> Union[Tuple[str, str], None]:
-        img_name = Path(ann_id).name
-        img_path = os.path.join(img_dir, img_name)
-        if os.path.exists(img_path):
-            return ann_id, img_path
+        img_path = os.path.join(img_dir, Path(mask_path).name)
+        if Path(img_path).exists():
+            return mask_path, img_path
         else:
-            logging.warning(f'Img path: {img_path} not exist')
+            logging.warning(f'Image: {img_path} does not exist')
             return None
 
     @staticmethod
@@ -189,7 +202,7 @@ class OCTDataModule(pl.LightningDataModule):
 
 if __name__ == '__main__':
     dataset = OCTDataset(
-        data_dir='data/final/train',
+        data_dir='data/cv/fold_1_dev/train',
         classes=['Lipid core', 'Lumen', 'Fibrous cap', 'Vasa vasorum'],
         input_size=448,
         use_augmentation=False,
