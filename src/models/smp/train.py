@@ -83,7 +83,7 @@ def main(cfg: DictConfig) -> None:
             log_momentum=False,
         ),
     ]
-    if cfg.log_artifacts:
+    if cfg.img_save_interval is not None:
         os.makedirs(f'{model_dir}/images_per_epoch', exist_ok=True)
         callbacks.append(
             ModelCheckpoint(
@@ -119,8 +119,8 @@ def main(cfg: DictConfig) -> None:
         classes=cfg.classes,
         model_name=task_name,
         lr=hyperparameters['lr'],
-        save_img_per_epoch=1 if cfg.log_artifacts else None,
-        wandb_save_media=cfg.wandb_save_media,
+        img_save_interval=cfg.img_save_interval,
+        save_wandb_media=cfg.save_wandb_media,
     )
     with open(f'{model_dir}/config.json', 'w') as file:
         json.dump(

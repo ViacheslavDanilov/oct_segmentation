@@ -17,6 +17,6 @@ input_size: 512
 batch_size: 4
 epochs: 75
 device: auto  # cpu, gpu,  or auto
-log_artifacts: true
-wandb_save_media: true
+img_save_interval: 1  # save images every N epochs
+save_wandb_media: false
 save_dir: models

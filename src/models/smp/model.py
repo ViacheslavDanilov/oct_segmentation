@@ -27,8 +27,8 @@ class OCTSegmentationModel(pl.LightningModule):
         lr: float = 0.0001,
         optimizer_name: str = 'Adam',
         input_size: int = 512,
-        save_img_per_epoch: int = None,
-        wandb_save_media: bool = False,
+        img_save_interval: int = 1,
+        save_wandb_media: bool = False,
         **kwargs,
     ):
         super().__init__()
@@ -52,8 +52,8 @@ class OCTSegmentationModel(pl.LightningModule):
         self.lr = lr
         self.optimizer = optimizer_name
         self.input_size = input_size
-        self.save_img_per_epoch = save_img_per_epoch
-        self.wandb_save_media = wandb_save_media
+        self.img_save_interval = img_save_interval
+        self.save_wandb_media = save_wandb_media
         self.class_values = [CLASS_IDS[cl] for _, cl in enumerate(self.classes)]
 
     def forward(
@@ -136,7 +136,7 @@ class OCTSegmentationModel(pl.LightningModule):
                 epoch=self.epoch,
                 log_dict=self.log_dict,
             )
-            if self.save_img_per_epoch is not None and self.epoch % self.save_img_per_epoch == 0:
+            if self.img_save_interval is not None and self.epoch % self.img_save_interval == 0:
                 self.log_predict_model_on_epoch()
         else:
             self.epoch += 1
@@ -215,7 +215,7 @@ class OCTSegmentationModel(pl.LightningModule):
                 res,
             )
 
-            if self.wandb_save_media:
+            if self.save_wandb_media:
                 wandb_images.append(
                     wandb.Image(
                         cv2.cvtColor(img, cv2.COLOR_BGR2RGB),
@@ -232,7 +232,7 @@ class OCTSegmentationModel(pl.LightningModule):
                         caption=f'Example-{idx}',
                     ),
                 )
-        if self.wandb_save_media:
+        if self.save_wandb_media:
             wandb.log(
                 {'Examples': wandb_images},
                 step=self.epoch,
