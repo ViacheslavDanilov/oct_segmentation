@@ -7,8 +7,8 @@ import numpy as np
 import pytorch_lightning as pl
 import segmentation_models_pytorch as smp
 import torch
-import wandb
 
+import wandb
 from src.data.utils import CLASS_COLORS_BGR, CLASS_IDS, CLASS_IDS_REVERSED
 from src.models.smp.utils import get_metrics, save_metrics_on_epoch
 
@@ -176,6 +176,7 @@ class OCTSegmentationModel(pl.LightningModule):
     def log_predict_model_on_epoch(
         self,
     ):
+        wandb_images = []
         for idx, img_path in enumerate(glob('data/visualization/img/*.[pj][np][pge]')):
             img = cv2.imread(img_path)
             img = cv2.resize(img, (self.input_size, self.input_size))
@@ -193,7 +194,6 @@ class OCTSegmentationModel(pl.LightningModule):
                 images=np.array([self.to_tensor_shape(img.copy())]),
                 device='cuda',
             )[0]
-            wandb_images = []
             color_mask_gt = np.zeros(img.shape, dtype=np.uint8)
             color_mask_pred = np.zeros(img.shape, dtype=np.uint8)
             color_mask_pred[:, :] = (128, 128, 128)
@@ -201,11 +201,11 @@ class OCTSegmentationModel(pl.LightningModule):
 
             wandb_mask_inference = np.zeros((img.shape[0], img.shape[1]))
             wandb_mask_ground_truth = np.zeros((img.shape[0], img.shape[1]))
-            for idx, cl in enumerate(self.classes):
-                color_mask_gt[mask[:, :, idx] == 1] = CLASS_COLORS_BGR[cl]
-                color_mask_pred[pred_mask[:, :, idx] == 1] = CLASS_COLORS_BGR[cl]
-                wandb_mask_inference[pred_mask[:, :, idx] == 1] = CLASS_IDS[cl]
-                wandb_mask_ground_truth[mask[:, :, idx] == 1] = CLASS_IDS[cl]
+            for idy, cl in enumerate(self.classes):
+                color_mask_gt[mask[:, :, idy] == 1] = CLASS_COLORS_BGR[cl]
+                color_mask_pred[pred_mask[:, :, idy] == 1] = CLASS_COLORS_BGR[cl]
+                wandb_mask_inference[pred_mask[:, :, idy] == 1] = CLASS_IDS[cl]
+                wandb_mask_ground_truth[mask[:, :, idy] == 1] = CLASS_IDS[cl]
 
             res = np.hstack((img, color_mask_gt))
             res = np.hstack((res, color_mask_pred))
@@ -219,7 +219,7 @@ class OCTSegmentationModel(pl.LightningModule):
             if self.wandb_save_media:
                 wandb_images.append(
                     wandb.Image(
-                        img,
+                        cv2.cvtColor(img, cv2.COLOR_BGR2RGB),
                         masks={
                             'predictions': {
                                 'mask_data': wandb_mask_inference,

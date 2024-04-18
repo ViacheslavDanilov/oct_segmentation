@@ -19,4 +19,5 @@ epochs: 75
 device: cuda
 cuda_num: [0]
 log_artifacts: true
+wandb_save_media: true
 save_dir: models
