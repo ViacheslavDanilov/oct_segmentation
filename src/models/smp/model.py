@@ -9,7 +9,7 @@ import segmentation_models_pytorch as smp
 import torch
 import wandb
 
-from src.data.utils import CLASS_COLORS, CLASS_IDS, CLASS_IDS_REVERSED
+from src.data.utils import CLASS_COLORS_BGR, CLASS_IDS, CLASS_IDS_REVERSED
 from src.models.smp.utils import get_metrics, save_metrics_on_epoch
 
 
@@ -202,8 +202,8 @@ class OCTSegmentationModel(pl.LightningModule):
             wandb_mask_inference = np.zeros((img.shape[0], img.shape[1]))
             wandb_mask_ground_truth = np.zeros((img.shape[0], img.shape[1]))
             for idx, cl in enumerate(self.classes):
-                color_mask_gt[mask[:, :, idx] == 1] = CLASS_COLORS[cl]
-                color_mask_pred[pred_mask[:, :, idx] == 1] = CLASS_COLORS[cl]
+                color_mask_gt[mask[:, :, idx] == 1] = CLASS_COLORS_BGR[cl]
+                color_mask_pred[pred_mask[:, :, idx] == 1] = CLASS_COLORS_BGR[cl]
                 wandb_mask_inference[pred_mask[:, :, idx] == 1] = CLASS_IDS[cl]
                 wandb_mask_ground_truth[mask[:, :, idx] == 1] = CLASS_IDS[cl]
 
