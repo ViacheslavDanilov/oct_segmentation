@@ -28,7 +28,11 @@ CLASS_MAP = {
     },
 }
 
-CLASS_COLORS = {
+CLASS_COLORS_RGB = {
+    class_name: tuple(class_info['color']) for class_name, class_info in CLASS_MAP.items()  # type: ignore
+}
+
+CLASS_COLORS_BGR = {
     class_name: tuple(class_info['color'][::-1]) for class_name, class_info in CLASS_MAP.items()  # type: ignore
 }
 
