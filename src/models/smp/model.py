@@ -6,6 +6,7 @@ import cv2
 import numpy as np
 import pytorch_lightning as pl
 import segmentation_models_pytorch as smp
+import tifffile
 import torch
 
 import wandb
@@ -177,18 +178,15 @@ class OCTSegmentationModel(pl.LightningModule):
         self,
     ):
         wandb_images = []
-        for idx, img_path in enumerate(glob('data/visualization/img/*.[pj][np][pge]')):
+        for idx, img_path in enumerate(glob('data/visualization/img/*.png')):
             img = cv2.imread(img_path)
             img = cv2.resize(img, (self.input_size, self.input_size))
-            mask = cv2.imread(img_path.replace('img', 'mask'), 0)
+            mask = tifffile.imread(f"{img_path.replace('img', 'mask').split('.')[0]}.tiff")
             mask = cv2.resize(
                 mask,
                 (self.input_size, self.input_size),
                 interpolation=cv2.INTER_NEAREST,
             )
-
-            masks = [(mask == v) for v in self.class_values]
-            mask = np.stack(masks, axis=-1).astype('float')
 
             pred_mask = self.predict(
                 images=np.array([self.to_tensor_shape(img.copy())]),
@@ -202,10 +200,11 @@ class OCTSegmentationModel(pl.LightningModule):
             wandb_mask_inference = np.zeros((img.shape[0], img.shape[1]))
             wandb_mask_ground_truth = np.zeros((img.shape[0], img.shape[1]))
             for idy, cl in enumerate(self.classes):
-                color_mask_gt[mask[:, :, idy] == 1] = CLASS_COLORS_BGR[cl]
+                class_id = CLASS_IDS[cl] - 1
+                color_mask_gt[mask[:, :, class_id] == 255] = CLASS_COLORS_BGR[cl]
                 color_mask_pred[pred_mask[:, :, idy] == 1] = CLASS_COLORS_BGR[cl]
                 wandb_mask_inference[pred_mask[:, :, idy] == 1] = CLASS_IDS[cl]
-                wandb_mask_ground_truth[mask[:, :, idy] == 1] = CLASS_IDS[cl]
+                wandb_mask_ground_truth[mask[:, :, class_id] == 255] = CLASS_IDS[cl]
 
             res = np.hstack((img, color_mask_gt))
             res = np.hstack((res, color_mask_pred))

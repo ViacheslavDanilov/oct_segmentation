@@ -9,6 +9,7 @@ import albumentations as albu
 import cv2
 import numpy as np
 import pytorch_lightning as pl
+import tifffile
 from joblib import Parallel, delayed
 from torch.utils.data import DataLoader, Dataset
 from tqdm import tqdm
@@ -28,42 +29,36 @@ class OCTDataset(Dataset):
     ):
         self.classes = classes
         self.class_values = [CLASS_IDS[cl] for _, cl in enumerate(self.classes)]
-
-        mask_paths = glob(f'{data_dir}/mask/*.[pj][np][pge]')
-
-        # TODO: Сделать фильтрацию масок и изображений
-        # TODO: если classes = Lumen, то mask_paths должен содержать пути, где есть класс Lumen. Причём на этих масках могут быть и другие классы
-        # TODO: если classes = [Lumen, Vasa Vasorum], то mask_paths должен содержать пути, где маске есть хотя бы один из перечисленных классов т.е. Lumen или Vasa Vasorum.
-        mask_paths = self.update_mask_paths(mask_paths)
-
         self.input_size = input_size
+
+        mask_paths = glob(f'{data_dir}/mask/*.tiff')
         pair_list = Parallel(n_jobs=-1)(
             delayed(self.verify_pairs)(
                 img_dir=f'{data_dir}/img',
                 mask_path=mask_path,
+                class_idx=self.class_values,
             )
             for mask_path in tqdm(mask_paths, desc='Check image-mask pairs')
         )
+        pair_list = list(filter(None, pair_list))
+        if len(pair_list) == 0:
+            raise 'Warning: data not corrected'
         self.img_paths = [pair[1] for pair in pair_list]
         self.mask_paths = [pair[0] for pair in pair_list]
 
         self.use_augmentation = use_augmentation
 
-    def update_mask_paths(
-        self,
-        mask_paths: List[str],
-    ) -> List[str]:
-        print('Debug')
-        return mask_paths
-
-    # TODO: Адаптировать код под мультиканальные маски
     def __getitem__(self, i: int):
         img = cv2.imread(self.img_paths[i])
         img = cv2.resize(img, (self.input_size, self.input_size))
-        mask = cv2.imread(self.mask_paths[i], 0)
+        mask = tifffile.imread(self.mask_paths[i])
         mask = cv2.resize(mask, (self.input_size, self.input_size), interpolation=cv2.INTER_NEAREST)
 
-        masks = [(mask == v) for v in self.class_values]
+        masks = []
+        for v in self.class_values:
+            class_mask = mask[:, :, v - 1]
+            class_mask[class_mask == 255] = v
+            masks.append(class_mask)
         mask = np.stack(masks, axis=-1).astype('float')
 
         if self.use_augmentation:
@@ -82,13 +77,16 @@ class OCTDataset(Dataset):
     def verify_pairs(
         img_dir: str,
         mask_path: str,
-    ) -> Union[Tuple[str, str], None]:
-        img_path = os.path.join(img_dir, Path(mask_path).name)
-        if Path(img_path).exists():
-            return mask_path, img_path
-        else:
-            logging.warning(f'Image: {img_path} does not exist')
-            return None
+            class_idx: List[int],
+    ) -> Union[Tuple[str, str]]:
+        mask = tifffile.imread(mask_path)
+        for class_id in class_idx:
+            if len(np.unique(mask[:, :, class_id - 1])) > 1:
+                img_path = os.path.join(img_dir, f"{Path(mask_path).name.split('.')[0]}.png")
+                if Path(img_path).exists():
+                    return mask_path, img_path
+                else:
+                    logging.warning(f'Image: {img_path} does not exist')
 
     @staticmethod
     def to_tensor_shape(
