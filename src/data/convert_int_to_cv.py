@@ -7,6 +7,7 @@ import cv2
 import hydra
 import numpy as np
 import pandas as pd
+import tifffile
 from joblib import Parallel, delayed
 from omegaconf import DictConfig, OmegaConf
 from sklearn.model_selection import KFold
@@ -92,6 +93,20 @@ def cross_validation_split(
     return splits
 
 
+def colorize_mask(
+    mask: np.ndarray,
+    classes: List[str],
+) -> np.ndarray:
+    mask_color = np.zeros((mask.shape[0], mask.shape[1], 3), dtype='uint8')
+    mask_color[:] = (128, 128, 128)
+
+    for idx, class_name in enumerate(classes):
+        channel_id = CLASS_IDS[class_name] - 1  # type: ignore
+        mask_color[mask[:, :, channel_id] == 255] = CLASS_COLORS[class_name]
+
+    return mask_color
+
+
 def process_pair(
     df: pd.DataFrame,
     save_dir: str,
@@ -105,13 +120,10 @@ def process_pair(
 
     img_path = df.iloc[0].img_path
     img = cv2.imread(img_path)
-    img_name = os.path.basename(img_path)
     img_height, img_width, _ = img.shape
 
     num_classes = len(classes)
     mask = np.zeros((img_height, img_width, num_classes), dtype='uint8')
-    mask_color = np.zeros((img_height, img_width, 3), dtype='uint8')
-    mask_color[:] = (128, 128, 128)
 
     mask_processor = MaskProcessor() if smooth_mask else None
 
@@ -122,7 +134,9 @@ def process_pair(
             obj_mask = mask_processor.remove_artifacts(mask=obj_mask)
         channel_id = CLASS_IDS[obj.class_name] - 1  # type: ignore
         mask[:, :, channel_id][obj_mask == 1] = 255
-        mask_color[mask[:, :, channel_id] == 255] = CLASS_COLORS[obj.class_name]
+
+    # Colorize mask
+    mask_color = colorize_mask(mask=mask, classes=classes)
 
     # Crop image and masks
     if crop is not None:
@@ -131,10 +145,11 @@ def process_pair(
         mask_color = mask_color[crop[0][1] : crop[1][1], crop[0][0] : crop[1][0], :]
 
     # Save image and masks
-    cv2.imwrite(os.path.join(save_dir, 'img', img_name), img)
-    cv2.imwrite(os.path.join(save_dir, 'mask', img_name), mask)
+    basename = Path(img_path).stem
+    cv2.imwrite(os.path.join(save_dir, 'img', f'{basename}.png'), img)
+    tifffile.imwrite(os.path.join(save_dir, 'mask', f'{basename}.tiff'), mask)
     if save_color_mask:
-        cv2.imwrite(os.path.join(save_dir, 'mask_color', img_name), mask_color)
+        cv2.imwrite(os.path.join(save_dir, 'mask_color', f'{basename}.png'), mask_color)
 
 
 def merge_and_save_metadata(
