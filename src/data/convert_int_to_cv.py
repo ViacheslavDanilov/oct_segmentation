@@ -15,7 +15,7 @@ from tqdm import tqdm
 
 from src import PROJECT_DIR
 from src.data.mask_processor import MaskProcessor
-from src.data.utils import CLASS_COLORS, CLASS_IDS, convert_base64_to_numpy
+from src.data.utils import CLASS_COLORS_RGB, CLASS_IDS, convert_base64_to_numpy
 
 log = logging.getLogger(__name__)
 log.setLevel(logging.INFO)
@@ -102,7 +102,7 @@ def colorize_mask(
 
     for idx, class_name in enumerate(classes):
         channel_id = CLASS_IDS[class_name] - 1  # type: ignore
-        mask_color[mask[:, :, channel_id] == 255] = CLASS_COLORS[class_name]
+        mask_color[mask[:, :, channel_id] == 255] = CLASS_COLORS_RGB[class_name]
 
     return mask_color
 
@@ -147,9 +147,13 @@ def process_pair(
     # Save image and masks
     basename = Path(img_path).stem
     cv2.imwrite(os.path.join(save_dir, 'img', f'{basename}.png'), img)
-    tifffile.imwrite(os.path.join(save_dir, 'mask', f'{basename}.tiff'), mask)
+    tifffile.imwrite(os.path.join(save_dir, 'mask', f'{basename}.tiff'), mask, compression='LZW')
     if save_color_mask:
-        cv2.imwrite(os.path.join(save_dir, 'mask_color', f'{basename}.png'), mask_color)
+        tifffile.imwrite(
+            os.path.join(save_dir, 'mask_color', f'{basename}.tiff'),
+            mask_color,
+            compression='LZW',
+        )
 
 
 def merge_and_save_metadata(
