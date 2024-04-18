@@ -15,6 +15,7 @@ from supervisely import Polygon
 from tqdm import tqdm
 
 from src import PROJECT_DIR
+from src.data.utils import CLASS_IDS
 
 log = logging.getLogger(__name__)
 log.setLevel(logging.INFO)
@@ -248,9 +249,8 @@ def main(cfg: DictConfig) -> None:
     data_dir = str(os.path.join(PROJECT_DIR, cfg.data_dir))
     save_dir = str(os.path.join(PROJECT_DIR, cfg.save_dir))
 
-    meta = json.load(open(os.path.join(data_dir, 'meta.json')))
+    # Read project
     project_sly = sly.VideoProject(data_dir, sly.OpenMode.READ)
-    class_ids = {value['title']: id + 1 for (id, value) in enumerate(meta['classes'])}
     img_dir = os.path.join(save_dir, 'img')
     os.makedirs(img_dir, exist_ok=True)
 
@@ -270,7 +270,7 @@ def main(cfg: DictConfig) -> None:
         delayed(process_single_annotation)(
             dataset=dataset,
             img_dir=img_dir,
-            class_ids=class_ids,
+            class_ids=CLASS_IDS,
             crop=cfg.crop,
         )
         for dataset in tqdm(project_sly.datasets, desc='Process annotations')
