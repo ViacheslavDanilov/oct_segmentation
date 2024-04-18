@@ -163,7 +163,7 @@ def process_single_annotation(
                 for figure in ann_frame.figures.tolist()[0]:
                     # Extract figure features
                     obj = objects[objects['key'] == figure['objectKey']]
-                    class_title = obj.classTitle.values[0]
+                    class_name = obj.classTitle.values[0]
                     mask = np.zeros((ann['size']['height'], ann['size']['width']))
                     encoded_mask, contour, bbox = get_mask_properties(
                         figure=figure,
@@ -175,8 +175,8 @@ def process_single_annotation(
 
                     # Fill the result dictionary with the figure properties
                     result_dict['type'] = figure['geometryType']
-                    result_dict['class_id'] = class_ids[class_title]
-                    result_dict['class_name'] = class_title
+                    result_dict['class_id'] = class_ids[class_name]
+                    result_dict['class_name'] = class_name
                     result_dict['x1'] = bbox[0][0]
                     result_dict['y1'] = bbox[0][1]
                     result_dict['x2'] = bbox[1][0]
