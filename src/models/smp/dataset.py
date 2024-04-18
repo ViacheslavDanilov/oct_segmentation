@@ -28,36 +28,36 @@ class OCTDataset(Dataset):
         use_augmentation: bool = False,
     ):
         self.classes = classes
-        self.class_values = [CLASS_IDS[cl] for _, cl in enumerate(self.classes)]
+        self.class_ids = [CLASS_IDS[cl] for _, cl in enumerate(self.classes)]
         self.input_size = input_size
+        self.use_augmentation = use_augmentation
 
-        mask_paths = glob(f'{data_dir}/mask/*.tiff')
+        mask_paths = glob(os.path.join(data_dir, 'mask', '*.tiff'))
         pair_list = Parallel(n_jobs=-1)(
             delayed(self.verify_pairs)(
-                img_dir=f'{data_dir}/img',
+                img_dir=os.path.join(data_dir, 'img'),
                 mask_path=mask_path,
-                class_idx=self.class_values,
+                class_ids=self.class_ids,
             )
             for mask_path in tqdm(mask_paths, desc='Check image-mask pairs')
         )
-        pair_list = list(filter(None, pair_list))
-        if len(pair_list) == 0:
-            raise 'Warning: data not corrected'
-        self.img_paths = [pair[1] for pair in pair_list]
-        self.mask_paths = [pair[0] for pair in pair_list]
+        pair_list = [pair for pair in pair_list if pair is not None]
+        if not pair_list:
+            raise ValueError('Warning: No correct data found')
 
-        self.use_augmentation = use_augmentation
+        self.img_paths, self.mask_paths = zip(*pair_list)
 
-    def __getitem__(self, i: int):
-        img = cv2.imread(self.img_paths[i])
+    def __getitem__(self, idx: int):
+        img = cv2.imread(self.img_paths[idx])
         img = cv2.resize(img, (self.input_size, self.input_size))
-        mask = tifffile.imread(self.mask_paths[i])
+        mask = tifffile.imread(self.mask_paths[idx])
         mask = cv2.resize(mask, (self.input_size, self.input_size), interpolation=cv2.INTER_NEAREST)
 
         masks = []
-        for v in self.class_values:
-            class_mask = mask[:, :, v - 1]
-            class_mask[class_mask == 255] = v
+        for class_id in self.class_ids:
+            channel_id = class_id - 1  # type: ignore
+            class_mask = mask[:, :, channel_id]
+            class_mask[class_mask == 255] = class_id
             masks.append(class_mask)
         mask = np.stack(masks, axis=-1).astype('float')
 
@@ -77,16 +77,23 @@ class OCTDataset(Dataset):
     def verify_pairs(
         img_dir: str,
         mask_path: str,
-            class_idx: List[int],
-    ) -> Union[Tuple[str, str]]:
+        class_ids: List[int],
+    ) -> Union[Tuple[str, str], None]:
         mask = tifffile.imread(mask_path)
-        for class_id in class_idx:
-            if len(np.unique(mask[:, :, class_id - 1])) > 1:
-                img_path = os.path.join(img_dir, f"{Path(mask_path).name.split('.')[0]}.png")
-                if Path(img_path).exists():
-                    return mask_path, img_path
-                else:
-                    logging.warning(f'Image: {img_path} does not exist')
+        img_name = Path(mask_path).stem
+        img_path = os.path.join(img_dir, f'{img_name}.png')
+
+        if not os.path.exists(img_path):
+            logging.warning(f'Image: {img_path} does not exist')
+            return None
+
+        for class_id in class_ids:
+            channel_id = class_id - 1
+            unique_values = np.unique(mask[:, :, channel_id])
+            if np.any(unique_values > 1):
+                return img_path, mask_path
+
+        return None
 
     @staticmethod
     def to_tensor_shape(
@@ -150,10 +157,10 @@ class OCTDataModule(pl.LightningDataModule):
     def __init__(
         self,
         classes: List[str],
-        input_size: int = 448,
+        input_size: int = 512,
         batch_size: int = 2,
         num_workers: int = 2,
-        data_dir: str = 'data/final',
+        data_dir: str = 'data/cv/fold_1',
     ):
         super().__init__()
         self.data_dir = data_dir
@@ -200,11 +207,11 @@ class OCTDataModule(pl.LightningDataModule):
 
 if __name__ == '__main__':
     dataset = OCTDataset(
-        data_dir='data/cv/fold_1_dev/train',
-        classes=['Lipid core', 'Lumen', 'Fibrous cap', 'Vasa vasorum'],
-        input_size=448,
+        data_dir='data/cv_dev/fold_1/train',
+        classes=['Lumen', 'Fibrous cap', 'Lipid core', 'Vasa vasorum'],
+        input_size=512,
         use_augmentation=False,
     )
-    for i in range(30):
-        img, mask = dataset[i]
+    for idx in range(30):
+        img, mask = dataset[idx]
     print('Complete')
