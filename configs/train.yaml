@@ -12,7 +12,7 @@ classes:
 architecture: unet
 encoder: resnet50
 optimizer: Adam
-lr: 0.001
+lr: 0.00001
 input_size: 512
 batch_size: 4
 epochs: 75
