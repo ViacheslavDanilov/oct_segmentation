@@ -9,7 +9,7 @@ import segmentation_models_pytorch as smp
 import torch
 import wandb
 
-from src.data.utils import CLASS_COLOR_BGR, CLASS_ID, CLASS_ID_REVERSED
+from src.data.utils import CLASS_COLORS, CLASS_IDS, CLASS_IDS_REVERSED
 from src.models.smp.utils import get_metrics, save_metrics_on_epoch
 
 
@@ -53,7 +53,7 @@ class OCTSegmentationModel(pl.LightningModule):
         self.input_size = input_size
         self.save_img_per_epoch = save_img_per_epoch
         self.wandb_save_media = wandb_save_media
-        self.class_values = [CLASS_ID[cl] for _, cl in enumerate(self.classes)]
+        self.class_values = [CLASS_IDS[cl] for _, cl in enumerate(self.classes)]
 
     def forward(
         self,
@@ -202,10 +202,10 @@ class OCTSegmentationModel(pl.LightningModule):
             wandb_mask_inference = np.zeros((img.shape[0], img.shape[1]))
             wandb_mask_ground_truth = np.zeros((img.shape[0], img.shape[1]))
             for idx, cl in enumerate(self.classes):
-                color_mask_gt[mask[:, :, idx] == 1] = CLASS_COLOR_BGR[cl]
-                color_mask_pred[pred_mask[:, :, idx] == 1] = CLASS_COLOR_BGR[cl]
-                wandb_mask_inference[pred_mask[:, :, idx] == 1] = CLASS_ID[cl]
-                wandb_mask_ground_truth[mask[:, :, idx] == 1] = CLASS_ID[cl]
+                color_mask_gt[mask[:, :, idx] == 1] = CLASS_COLORS[cl]
+                color_mask_pred[pred_mask[:, :, idx] == 1] = CLASS_COLORS[cl]
+                wandb_mask_inference[pred_mask[:, :, idx] == 1] = CLASS_IDS[cl]
+                wandb_mask_ground_truth[mask[:, :, idx] == 1] = CLASS_IDS[cl]
 
             res = np.hstack((img, color_mask_gt))
             res = np.hstack((res, color_mask_pred))
@@ -223,11 +223,11 @@ class OCTSegmentationModel(pl.LightningModule):
                         masks={
                             'predictions': {
                                 'mask_data': wandb_mask_inference,
-                                'class_labels': CLASS_ID_REVERSED,
+                                'class_labels': CLASS_IDS_REVERSED,
                             },
                             'ground_truth': {
                                 'mask_data': wandb_mask_ground_truth,
-                                'class_labels': CLASS_ID_REVERSED,
+                                'class_labels': CLASS_IDS_REVERSED,
                             },
                         },
                         caption=f'Example-{idx}',
