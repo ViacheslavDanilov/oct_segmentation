@@ -6,6 +6,7 @@ import ssl
 
 import hydra
 import pytorch_lightning as pl
+import torch
 from omegaconf import DictConfig, OmegaConf
 from pytorch_lightning import loggers as pl_loggers
 from pytorch_lightning.callbacks import LearningRateMonitor, ModelCheckpoint
@@ -21,6 +22,25 @@ log = logging.getLogger(__name__)
 log.setLevel(logging.INFO)
 
 os.environ['WANDB_API_KEY'] = '0a94ef68f2a7a8b709671d6ef76e61580d20da7f'
+
+
+def pick_device(
+    option: str,
+) -> str:
+    """Pick the appropriate device based on the provided option.
+
+    Args:
+        option (str): Available device option ('cpu', 'cuda', 'auto').
+
+    Returns:
+        str: Selected device.
+    """
+    if option == 'auto':
+        return 'gpu' if torch.cuda.is_available() else 'cpu'
+    elif option in ['cpu', 'gpu']:
+        return option
+    else:
+        raise ValueError("Invalid device option. Please specify 'cpu', 'gpu', or 'auto'.")
 
 
 @hydra.main(
@@ -39,6 +59,8 @@ def main(cfg: DictConfig) -> None:
     task_name = f'{cfg.architecture}_{cfg.encoder}_{today.strftime("%d%m_%H%M")}'
     model_dir = f'{save_dir}/{task_name}'
 
+    device = pick_device(cfg.device)
+
     hyperparameters = {
         'architecture': cfg.architecture,
         'encoder': cfg.encoder,
@@ -49,7 +71,7 @@ def main(cfg: DictConfig) -> None:
         'optimizer': cfg.optimizer,
         'lr': cfg.lr,
         'epochs': cfg.epochs,
-        'device': cfg.device,
+        'device': device,
         'data_dir': data_dir,
     }
 
@@ -118,8 +140,8 @@ def main(cfg: DictConfig) -> None:
 
     # Initialize and tun trainer
     trainer = pl.Trainer(
-        devices=cfg.cuda_num,
-        accelerator=cfg.device,
+        devices='auto',
+        accelerator=device,
         max_epochs=hyperparameters['epochs'],
         logger=tb_logger,
         callbacks=callbacks,

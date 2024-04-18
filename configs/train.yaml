@@ -12,12 +12,11 @@ classes:
 architecture: unet
 encoder: resnet50
 optimizer: Adam
-lr: 0.00012
-input_size: 448
+lr: 0.001
+input_size: 512
 batch_size: 4
 epochs: 75
-device: cuda
-cuda_num: [0]
+device: auto  # cpu, gpu,  or auto
 log_artifacts: true
 wandb_save_media: true
 save_dir: models
