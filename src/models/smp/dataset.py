@@ -44,6 +44,7 @@ class OCTDataset(Dataset):
         pair_list = [pair for pair in pair_list if pair is not None]
         if not pair_list:
             raise ValueError('Warning: No correct data found')
+        print(f'Number of image-mask pairs: {len(pair_list)}')
 
         self.img_paths, self.mask_paths = zip(*pair_list)
 
@@ -56,9 +57,7 @@ class OCTDataset(Dataset):
         masks = []
         for class_id in self.class_ids:
             channel_id = class_id - 1  # type: ignore
-            class_mask = mask[:, :, channel_id]
-            class_mask[class_mask == 255] = class_id
-            masks.append(class_mask)
+            masks.append(np.array(mask[:, :, channel_id], dtype='bool'))
         mask = np.stack(masks, axis=-1).astype('float')
 
         if self.use_augmentation:
