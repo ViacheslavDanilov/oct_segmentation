@@ -70,6 +70,7 @@ def main(cfg: DictConfig) -> None:
         'batch_size': cfg.batch_size,
         'optimizer': cfg.optimizer,
         'lr': cfg.lr,
+        'weight_decay': cfg.weight_decay,
         'use_augmentation': cfg.use_augmentation,
         'epochs': cfg.epochs,
         'device': device,
@@ -121,6 +122,7 @@ def main(cfg: DictConfig) -> None:
         classes=cfg.classes,
         model_name=task_name,
         lr=hyperparameters['lr'],
+        weight_decay=hyperparameters['weight_decay'],
         img_save_interval=cfg.img_save_interval,
         save_wandb_media=cfg.save_wandb_media,
     )

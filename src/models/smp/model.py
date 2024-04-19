@@ -25,6 +25,7 @@ class OCTSegmentationModel(pl.LightningModule):
         in_channels: int,
         classes: List[str],
         lr: float = 0.0001,
+        weight_decay: float = 0.0001,
         optimizer_name: str = 'Adam',
         input_size: int = 512,
         img_save_interval: int = 1,
@@ -50,6 +51,7 @@ class OCTSegmentationModel(pl.LightningModule):
         self.loss_fn = smp.losses.DiceLoss(smp.losses.MULTILABEL_MODE, from_logits=True)
         self.model_name = model_name
         self.lr = lr
+        self.weight_decay = weight_decay
         self.optimizer = optimizer_name
         self.input_size = input_size
         self.img_save_interval = img_save_interval
@@ -144,15 +146,34 @@ class OCTSegmentationModel(pl.LightningModule):
 
     def configure_optimizers(self):
         if self.optimizer == 'SGD':
-            return torch.optim.SGD(self.parameters(), lr=self.lr)
+            return torch.optim.SGD(
+                self.parameters(),
+                lr=self.lr,
+                weight_decay=self.weight_decay,
+            )
         elif self.optimizer == 'RMSprop':
-            return torch.optim.RMSprop(self.parameters(), lr=self.lr)
+            return torch.optim.RMSprop(
+                self.parameters(),
+                lr=self.lr,
+                weight_decay=self.weight_decay,
+            )
         elif self.optimizer == 'RAdam':
-            return torch.optim.RAdam(self.parameters(), lr=self.lr)
+            return torch.optim.RAdam(
+                self.parameters(),
+                lr=self.lr,
+                weight_decay=self.weight_decay,
+            )
         elif self.optimizer == 'SAdam':
-            return torch.optim.SparseAdam(self.parameters(), lr=self.lr)
+            return torch.optim.SparseAdam(
+                self.parameters(),
+                lr=self.lr,
+            )
         elif self.optimizer == 'Adam':
-            return torch.optim.Adam(self.parameters(), lr=self.lr)
+            return torch.optim.Adam(
+                self.parameters(),
+                lr=self.lr,
+                weight_decay=self.weight_decay,
+            )
         else:
             raise ValueError(f'Unknown optimizer: {self.optimizer}')
 
