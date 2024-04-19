@@ -12,8 +12,8 @@ classes:
 architecture: unet
 encoder: resnet50
 optimizer: Adam
-lr: 0.0001          # Values to consider: 0.01, 0.001 and 0.0001
-weight_decay: 0.0   # Values to consider: 0.001, 0.0001 and 0.00001
+lr: 0.00001         # Values to consider: 0.001, 0.0001, and 0.00001
+weight_decay: 0.0   # Values to consider: 0.001, 0.0001, and 0.00001
 input_size: 512
 batch_size: 4
 epochs: 75
