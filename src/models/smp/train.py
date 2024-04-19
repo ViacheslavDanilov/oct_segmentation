@@ -61,7 +61,7 @@ def main(cfg: DictConfig) -> None:
 
     device = pick_device(cfg.device)
 
-    hyperparameters = {
+    hyperparams = {
         'architecture': cfg.architecture,
         'encoder': cfg.encoder,
         'input_size': cfg.input_size,
@@ -77,7 +77,7 @@ def main(cfg: DictConfig) -> None:
         'data_dir': data_dir,
     }
 
-    wandb.init(config=hyperparameters, project='oct_segmentation', name=task_name)  # type: ignore
+    wandb.init(config=hyperparams, project='oct_segmentation', name=task_name)  # type: ignore
 
     callbacks = [
         LearningRateMonitor(
@@ -103,8 +103,8 @@ def main(cfg: DictConfig) -> None:
     oct_data_module = OCTDataModule(
         data_dir=data_dir,
         classes=cfg.classes,
-        input_size=hyperparameters['input_size'],
-        batch_size=hyperparameters['batch_size'],
+        input_size=hyperparams['input_size'],
+        batch_size=hyperparams['batch_size'],
         num_workers=os.cpu_count(),
         use_augmentation=cfg.use_augmentation,
     )
@@ -114,15 +114,15 @@ def main(cfg: DictConfig) -> None:
 
     # Initialize model
     model = OCTSegmentationModel(
-        arch=hyperparameters['architecture'],
-        encoder_name=hyperparameters['encoder'],
-        optimizer_name=hyperparameters['optimizer'],
-        input_size=hyperparameters['input_size'],
+        arch=hyperparams['architecture'],
+        encoder_name=hyperparams['encoder'],
+        optimizer_name=hyperparams['optimizer'],
+        input_size=hyperparams['input_size'],
         in_channels=3,
         classes=cfg.classes,
         model_name=task_name,
-        lr=hyperparameters['lr'],
-        weight_decay=hyperparameters['weight_decay'],
+        lr=hyperparams['lr'],
+        weight_decay=hyperparams['weight_decay'],
         img_save_interval=cfg.img_save_interval,
         save_wandb_media=cfg.save_wandb_media,
     )
@@ -146,11 +146,11 @@ def main(cfg: DictConfig) -> None:
     trainer = pl.Trainer(
         devices='auto',
         accelerator=device,
-        max_epochs=hyperparameters['epochs'],
+        max_epochs=hyperparams['epochs'],
         logger=tb_logger,
         callbacks=callbacks,
         enable_checkpointing=True,
-        log_every_n_steps=hyperparameters['batch_size'],
+        log_every_n_steps=hyperparams['batch_size'],
         default_root_dir=model_dir,
     )
     trainer.fit(
