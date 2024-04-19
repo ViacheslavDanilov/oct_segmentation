@@ -17,6 +17,62 @@ from tqdm import tqdm
 from src.data.utils import CLASS_IDS
 
 
+class OCTDataModule(pl.LightningDataModule):
+    """A data module used to create training and validation dataloaders with OCT images."""
+
+    def __init__(
+        self,
+        classes: List[str],
+        data_dir: str = 'data/cv/fold_1',
+        input_size: int = 512,
+        batch_size: int = 2,
+        num_workers: int = 2,
+        use_augmentation: bool = False,
+    ):
+        super().__init__()
+        self.data_dir = data_dir
+        self.classes = classes
+        self.input_size = input_size
+        self.batch_size = batch_size
+        self.num_workers = num_workers
+        self.use_augmentation = use_augmentation
+
+    def setup(self, stage: str = 'fit'):
+        if stage == 'fit':
+            self.train_dataloader_set = OCTDataset(
+                input_size=self.input_size,
+                data_dir=f'{self.data_dir}/train',
+                classes=self.classes,
+                use_augmentation=self.use_augmentation,
+            )
+            self.val_dataloader_set = OCTDataset(
+                input_size=self.input_size,
+                data_dir=f'{self.data_dir}/test',
+                classes=self.classes,
+                use_augmentation=False,
+            )
+        elif stage == 'test':
+            raise ValueError('The "test" method is not yet implemented')
+        else:
+            raise ValueError(f'Unsupported stage value: {stage}')
+
+    def train_dataloader(self):
+        return DataLoader(
+            dataset=self.train_dataloader_set,
+            batch_size=self.batch_size,
+            shuffle=True,
+            num_workers=self.num_workers,
+        )
+
+    def val_dataloader(self):
+        return DataLoader(
+            dataset=self.val_dataloader_set,
+            batch_size=self.batch_size,
+            shuffle=False,
+            num_workers=self.num_workers,
+        )
+
+
 class OCTDataset(Dataset):
     """The dataset used to process OCT images and corresponding segmentation masks."""
 
@@ -148,60 +204,6 @@ class OCTDataset(Dataset):
             ),
         ]
         return albu.Compose(transform)
-
-
-class OCTDataModule(pl.LightningDataModule):
-    """A data module used to create training and validation dataloaders with OCT images."""
-
-    def __init__(
-        self,
-        classes: List[str],
-        input_size: int = 512,
-        batch_size: int = 2,
-        num_workers: int = 2,
-        data_dir: str = 'data/cv/fold_1',
-    ):
-        super().__init__()
-        self.data_dir = data_dir
-        self.classes = classes
-        self.input_size = input_size
-        self.batch_size = batch_size
-        self.num_workers = num_workers
-
-    def setup(self, stage: str = 'fit'):
-        if stage == 'fit':
-            self.train_dataloader_set = OCTDataset(
-                input_size=self.input_size,
-                data_dir=f'{self.data_dir}/train',
-                classes=self.classes,
-                use_augmentation=True,
-            )
-            self.val_dataloader_set = OCTDataset(
-                input_size=self.input_size,
-                data_dir=f'{self.data_dir}/test',
-                classes=self.classes,
-                use_augmentation=False,
-            )
-        elif stage == 'test':
-            raise ValueError('The "test" method is not yet implemented')
-        else:
-            raise ValueError(f'Unsupported stage value: {stage}')
-
-    def train_dataloader(self):
-        return DataLoader(
-            dataset=self.train_dataloader_set,
-            batch_size=self.batch_size,
-            shuffle=True,
-            num_workers=self.num_workers,
-        )
-
-    def val_dataloader(self):
-        return DataLoader(
-            dataset=self.val_dataloader_set,
-            batch_size=self.batch_size,
-            shuffle=False,
-            num_workers=self.num_workers,
-        )
 
 
 if __name__ == '__main__':

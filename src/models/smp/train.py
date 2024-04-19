@@ -70,6 +70,7 @@ def main(cfg: DictConfig) -> None:
         'batch_size': cfg.batch_size,
         'optimizer': cfg.optimizer,
         'lr': cfg.lr,
+        'use_augmentation': cfg.use_augmentation,
         'epochs': cfg.epochs,
         'device': device,
         'data_dir': data_dir,
@@ -99,11 +100,12 @@ def main(cfg: DictConfig) -> None:
 
     # Initialize data module
     oct_data_module = OCTDataModule(
-        input_size=hyperparameters['input_size'],
+        data_dir=data_dir,
         classes=cfg.classes,
+        input_size=hyperparameters['input_size'],
         batch_size=hyperparameters['batch_size'],
         num_workers=os.cpu_count(),
-        data_dir=data_dir,
+        use_augmentation=cfg.use_augmentation,
     )
     tb_logger = pl_loggers.TensorBoardLogger(
         save_dir='logs/',

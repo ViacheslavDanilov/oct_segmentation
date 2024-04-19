@@ -19,4 +19,5 @@ epochs: 75
 device: auto  # cpu, gpu,  or auto
 img_save_interval: 1  # save images every N epochs
 save_wandb_media: false
+use_augmentation: true
 save_dir: models
