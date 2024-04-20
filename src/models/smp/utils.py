@@ -70,12 +70,12 @@ def save_metrics_on_epoch(
                     )
 
     metrics_log = {
-        f'{split}/loss_mean': metrics['loss'],
-        f'{split}/iou_mean': metrics['iou'].mean(),
-        f'{split}/dice_mean': metrics['dice'].mean(),
-        f'{split}/precision_mean': metrics['precision'].mean(),
-        f'{split}/recall_mean': metrics['recall'].mean(),
-        f'{split}/f1_mean': metrics['f1'].mean(),
+        f'{split}/loss': metrics['loss'],
+        f'{split}/iou': metrics['iou'].mean(),
+        f'{split}/dice': metrics['dice'].mean(),
+        f'{split}/precision': metrics['precision'].mean(),
+        f'{split}/recall': metrics['recall'].mean(),
+        f'{split}/f1': metrics['f1'].mean(),
     }
 
     metrics_l = metrics_log.copy()

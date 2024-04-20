@@ -6,10 +6,11 @@ import cv2
 import numpy as np
 import pytorch_lightning as pl
 import segmentation_models_pytorch as smp
+import tifffile
 import torch
 import wandb
 
-from src.data.utils import CLASS_COLOR_BGR, CLASS_ID, CLASS_ID_REVERSED
+from src.data.utils import CLASS_COLORS_BGR, CLASS_IDS, CLASS_IDS_REVERSED
 from src.models.smp.utils import get_metrics, save_metrics_on_epoch
 
 
@@ -24,10 +25,11 @@ class OCTSegmentationModel(pl.LightningModule):
         in_channels: int,
         classes: List[str],
         lr: float = 0.0001,
+        weight_decay: float = 0.0001,
         optimizer_name: str = 'Adam',
         input_size: int = 512,
-        save_img_per_epoch: int = None,
-        wandb_save_media: bool = False,
+        img_save_interval: int = 1,
+        save_wandb_media: bool = False,
         **kwargs,
     ):
         super().__init__()
@@ -49,11 +51,12 @@ class OCTSegmentationModel(pl.LightningModule):
         self.loss_fn = smp.losses.DiceLoss(smp.losses.MULTILABEL_MODE, from_logits=True)
         self.model_name = model_name
         self.lr = lr
+        self.weight_decay = weight_decay
         self.optimizer = optimizer_name
         self.input_size = input_size
-        self.save_img_per_epoch = save_img_per_epoch
-        self.wandb_save_media = wandb_save_media
-        self.class_values = [CLASS_ID[cl] for _, cl in enumerate(self.classes)]
+        self.img_save_interval = img_save_interval
+        self.save_wandb_media = save_wandb_media
+        self.class_values = [CLASS_IDS[cl] for _, cl in enumerate(self.classes)]
 
     def forward(
         self,
@@ -135,7 +138,7 @@ class OCTSegmentationModel(pl.LightningModule):
                 epoch=self.epoch,
                 log_dict=self.log_dict,
             )
-            if self.save_img_per_epoch is not None and self.epoch % self.save_img_per_epoch == 0:
+            if self.img_save_interval is not None and self.epoch % self.img_save_interval == 0:
                 self.log_predict_model_on_epoch()
         else:
             self.epoch += 1
@@ -143,15 +146,34 @@ class OCTSegmentationModel(pl.LightningModule):
 
     def configure_optimizers(self):
         if self.optimizer == 'SGD':
-            return torch.optim.SGD(self.parameters(), lr=self.lr)
+            return torch.optim.SGD(
+                self.parameters(),
+                lr=self.lr,
+                weight_decay=self.weight_decay,
+            )
         elif self.optimizer == 'RMSprop':
-            return torch.optim.RMSprop(self.parameters(), lr=self.lr)
+            return torch.optim.RMSprop(
+                self.parameters(),
+                lr=self.lr,
+                weight_decay=self.weight_decay,
+            )
         elif self.optimizer == 'RAdam':
-            return torch.optim.RAdam(self.parameters(), lr=self.lr)
+            return torch.optim.RAdam(
+                self.parameters(),
+                lr=self.lr,
+                weight_decay=self.weight_decay,
+            )
         elif self.optimizer == 'SAdam':
-            return torch.optim.SparseAdam(self.parameters(), lr=self.lr)
+            return torch.optim.SparseAdam(
+                self.parameters(),
+                lr=self.lr,
+            )
         elif self.optimizer == 'Adam':
-            return torch.optim.Adam(self.parameters(), lr=self.lr)
+            return torch.optim.Adam(
+                self.parameters(),
+                lr=self.lr,
+                weight_decay=self.weight_decay,
+            )
         else:
             raise ValueError(f'Unknown optimizer: {self.optimizer}')
 
@@ -176,24 +198,21 @@ class OCTSegmentationModel(pl.LightningModule):
     def log_predict_model_on_epoch(
         self,
     ):
-        for idx, img_path in enumerate(glob('data/visualization/img/*.[pj][np][pge]')):
+        wandb_images = []
+        for idx, img_path in enumerate(glob('data/visualization/img/*.png')):
             img = cv2.imread(img_path)
             img = cv2.resize(img, (self.input_size, self.input_size))
-            mask = cv2.imread(img_path.replace('img', 'mask'), 0)
+            mask = tifffile.imread(f"{img_path.replace('img', 'mask').split('.')[0]}.tiff")
             mask = cv2.resize(
                 mask,
                 (self.input_size, self.input_size),
                 interpolation=cv2.INTER_NEAREST,
             )
 
-            masks = [(mask == v) for v in self.class_values]
-            mask = np.stack(masks, axis=-1).astype('float')
-
             pred_mask = self.predict(
                 images=np.array([self.to_tensor_shape(img.copy())]),
                 device='cuda',
             )[0]
-            wandb_images = []
             color_mask_gt = np.zeros(img.shape, dtype=np.uint8)
             color_mask_pred = np.zeros(img.shape, dtype=np.uint8)
             color_mask_pred[:, :] = (128, 128, 128)
@@ -201,11 +220,12 @@ class OCTSegmentationModel(pl.LightningModule):
 
             wandb_mask_inference = np.zeros((img.shape[0], img.shape[1]))
             wandb_mask_ground_truth = np.zeros((img.shape[0], img.shape[1]))
-            for idx, cl in enumerate(self.classes):
-                color_mask_gt[mask[:, :, idx] == 1] = CLASS_COLOR_BGR[cl]
-                color_mask_pred[pred_mask[:, :, idx] == 1] = CLASS_COLOR_BGR[cl]
-                wandb_mask_inference[pred_mask[:, :, idx] == 1] = CLASS_ID[cl]
-                wandb_mask_ground_truth[mask[:, :, idx] == 1] = CLASS_ID[cl]
+            for idy, cl in enumerate(self.classes):
+                class_id = CLASS_IDS[cl] - 1
+                color_mask_gt[mask[:, :, class_id] == 255] = CLASS_COLORS_BGR[cl]
+                color_mask_pred[pred_mask[:, :, idy] == 1] = CLASS_COLORS_BGR[cl]
+                wandb_mask_inference[pred_mask[:, :, idy] == 1] = CLASS_IDS[cl]
+                wandb_mask_ground_truth[mask[:, :, class_id] == 255] = CLASS_IDS[cl]
 
             res = np.hstack((img, color_mask_gt))
             res = np.hstack((res, color_mask_pred))
@@ -216,24 +236,24 @@ class OCTSegmentationModel(pl.LightningModule):
                 res,
             )
 
-            if self.wandb_save_media:
+            if self.save_wandb_media:
                 wandb_images.append(
                     wandb.Image(
-                        img,
+                        cv2.cvtColor(img, cv2.COLOR_BGR2RGB),
                         masks={
                             'predictions': {
                                 'mask_data': wandb_mask_inference,
-                                'class_labels': CLASS_ID_REVERSED,
+                                'class_labels': CLASS_IDS_REVERSED,
                             },
                             'ground_truth': {
                                 'mask_data': wandb_mask_ground_truth,
-                                'class_labels': CLASS_ID_REVERSED,
+                                'class_labels': CLASS_IDS_REVERSED,
                             },
                         },
                         caption=f'Example-{idx}',
                     ),
                 )
-        if self.wandb_save_media:
+        if self.save_wandb_media:
             wandb.log(
                 {'Examples': wandb_images},
                 step=self.epoch,
