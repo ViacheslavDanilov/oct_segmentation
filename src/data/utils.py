@@ -10,42 +10,35 @@ import cv2
 import numpy as np
 
 CLASS_MAP = {
-    'Lipid core': {
-        'id': 1,
-        'color': [125, 227, 127],
-    },
     'Lumen': {
-        'id': 2,
+        'id': 1,
         'color': [228, 30, 199],
     },
     'Fibrous cap': {
-        'id': 3,
+        'id': 2,
         'color': [123, 171, 226],
+    },
+    'Lipid core': {
+        'id': 3,
+        'color': [125, 227, 127],
     },
     'Vasa vasorum': {
         'id': 4,
         'color': [208, 2, 27],
     },
-    'Artifact': {
-        'id': 5,
-        'color': [80, 227, 194],
-    },
 }
 
-CLASS_COLOR = {
+CLASS_COLORS_RGB = {
     class_name: tuple(class_info['color']) for class_name, class_info in CLASS_MAP.items()  # type: ignore
 }
-CLASS_COLOR_BGR = {
+
+CLASS_COLORS_BGR = {
     class_name: tuple(class_info['color'][::-1]) for class_name, class_info in CLASS_MAP.items()  # type: ignore
 }
 
-CLASS_COLOR_BGR = {
-    class_name: tuple(class_info['color'][::-1]) for class_name, class_info in CLASS_MAP.items()  # type: ignore
-}
+CLASS_IDS = {class_name: class_info['id'] for class_name, class_info in CLASS_MAP.items()}
 
-CLASS_ID = {class_name: class_info['id'] for class_name, class_info in CLASS_MAP.items()}
-
-CLASS_ID_REVERSED = dict((v, k) for k, v in CLASS_ID.items())
+CLASS_IDS_REVERSED = dict((v, k) for k, v in CLASS_IDS.items())
 
 
 def get_file_list(

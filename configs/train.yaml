@@ -5,18 +5,20 @@ defaults:
 project_name: OCT segmentation
 data_dir: data/cv/fold_1
 classes:
-- Lipid core
 - Lumen
 - Fibrous cap
+- Lipid core
 - Vasa vasorum
 architecture: unet
 encoder: resnet50
 optimizer: Adam
-lr: 0.00012
-input_size: 448
+lr: 0.00001         # Values to consider: 0.001, 0.0001, and 0.00001
+weight_decay: 0.0   # Values to consider: 0.001, 0.0001, and 0.00001
+input_size: 512
 batch_size: 4
 epochs: 75
-device: cuda
-cuda_num: [0]
-log_artifacts: true
+device: auto  # cpu, gpu,  or auto
+img_save_interval: 1  # save images every N epochs
+save_wandb_media: false
+use_augmentation: true
 save_dir: models

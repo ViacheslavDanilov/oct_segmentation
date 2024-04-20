@@ -6,6 +6,7 @@ import ssl
 
 import hydra
 import pytorch_lightning as pl
+import torch
 import wandb
 from omegaconf import DictConfig, OmegaConf
 from pytorch_lightning import loggers as pl_loggers
@@ -21,6 +22,25 @@ log = logging.getLogger(__name__)
 log.setLevel(logging.INFO)
 
 os.environ['WANDB_API_KEY'] = '0a94ef68f2a7a8b709671d6ef76e61580d20da7f'
+
+
+def pick_device(
+    option: str,
+) -> str:
+    """Pick the appropriate device based on the provided option.
+
+    Args:
+        option (str): Available device option ('cpu', 'cuda', 'auto').
+
+    Returns:
+        str: Selected device.
+    """
+    if option == 'auto':
+        return 'gpu' if torch.cuda.is_available() else 'cpu'
+    elif option in ['cpu', 'gpu']:
+        return option
+    else:
+        raise ValueError("Invalid device option. Please specify 'cpu', 'gpu', or 'auto'.")
 
 
 @hydra.main(
@@ -39,7 +59,9 @@ def main(cfg: DictConfig) -> None:
     task_name = f'{cfg.architecture}_{cfg.encoder}_{today.strftime("%d%m_%H%M")}'
     model_dir = f'{save_dir}/{task_name}'
 
-    hyperparameters = {
+    device = pick_device(cfg.device)
+
+    hyperparams = {
         'architecture': cfg.architecture,
         'encoder': cfg.encoder,
         'input_size': cfg.input_size,
@@ -48,12 +70,14 @@ def main(cfg: DictConfig) -> None:
         'batch_size': cfg.batch_size,
         'optimizer': cfg.optimizer,
         'lr': cfg.lr,
+        'weight_decay': cfg.weight_decay,
+        'use_augmentation': cfg.use_augmentation,
         'epochs': cfg.epochs,
-        'device': cfg.device,
+        'device': device,
         'data_dir': data_dir,
     }
 
-    wandb.init(config=hyperparameters, project='oct_segmentation', name=task_name)  # type: ignore
+    wandb.init(config=hyperparams, project='oct_segmentation', name=task_name)  # type: ignore
 
     callbacks = [
         LearningRateMonitor(
@@ -61,7 +85,7 @@ def main(cfg: DictConfig) -> None:
             log_momentum=False,
         ),
     ]
-    if cfg.log_artifacts:
+    if cfg.img_save_interval is not None:
         os.makedirs(f'{model_dir}/images_per_epoch', exist_ok=True)
         callbacks.append(
             ModelCheckpoint(
@@ -77,11 +101,12 @@ def main(cfg: DictConfig) -> None:
 
     # Initialize data module
     oct_data_module = OCTDataModule(
-        input_size=hyperparameters['input_size'],
-        classes=cfg.classes,
-        batch_size=hyperparameters['batch_size'],
-        num_workers=os.cpu_count(),
         data_dir=data_dir,
+        classes=cfg.classes,
+        input_size=hyperparams['input_size'],
+        batch_size=hyperparams['batch_size'],
+        num_workers=os.cpu_count(),
+        use_augmentation=cfg.use_augmentation,
     )
     tb_logger = pl_loggers.TensorBoardLogger(
         save_dir='logs/',
@@ -89,15 +114,17 @@ def main(cfg: DictConfig) -> None:
 
     # Initialize model
     model = OCTSegmentationModel(
-        arch=hyperparameters['architecture'],
-        encoder_name=hyperparameters['encoder'],
-        optimizer_name=hyperparameters['optimizer'],
-        input_size=hyperparameters['input_size'],
+        arch=hyperparams['architecture'],
+        encoder_name=hyperparams['encoder'],
+        optimizer_name=hyperparams['optimizer'],
+        input_size=hyperparams['input_size'],
         in_channels=3,
         classes=cfg.classes,
         model_name=task_name,
-        lr=hyperparameters['lr'],
-        save_img_per_epoch=1 if cfg.log_artifacts else None,
+        lr=hyperparams['lr'],
+        weight_decay=hyperparams['weight_decay'],
+        img_save_interval=cfg.img_save_interval,
+        save_wandb_media=cfg.save_wandb_media,
     )
     with open(f'{model_dir}/config.json', 'w') as file:
         json.dump(
@@ -117,13 +144,13 @@ def main(cfg: DictConfig) -> None:
 
     # Initialize and tun trainer
     trainer = pl.Trainer(
-        devices=cfg.cuda_num,
-        accelerator=cfg.device,
-        max_epochs=hyperparameters['epochs'],
+        devices='auto',
+        accelerator=device,
+        max_epochs=hyperparams['epochs'],
         logger=tb_logger,
         callbacks=callbacks,
         enable_checkpointing=True,
-        log_every_n_steps=hyperparameters['batch_size'],
+        log_every_n_steps=hyperparams['batch_size'],
         default_root_dir=model_dir,
     )
     trainer.fit(

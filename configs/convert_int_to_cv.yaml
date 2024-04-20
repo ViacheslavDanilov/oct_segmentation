@@ -10,8 +10,8 @@ num_folds: 5
 crop: [[125, 0], [875, 750]]  # [[x1,y1], [x2,y2]]
 seed: 11
 split_column: study
-class_names:
+classes:
 - Lumen
-- Lipid core
 - Fibrous cap
+- Lipid core
 - Vasa vasorum
