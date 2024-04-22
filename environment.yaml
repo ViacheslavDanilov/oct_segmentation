@@ -24,6 +24,7 @@ dependencies:
   - Pillow==10.2.0
   - pre-commit==3.7.0
   - pytorch_lightning==2.2.1
+  - seaborn==0.13.2
   - segmentation_models_pytorch==0.3.3
   - scikit-learn==1.4.1.post1
   - supervisely==6.73.62

@@ -1,0 +1,8 @@
+defaults:
+- main
+- _self_
+
+metrics_path: eval/model_results.csv
+save_dir: eval/loss
+train_metric: Loss
+test_metric: Dice
