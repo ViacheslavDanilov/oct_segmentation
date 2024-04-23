@@ -32,7 +32,8 @@ def main(cfg: DictConfig) -> None:
         input_res=tuple(cfg.input_size[::-1]),
         as_strings=True,
         print_per_layer_stat=True,
-        verbose=True,
+        verbose=False,
+        output_precision=1,
     )
     log.info(f'Number of parameters: {params}')
     log.info(f'Computational complexity: {flops}')
