@@ -1,0 +1,7 @@
+defaults:
+- main
+- _self_
+
+model_name: Unet  # TODO: Available models:
+encoder_name: resnet50  # TODO: Available encoders:
+input_size: [512, 512, 3]
