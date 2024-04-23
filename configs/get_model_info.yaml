@@ -1,0 +1,8 @@
+defaults:
+- main
+- _self_
+
+model_name: Unet  # Available models: DeepLabV3, DeepLabV3Plus, FPN, Linknet, MAnet, PAN, PSPNet, Unet, UnetPlusPlus
+encoder_name: resnet50  # Available encoders: encoder_list = smp.encoders.get_encoder_names()
+input_size: [512, 512, 3]
+evaluation_mode: false
