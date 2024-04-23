@@ -5,3 +5,4 @@ defaults:
 model_name: Unet  # TODO: Available models:
 encoder_name: resnet50  # TODO: Available encoders:
 input_size: [512, 512, 3]
+evaluation_mode: false
