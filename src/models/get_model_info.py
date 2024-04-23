@@ -34,8 +34,8 @@ def main(cfg: DictConfig) -> None:
         print_per_layer_stat=True,
         verbose=True,
     )
-    log.info(f'Computational complexity: {flops}')
     log.info(f'Number of parameters: {params}')
+    log.info(f'Computational complexity: {flops}')
 
 
 if __name__ == '__main__':
