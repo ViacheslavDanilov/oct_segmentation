@@ -1,7 +1,7 @@
 import logging
 import os
 from pathlib import Path
-from typing import List, Tuple
+from typing import List, Tuple, Union
 
 import cv2
 import hydra
@@ -107,6 +107,69 @@ def colorize_mask(
     return mask_color
 
 
+def apply_circle_crop(
+    img: np.ndarray,
+    crop: List[List[int]],
+    background: Union[Tuple[int, int, int], int] = (0, 0, 0),
+) -> np.ndarray:
+    """Crop an image with a circular region defined by the crop coordinates.
+
+    Args:
+    - img: Input image (numpy array).
+    - crop: List containing the crop coordinates: [[x1, y1], [x2, y2]].
+    - background: Background value to fill the cropped area with. If None, the area outside the circle will be black.
+                 If a tuple, it specifies the background color for each channel.
+
+    Returns:
+    - cropped_img: Cropped and masked image.
+    """
+    # Extract crop coordinates
+    x1, y1 = crop[0]
+    x2, y2 = crop[1]
+
+    # Calculate center and radii of the ellipse
+    center_x = (x1 + x2) // 2
+    center_y = (y1 + y2) // 2
+    radius_x = abs(x2 - x1) // 2
+    radius_y = abs(y2 - y1) // 2
+
+    # Create a mask with the same dimensions as the image
+    circular_mask = np.zeros_like(img, dtype=np.uint8)
+
+    # Draw a filled ellipse on the mask
+    cv2.ellipse(
+        circular_mask,
+        (center_x, center_y),
+        (radius_x, radius_y),
+        0,
+        0,
+        360,
+        (255, 255, 255),
+        -1,
+    )
+
+    # Apply the mask to the image
+    masked_img = cv2.bitwise_and(img, circular_mask)
+
+    # Fill the background if specified
+    if background is not None:
+        # Create a mask for the background
+        background_mask = cv2.bitwise_not(circular_mask)
+
+        # If the background value is a single value, repeat it for each channel
+        if isinstance(background, int):
+            background = (background,) * img.shape[2]
+
+        # Fill the background with the specified value
+        for channel in range(img.shape[2]):
+            masked_img[:, :, channel] += background[channel] * background_mask[:, :, channel]  # type: ignore
+
+    # Crop the image to the exact crop coordinates
+    cropped_img = masked_img[y1:y2, x1:x2]
+
+    return cropped_img
+
+
 def process_pair(
     df: pd.DataFrame,
     save_dir: str,
@@ -138,11 +201,11 @@ def process_pair(
     # Colorize mask
     mask_color = colorize_mask(mask=mask, classes=classes)
 
-    # Crop image and masks
+    # Apply the circular mask to the image and masks
     if crop is not None:
-        img = img[crop[0][1] : crop[1][1], crop[0][0] : crop[1][0], :]
-        mask = mask[crop[0][1] : crop[1][1], crop[0][0] : crop[1][0], :]
-        mask_color = mask_color[crop[0][1] : crop[1][1], crop[0][0] : crop[1][0], :]
+        img = apply_circle_crop(img, crop, background=(0, 0, 0))
+        mask = apply_circle_crop(mask, crop, background=0)
+        mask_color = apply_circle_crop(mask_color, crop, background=(128, 128, 128))
 
     # Save image and masks
     basename = Path(img_path).stem
