@@ -96,9 +96,10 @@ def cross_validation_split(
 def colorize_mask(
     mask: np.ndarray,
     classes: List[str],
+    background: Tuple[int, int, int] = (128, 128, 128),
 ) -> np.ndarray:
     mask_color = np.zeros((mask.shape[0], mask.shape[1], 3), dtype='uint8')
-    mask_color[:] = (128, 128, 128)
+    mask_color[:] = background
 
     for idx, class_name in enumerate(classes):
         channel_id = CLASS_IDS[class_name] - 1  # type: ignore
