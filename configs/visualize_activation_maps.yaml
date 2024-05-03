@@ -3,6 +3,8 @@ defaults:
 - _self_
 
 model_dir: models/Unet
-img_dir: data/visualization/img
+data_dir: data/visualization
+method: GradCAM # Available options: GradCAM, ScoreCAM, FullGrad  # TODO: implement the use of method
+output_size: [1024, 1024] # TODO: implement the use of output_size
 device: auto  # cpu, gpu,  or auto
-save_dir: data/activation_maps
+save_dir: eval/activation_maps
