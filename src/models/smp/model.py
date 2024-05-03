@@ -179,14 +179,21 @@ class OCTSegmentationModel(pl.LightningModule):
 
     def predict(
         self,
-        images: np.ndarray,
+        images: np.ndarray,  # standard shape: (N, H, W, C)
         device: str,
-    ):
-        y_hat = self.model(torch.Tensor(images).to(device)).cpu().detach()
-        masks = y_hat.sigmoid()
-        masks = (masks > 0.5).float()
-        masks = masks.permute(0, 2, 3, 1)
-        masks = masks.numpy().round()
+    ) -> np.ndarray:
+        # Convert images to tensor of shape (N, C, H, W) and move to device
+        images_tensor = torch.Tensor(images.transpose((0, 3, 1, 2))).to(device)
+
+        # Perform model prediction
+        y_hat = self.model(images_tensor).cpu().detach()
+
+        # Apply sigmoid and thresholding
+        masks = (y_hat.sigmoid() > 0.5).float()
+
+        # Convert masks back to numpy array
+        masks = masks.permute(0, 2, 3, 1).numpy().round()
+
         return masks
 
     @staticmethod
