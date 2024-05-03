@@ -1,7 +1,8 @@
 import json
 import logging
-import os.path
+import os
 from glob import glob
+from pathlib import Path
 
 import cv2
 import hydra
@@ -12,14 +13,15 @@ from omegaconf import DictConfig, OmegaConf
 from PIL import Image
 from pytorch_grad_cam import GradCAM
 from pytorch_grad_cam.utils.image import show_cam_on_image
+from tqdm import tqdm
 
 from src import PROJECT_DIR
 from src.data.utils import CLASS_COLORS_RGB, CLASS_IDS_REVERSED
 from src.models.smp.model import OCTSegmentationModel
 from src.models.smp.utils import pick_device, preprocessing_img
 
+logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
-log.setLevel(logging.INFO)
 
 
 class SemanticSegmentationTarget:
@@ -36,9 +38,9 @@ class SemanticSegmentationTarget:
 
     def __init__(self, category, mask):
         self.category = category
-        self.mask = torch.from_numpy(mask)
-        if torch.cuda.is_available():
-            self.mask = self.mask.cuda()
+        self.mask = (
+            torch.from_numpy(mask).cuda() if torch.cuda.is_available() else torch.from_numpy(mask)
+        )
 
     def __call__(self, model_output):
         return (model_output[self.category, :, :] * self.mask).sum()
@@ -54,52 +56,60 @@ def main(cfg: DictConfig) -> None:
 
     # Define absolute paths
     model_dir = str(os.path.join(PROJECT_DIR, cfg.model_dir))
-    img_dir = str(os.path.join(PROJECT_DIR, cfg.img_dir))
+    data_dir = str(os.path.join(PROJECT_DIR, cfg.data_dir))
     save_dir = str(os.path.join(PROJECT_DIR, cfg.save_dir))
 
     device = pick_device(cfg.device)
+    with open(os.path.join(model_dir, 'config.json'), 'r') as file:
+        model_cfg = json.load(file)
 
-    for img_path in glob(f'{img_dir}/*.png'):
-        img_name = os.path.basename(img_path)
-        with open(f'{model_dir}/config.json', 'r') as file:
-            model_cfg = json.load(file)
-        model = OCTSegmentationModel.load_from_checkpoint(
-            checkpoint_path=f'{model_dir}/weights.ckpt',
-            encoder_weights=None,
-            arch=model_cfg['architecture'],
-            encoder_name=model_cfg['encoder'],
-            model_name=model_cfg['model_name'],
-            in_channels=3,
-            classes=model_cfg['classes'],
-            map_location=device,
-        )
-        model.eval()
-        image = preprocessing_img(img_path, input_size=model_cfg['input_size'])
-        masks = model.predict(images=np.array([image]), device=device)[0]
+    model = OCTSegmentationModel.load_from_checkpoint(
+        checkpoint_path=os.path.join(model_dir, 'weights.ckpt'),
+        encoder_weights=None,
+        arch=model_cfg['architecture'],
+        encoder_name=model_cfg['encoder'],
+        model_name=model_cfg['model_name'],
+        in_channels=3,
+        classes=model_cfg['classes'],
+        map_location=device,
+    )
+    model.eval()
+    class_names = model_cfg['classes']
+
+    img_dir = os.path.join(data_dir, 'img')
+    mask_dir = os.path.join(data_dir, 'mask')
+    img_paths = glob(os.path.join(img_dir, '*.png'))
+    for img_path in tqdm(img_paths, desc='Process images', unit='image'):
+        img = preprocessing_img(img_path, input_size=model_cfg['input_size'])
+        mask = model.predict(images=np.array([img]), device=device)[0]
         target_layers = [model.model.encoder.layer4[-1]]
 
-        if not os.path.exists(f'{save_dir}/{img_name.split(".")[0]}'):
-            os.makedirs(f'{save_dir}/{img_name.split(".")[0]}')
+        img_stem = Path(img_path).stem
+        map_dir = os.path.join(save_dir, model_cfg['model_name'])
+        os.makedirs(map_dir, exist_ok=True)
 
-        mask_gt = tifffile.imread(f"{img_path.replace('img', 'mask').split('.')[0]}.tiff")
+        mask_gt_path = os.path.join(mask_dir, f'{img_stem}.tiff')
+        mask_gt = tifffile.imread(mask_gt_path)
         mask_gt = cv2.resize(mask_gt, (1024, 1024), interpolation=cv2.INTER_NEAREST)
 
-        for class_detection in range(3):
+        for class_detection in range(len(class_names)):
             class_name = CLASS_IDS_REVERSED[class_detection + 1]
-            mask_class = np.float32(np.array(masks[:, :, class_detection]).astype(bool))
+            mask_class = np.float32(np.array(mask[:, :, class_detection]).astype(bool))
             targets = [SemanticSegmentationTarget(class_detection, mask_class)]
-            input_tensor = image.copy()
-            input_tensor = torch.Tensor(np.array(input_tensor)).to(device)
 
-            rgb_img = Image.open(img_path).resize(
+            input_tensor = torch.Tensor(np.array(img)).to(device)
+
+            img_rgb = Image.open(img_path).resize(
                 (model_cfg['input_size'], model_cfg['input_size']),
             )
-            rgb_img = np.float32(rgb_img) / 255
-            rgb_img = np.array(rgb_img)
+            img_rgb = np.float32(img_rgb) / 255
+            img_rgb = np.array(img_rgb)  # TODO: это BGR изображение?
 
+            map_name = f'{img_stem}_{class_name}.png'
+            # TODO: add input image to the beginning i.e. input image - cam - GT - Predict
             with GradCAM(model=model, target_layers=target_layers) as cam:
                 grayscale_cam = cam(input_tensor=input_tensor, targets=targets)[0, :]
-                cam_image = show_cam_on_image(rgb_img, grayscale_cam, use_rgb=True)
+                cam_image = show_cam_on_image(img_rgb, grayscale_cam, use_rgb=True)
                 cam_image = Image.fromarray(cam_image).resize((1024, 1024))
                 output = Image.new('RGB', (cam_image.size[0] * 3, cam_image.size[1]), (0, 0, 0))
 
@@ -137,10 +147,7 @@ def main(cfg: DictConfig) -> None:
                 )
                 output.paste(color_mask, (cam_image.size[0] * 2, 0))
 
-                output.save(
-                    f'{save_dir}/{img_name.split(".")[0]}/{class_name}.png',
-                )
-                # output.show()
+                output.save(os.path.join(map_dir, map_name), quality=100)
 
 
 if __name__ == '__main__':
