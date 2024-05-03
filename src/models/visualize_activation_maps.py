@@ -3,76 +3,46 @@ import logging
 import os
 from glob import glob
 from pathlib import Path
+from typing import List, Tuple
 
 import cv2
 import hydra
 import numpy as np
 import tifffile
-import torch
 from omegaconf import DictConfig, OmegaConf
-from PIL import Image
-from pytorch_grad_cam import (
-    AblationCAM,
-    EigenCAM,
-    EigenGradCAM,
-    GradCAM,
-    GradCAMElementWise,
-    GradCAMPlusPlus,
-    HiResCAM,
-    LayerCAM,
-    XGradCAM,
-)
-from pytorch_grad_cam.utils.image import show_cam_on_image
 from tqdm import tqdm
 
 from src import PROJECT_DIR
-from src.data.utils import CLASS_COLORS_RGB, CLASS_IDS_REVERSED
+from src.data.convert_int_to_cv import colorize_mask
+from src.data.utils import CLASS_IDS_REVERSED
+from src.models.cam_processor import CAMProcessor
 from src.models.smp.model import OCTSegmentationModel
-from src.models.smp.utils import pick_device, preprocessing_img
+from src.models.smp.utils import pick_device
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
 
-cam_methods = {
-    'GradCAM': GradCAM,
-    'HiResCAM': HiResCAM,
-    'GradCAMElementWise': GradCAMElementWise,
-    'GradCAMPlusPlus': GradCAMPlusPlus,
-    'XGradCAM': XGradCAM,
-    'AblationCAM': AblationCAM,
-    'EigenCAM': EigenCAM,
-    'EigenGradCAM': EigenGradCAM,
-    'LayerCAM': LayerCAM,
-}
+
+def combine_images(
+    images: List[np.ndarray],
+    output_size: Tuple[int, int],
+) -> np.ndarray:
+    resized_images = [
+        cv2.resize(img, output_size, interpolation=cv2.INTER_NEAREST) for img in images
+    ]
+    combined_image = np.hstack(resized_images)
+    return combined_image
 
 
-class SemanticSegmentationTarget:
-    """Represents a semantic segmentation target.
-
-    Attributes:
-        category (int): The category of the target.
-        mask (torch.Tensor): The mask associated with the target.
-
-    Methods:
-        __init__: Initializes a SemanticSegmentationTarget instance.
-        __call__: Computes the target based on the model output.
-    """
-
-    def __init__(
-        self,
-        category: int,
-        mask: np.ndarray,
-    ) -> None:
-        self.category = category
-        self.mask = (
-            torch.from_numpy(mask).cuda() if torch.cuda.is_available() else torch.from_numpy(mask)
-        )
-
-    def __call__(
-        self,
-        model_output: torch.Tensor,
-    ) -> torch.Tensor:
-        return (model_output[self.category, :, :] * self.mask).sum()
+def save_image(
+    image: np.ndarray,
+    image_name: str,
+    save_dir: str,
+) -> None:
+    image_name = image_name.replace(' ', '_')
+    os.makedirs(save_dir, exist_ok=True)
+    save_path = os.path.join(save_dir, image_name)
+    cv2.imwrite(save_path, image, [cv2.IMWRITE_PNG_COMPRESSION, 0])
 
 
 @hydra.main(
@@ -88,10 +58,10 @@ def main(cfg: DictConfig) -> None:
     data_dir = str(os.path.join(PROJECT_DIR, cfg.data_dir))
     save_dir = str(os.path.join(PROJECT_DIR, cfg.save_dir))
 
+    # Initialize model
     device = pick_device(cfg.device)
     with open(os.path.join(model_dir, 'config.json'), 'r') as file:
         model_cfg = json.load(file)
-
     model = OCTSegmentationModel.load_from_checkpoint(
         checkpoint_path=os.path.join(model_dir, 'weights.ckpt'),
         encoder_weights=None,
@@ -104,70 +74,69 @@ def main(cfg: DictConfig) -> None:
     )
     model.eval()
     target_layers = [model.model.encoder.layer4[-1]]
-    class_names = model_cfg['classes']
 
+    # Initialize CAM processor
+    cam_processor = CAMProcessor(
+        model=model,
+        cam_method=cfg.cam_method,
+        device=device,
+        target_layers=target_layers,
+    )
+
+    # Define additional parameters
     img_dir = os.path.join(data_dir, 'img')
     mask_dir = os.path.join(data_dir, 'mask')
     img_paths = glob(os.path.join(img_dir, '*.png'))
-    for img_path in tqdm(img_paths, desc='Process images', unit='image'):
-        img = preprocessing_img(img_path, input_size=model_cfg['input_size'])
-        mask = model.predict(images=np.array([img]), device=device)[0]
+    class_names = model_cfg['classes']
+    input_size = (model_cfg['input_size'],) * 2
+
+    # Extract activation maps and save with overlay images
+    for img_path in tqdm(img_paths, desc='Save activation maps', unit='image'):
+        img = cv2.imread(img_path)
+        img = cv2.resize(img, input_size)
+        mask_pred = model.predict(images=np.array([img]), device=device)[0]
 
         img_stem = Path(img_path).stem
-        map_dir = os.path.join(save_dir, model_cfg['model_name'])
-        os.makedirs(map_dir, exist_ok=True)
-
         mask_gt_path = os.path.join(mask_dir, f'{img_stem}.tiff')
         mask_gt = tifffile.imread(mask_gt_path)
-        mask_gt = cv2.resize(mask_gt, cfg.output_size, interpolation=cv2.INTER_NEAREST)
 
         for class_idx in range(len(class_names)):
-            class_name = CLASS_IDS_REVERSED[class_idx + 1]
-            mask_class = np.float32(np.array(mask[:, :, class_idx]).astype(bool))
-            input_tensor = torch.Tensor(np.array(img)).to(device)
-            targets = [SemanticSegmentationTarget(class_idx, mask_class)]
-
-            img_rgb = Image.open(img_path).resize(
-                (model_cfg['input_size'], model_cfg['input_size']),
+            class_mask_pred = mask_pred[:, :, class_idx]
+            mask_cam = cam_processor.extract_activation_map(
+                image=img,
+                class_idx=class_idx,
+                class_mask=class_mask_pred,
             )
-            img_rgb = np.float32(img_rgb) / 255
-            img_rgb = np.array(img_rgb)
+            img_cam = cam_processor.overlay_activation_map(
+                image=img,
+                mask=mask_cam,
+                image_weight=0.5,
+            )
 
-            map_name = f'{img_stem}_{class_name}_{cfg.cam_method}.png'
-            cam_method = cam_methods[cfg.cam_method]
-            with cam_method(model=model, target_layers=target_layers) as cam:
-                # init source image
-                source_image = Image.open(img_path)
-                source_image = source_image.resize(cfg.output_size)
-                # init cam image
-                grayscale_cam = cam(input_tensor=input_tensor, targets=targets)[0, :]
-                cam_image = show_cam_on_image(img_rgb, grayscale_cam, use_rgb=True)
-                cam_image = Image.fromarray(cam_image).resize(cfg.output_size)
-                # init class color img
-                color = Image.new('RGB', cam_image.size, CLASS_COLORS_RGB[class_name])
-                # init gr
-                color_mask_gt = Image.new('RGB', cam_image.size, (128, 128, 128))
-                color_mask_gt.paste(
-                    color,
-                    (0, 0),
-                    Image.fromarray(mask_gt[:, :, class_idx]).resize(cfg.output_size),
-                )
-                # init predict
-                color_mask = Image.new('RGB', cam_image.size, (128, 128, 128))
-                color_mask.paste(
-                    color,
-                    (0, 0),
-                    Image.fromarray(np.array(mask_class * 255).astype('uint8')).resize(
-                        cfg.output_size,
-                    ),
-                )
-                # init and save result img
-                output = Image.new('RGB', (cam_image.size[0] * 4, cam_image.size[1]), (0, 0, 0))
-                output.paste(source_image, (0, 0))
-                output.paste(cam_image, (cam_image.size[0], 0))
-                output.paste(color_mask_gt, (cam_image.size[0] * 2, 0))
-                output.paste(color_mask, (cam_image.size[0] * 3, 0))
-                output.save(os.path.join(map_dir, map_name), quality=100)
+            class_name = CLASS_IDS_REVERSED[class_idx + 1]
+            color_class_mask_gt = colorize_mask(
+                mask=mask_gt,
+                classes=[class_name],
+            )
+            color_class_mask_gt = cv2.cvtColor(color_class_mask_gt, cv2.COLOR_BGR2RGB)
+
+            color_class_mask_pred = colorize_mask(
+                mask=(mask_pred * 255).astype('uint8'),
+                classes=[class_name],
+            )
+            color_class_mask_pred = cv2.cvtColor(color_class_mask_pred, cv2.COLOR_BGR2RGB)
+
+            img_stack = combine_images(
+                images=[img, img_cam, color_class_mask_pred, color_class_mask_gt],
+                output_size=cfg.output_size,
+            )
+
+            save_image(
+                image=img_stack,
+                image_name=f'{img_stem}_{class_name}_{cfg.cam_method}.png',
+                save_dir=os.path.join(save_dir, model_cfg['model_name']),
+            )
+            print('')
 
 
 if __name__ == '__main__':
