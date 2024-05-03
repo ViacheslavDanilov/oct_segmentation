@@ -58,13 +58,20 @@ class SemanticSegmentationTarget:
         __call__: Computes the target based on the model output.
     """
 
-    def __init__(self, category, mask):
+    def __init__(
+        self,
+        category: int,
+        mask: np.ndarray,
+    ) -> None:
         self.category = category
         self.mask = (
             torch.from_numpy(mask).cuda() if torch.cuda.is_available() else torch.from_numpy(mask)
         )
 
-    def __call__(self, model_output):
+    def __call__(
+        self,
+        model_output: torch.Tensor,
+    ) -> torch.Tensor:
         return (model_output[self.category, :, :] * self.mask).sum()
 
 
