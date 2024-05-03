@@ -42,7 +42,7 @@ def save_image(
     image_name = image_name.replace(' ', '_')
     os.makedirs(save_dir, exist_ok=True)
     save_path = os.path.join(save_dir, image_name)
-    cv2.imwrite(save_path, image, [cv2.IMWRITE_PNG_COMPRESSION, 0])
+    cv2.imwrite(save_path, image, [cv2.IMWRITE_PNG_COMPRESSION, 1])
 
 
 @hydra.main(
