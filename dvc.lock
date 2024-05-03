@@ -79,9 +79,9 @@ stages:
     deps:
     - path: data/sly_output
       hash: md5
-      md5: 8cd253bcdb1086ebc8facdcf8ff650ab.dir
-      size: 1166449225
-      nfiles: 70
+      md5: b4d6ab6210bd854d2a0c2130354dac0c.dir
+      size: 1369637974
+      nfiles: 82
     - path: src/data/convert_sly_to_int.py
       hash: md5
       md5: a681d7b0c341fc751440ec014e31d60a
@@ -89,9 +89,9 @@ stages:
     outs:
     - path: data/interim
       hash: md5
-      md5: 9f9e15fc25170b54e1e8f828ab1d49fb.dir
-      size: 7573302875
-      nfiles: 8586
+      md5: 3cd4ea60168e604607f13b6db9ff886a.dir
+      size: 9001243860
+      nfiles: 10206
   convert_int_to_cv:
     cmd:
     - rm -rf data/cv || true
@@ -99,20 +99,20 @@ stages:
     deps:
     - path: data/interim
       hash: md5
-      md5: 9f9e15fc25170b54e1e8f828ab1d49fb.dir
-      size: 7573302875
-      nfiles: 8586
+      md5: 3cd4ea60168e604607f13b6db9ff886a.dir
+      size: 9001243860
+      nfiles: 10206
     - path: data/interim/metadata.csv
       hash: md5
-      md5: 11379ec3cdee905714d2e1e764284e17
-      size: 15627657
+      md5: 96bb34c8ee68e5def961bfb26f3a6075
+      size: 18915180
     - path: src/data/convert_int_to_cv.py
       hash: md5
-      md5: 827f641cd2e0aa880115106e387a8d99
-      size: 7825
+      md5: 6ae9ec66137413ae3860e45eda051409
+      size: 9765
     outs:
     - path: data/cv
       hash: md5
-      md5: 95d58ebee49f9ddf5c4ea7c826a13bd7.dir
-      size: 19629439462
-      nfiles: 92356
+      md5: 1365e990781fd9f57fa37bdcbacfa782.dir
+      size: 22540760453
+      nfiles: 109351
