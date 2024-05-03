@@ -78,11 +78,17 @@ def main(cfg: DictConfig) -> None:
         for class_idx in range(len(class_names)):
             class_name = CLASS_IDS_REVERSED[class_idx + 1]
             class_mask = mask[:, :, class_idx]
-            img_cam_gray = cam_processor.process_image(
-                img=img,
+            mask_cam = cam_processor.extract_activation_map(
+                image=img,
                 class_idx=class_idx,
                 class_mask=class_mask,
             )
+            img_cam = cam_processor.overlay_activation_map(
+                image=img,
+                mask=mask_cam,
+                image_weight=0.5,
+            )
+            print('')
 
             # img_rgb = Image.open(img_path).resize(
             #     (model_cfg['input_size'], model_cfg['input_size']),
@@ -101,8 +107,8 @@ def main(cfg: DictConfig) -> None:
             #
 
     # for img_path in tqdm(img_paths, desc='Process images', unit='image'):
-    #     img = preprocessing_img(img_path, input_size=model_cfg['input_size'])
-    #     mask = model.predict(images=np.array([img]), device=device)[0]
+    #     image = preprocessing_img(img_path, input_size=model_cfg['input_size'])
+    #     mask = model.predict(images=np.array([image]), device=device)[0]
     #
     #     img_stem = Path(img_path).stem
     #     map_dir = os.path.join(save_dir, model_cfg['model_name'])
@@ -127,18 +133,6 @@ def main(cfg: DictConfig) -> None:
     #         img_rgb = Image.open(img_path).resize((model_cfg['input_size'], model_cfg['input_size']))
     #         img_rgb = np.float32(img_rgb) / 255
     #         img_rgb = np.array(img_rgb)
-    #
-    #         cam_methods = {
-    #             'GradCAM': GradCAM,
-    #             'HiResCAM': HiResCAM,
-    #             'GradCAMElementWise': GradCAMElementWise,
-    #             'GradCAMPlusPlus': GradCAMPlusPlus,
-    #             'XGradCAM': XGradCAM,
-    #             'AblationCAM': AblationCAM,
-    #             'EigenCAM': EigenCAM,
-    #             'EigenGradCAM': EigenGradCAM,
-    #             'LayerCAM': LayerCAM,
-    #         }
     #
     #         map_name = f'{img_stem}_{class_name}_{cfg.cam_method}.png'
     #         cam_method = cam_methods[cfg.cam_method]

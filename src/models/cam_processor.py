@@ -13,6 +13,7 @@ from pytorch_grad_cam import (
     LayerCAM,
     XGradCAM,
 )
+from pytorch_grad_cam.utils.image import show_cam_on_image
 
 
 class CAMProcessor:
@@ -73,6 +74,21 @@ class CAMProcessor:
             mask_cam = cam(input_tensor=input_tensor, targets=targets)[0, :]
 
         return mask_cam
+
+    @staticmethod
+    def overlay_activation_map(
+        image: np.ndarray,
+        mask: np.ndarray,
+        image_weight: float = 0.5,
+    ) -> np.ndarray:
+        img = (image / 255).astype('float32')
+        fused_img = show_cam_on_image(
+            img=img,
+            mask=mask,
+            use_rgb=False,
+            image_weight=image_weight,
+        )
+        return fused_img
 
 
 class SemanticSegmentationTarget:
