@@ -74,6 +74,7 @@ def main(cfg: DictConfig) -> None:
         map_location=device,
     )
     model.eval()
+    target_layers = [model.model.encoder.layer4[-1]]
     class_names = model_cfg['classes']
 
     img_dir = os.path.join(data_dir, 'img')
@@ -82,7 +83,6 @@ def main(cfg: DictConfig) -> None:
     for img_path in tqdm(img_paths, desc='Process images', unit='image'):
         img = preprocessing_img(img_path, input_size=model_cfg['input_size'])
         mask = model.predict(images=np.array([img]), device=device)[0]
-        target_layers = [model.model.encoder.layer4[-1]]
 
         img_stem = Path(img_path).stem
         map_dir = os.path.join(save_dir, model_cfg['model_name'])
@@ -90,7 +90,7 @@ def main(cfg: DictConfig) -> None:
 
         mask_gt_path = os.path.join(mask_dir, f'{img_stem}.tiff')
         mask_gt = tifffile.imread(mask_gt_path)
-        mask_gt = cv2.resize(mask_gt, (1024, 1024), interpolation=cv2.INTER_NEAREST)
+        mask_gt = cv2.resize(mask_gt, cfg.output_size, interpolation=cv2.INTER_NEAREST)
 
         for class_detection in range(len(class_names)):
             class_name = CLASS_IDS_REVERSED[class_detection + 1]
@@ -103,50 +103,41 @@ def main(cfg: DictConfig) -> None:
                 (model_cfg['input_size'], model_cfg['input_size']),
             )
             img_rgb = np.float32(img_rgb) / 255
-            img_rgb = np.array(img_rgb)  # TODO: это BGR изображение?
+            img_rgb = np.array(img_rgb)
 
             map_name = f'{img_stem}_{class_name}.png'
-            # TODO: add input image to the beginning i.e. input image - cam - GT - Predict
             with GradCAM(model=model, target_layers=target_layers) as cam:
+                # init source image
+                source_image = Image.open(img_path)
+                source_image = source_image.resize(cfg.output_size)
+                # init cam image
                 grayscale_cam = cam(input_tensor=input_tensor, targets=targets)[0, :]
                 cam_image = show_cam_on_image(img_rgb, grayscale_cam, use_rgb=True)
-                cam_image = Image.fromarray(cam_image).resize((1024, 1024))
-                output = Image.new('RGB', (cam_image.size[0] * 3, cam_image.size[1]), (0, 0, 0))
-
-                # source_image = Image.open(img_path)
-                # source_image = source_image.resize((1024, 1024))
-                # output.paste(source_image, (0, 0))
-                #
-                # output.paste(cam_image, (source_image.size[0], 0))
-                # color_mask = Image.new('RGB', cam_image.size, (128, 128, 128))
-                # color_mask.paste(
-                #     Image.new('RGB', cam_image.size, CLASS_COLORS_RGB[class_name]),
-                #     (0, 0),
-                #     Image.fromarray(np.array(mask_class * 255).astype('uint8')).resize((1024, 1024))
-                # )
-                # output.paste(color_mask, (source_image.size[0] * 2, 0))
+                cam_image = Image.fromarray(cam_image).resize(cfg.output_size)
+                # init class color img
                 color = Image.new('RGB', cam_image.size, CLASS_COLORS_RGB[class_name])
-
-                output.paste(cam_image, (0, 0))
-
+                # init gr
                 color_mask_gt = Image.new('RGB', cam_image.size, (128, 128, 128))
                 color_mask_gt.paste(
                     color,
                     (0, 0),
-                    Image.fromarray(mask_gt[:, :, class_detection]).resize((1024, 1024)),
+                    Image.fromarray(mask_gt[:, :, class_detection]).resize(cfg.output_size),
                 )
-                output.paste(color_mask_gt, (cam_image.size[0], 0))
-
+                # init predict
                 color_mask = Image.new('RGB', cam_image.size, (128, 128, 128))
                 color_mask.paste(
                     color,
                     (0, 0),
                     Image.fromarray(np.array(mask_class * 255).astype('uint8')).resize(
-                        (1024, 1024),
+                        cfg.output_size,
                     ),
                 )
-                output.paste(color_mask, (cam_image.size[0] * 2, 0))
-
+                # init and save result img
+                output = Image.new('RGB', (cam_image.size[0] * 4, cam_image.size[1]), (0, 0, 0))
+                output.paste(source_image, (0, 0))
+                output.paste(cam_image, (cam_image.size[0], 0))
+                output.paste(color_mask_gt, (cam_image.size[0] * 2, 0))
+                output.paste(color_mask, (cam_image.size[0] * 3, 0))
                 output.save(os.path.join(map_dir, map_name), quality=100)
 
 

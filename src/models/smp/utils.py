@@ -6,8 +6,9 @@ import cv2
 import numpy as np
 import segmentation_models_pytorch as smp
 import torch
-import wandb
 from PIL import Image
+
+import wandb
 
 
 def get_metrics(
@@ -225,8 +226,10 @@ def pick_device(
         str: Selected device.
     """
     if option == 'auto':
-        return 'gpu' if torch.cuda.is_available() else 'cpu'
-    elif option in ['cpu', 'gpu']:
+        return 'cuda' if torch.cuda.is_available() else 'cpu'
+    elif option in ['cpu', 'cuda']:
         return option
     else:
-        raise ValueError("Invalid device option. Please specify 'cpu', 'gpu', or 'auto'.")
+        raise ValueError(
+            "Invalid device option. Please specify 'cpu', 'cuda', or 'auto'.",
+        )  # TODO: device gpu exists? cuda, cuda:0, cuda:1. this is gpu?
