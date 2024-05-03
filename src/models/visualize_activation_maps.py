@@ -11,7 +11,17 @@ import tifffile
 import torch
 from omegaconf import DictConfig, OmegaConf
 from PIL import Image
-from pytorch_grad_cam import GradCAM
+from pytorch_grad_cam import (
+    AblationCAM,
+    EigenCAM,
+    EigenGradCAM,
+    GradCAM,
+    GradCAMElementWise,
+    GradCAMPlusPlus,
+    HiResCAM,
+    LayerCAM,
+    XGradCAM,
+)
 from pytorch_grad_cam.utils.image import show_cam_on_image
 from tqdm import tqdm
 
@@ -22,6 +32,18 @@ from src.models.smp.utils import pick_device, preprocessing_img
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
+
+cam_methods = {
+    'GradCAM': GradCAM,
+    'HiResCAM': HiResCAM,
+    'GradCAMElementWise': GradCAMElementWise,
+    'GradCAMPlusPlus': GradCAMPlusPlus,
+    'XGradCAM': XGradCAM,
+    'AblationCAM': AblationCAM,
+    'EigenCAM': EigenCAM,
+    'EigenGradCAM': EigenGradCAM,
+    'LayerCAM': LayerCAM,
+}
 
 
 class SemanticSegmentationTarget:
@@ -92,12 +114,11 @@ def main(cfg: DictConfig) -> None:
         mask_gt = tifffile.imread(mask_gt_path)
         mask_gt = cv2.resize(mask_gt, cfg.output_size, interpolation=cv2.INTER_NEAREST)
 
-        for class_detection in range(len(class_names)):
-            class_name = CLASS_IDS_REVERSED[class_detection + 1]
-            mask_class = np.float32(np.array(mask[:, :, class_detection]).astype(bool))
-            targets = [SemanticSegmentationTarget(class_detection, mask_class)]
-
+        for class_idx in range(len(class_names)):
+            class_name = CLASS_IDS_REVERSED[class_idx + 1]
+            mask_class = np.float32(np.array(mask[:, :, class_idx]).astype(bool))
             input_tensor = torch.Tensor(np.array(img)).to(device)
+            targets = [SemanticSegmentationTarget(class_idx, mask_class)]
 
             img_rgb = Image.open(img_path).resize(
                 (model_cfg['input_size'], model_cfg['input_size']),
@@ -105,8 +126,9 @@ def main(cfg: DictConfig) -> None:
             img_rgb = np.float32(img_rgb) / 255
             img_rgb = np.array(img_rgb)
 
-            map_name = f'{img_stem}_{class_name}.png'
-            with GradCAM(model=model, target_layers=target_layers) as cam:
+            map_name = f'{img_stem}_{class_name}_{cfg.cam_method}.png'
+            cam_method = cam_methods[cfg.cam_method]
+            with cam_method(model=model, target_layers=target_layers) as cam:
                 # init source image
                 source_image = Image.open(img_path)
                 source_image = source_image.resize(cfg.output_size)
@@ -121,7 +143,7 @@ def main(cfg: DictConfig) -> None:
                 color_mask_gt.paste(
                     color,
                     (0, 0),
-                    Image.fromarray(mask_gt[:, :, class_detection]).resize(cfg.output_size),
+                    Image.fromarray(mask_gt[:, :, class_idx]).resize(cfg.output_size),
                 )
                 # init predict
                 color_mask = Image.new('RGB', cam_image.size, (128, 128, 128))
