@@ -1,0 +1,7 @@
+defaults:
+- main
+- _self_
+
+model_dir: models/Unet
+img_dir: data/visualization/img
+save_dir: data/activation_maps
