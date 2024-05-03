@@ -4,4 +4,5 @@ defaults:
 
 model_dir: models/Unet
 img_dir: data/visualization/img
+device: auto  # cpu, gpu,  or auto
 save_dir: data/activation_maps
