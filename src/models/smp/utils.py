@@ -5,6 +5,7 @@ from typing import List, Tuple
 import cv2
 import numpy as np
 import segmentation_models_pytorch as smp
+import torch
 import wandb
 from PIL import Image
 
@@ -210,3 +211,22 @@ def preprocessing_img(
     image = cv2.resize(image, (input_size, input_size))
     image = to_tensor(np.array(image))
     return image
+
+
+def pick_device(
+    option: str,
+) -> str:
+    """Pick the appropriate device based on the provided option.
+
+    Args:
+        option (str): Available device option ('cpu', 'cuda', 'auto').
+
+    Returns:
+        str: Selected device.
+    """
+    if option == 'auto':
+        return 'gpu' if torch.cuda.is_available() else 'cpu'
+    elif option in ['cpu', 'gpu']:
+        return option
+    else:
+        raise ValueError("Invalid device option. Please specify 'cpu', 'gpu', or 'auto'.")
