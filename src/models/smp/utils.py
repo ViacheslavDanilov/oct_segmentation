@@ -6,9 +6,8 @@ import cv2
 import numpy as np
 import segmentation_models_pytorch as smp
 import torch
-from PIL import Image
-
 import wandb
+from PIL import Image
 
 
 def get_metrics(
@@ -210,7 +209,7 @@ def preprocessing_img(
 ):
     image = cv2.imread(img_path)
     image = cv2.resize(image, (input_size, input_size))
-    image = to_tensor(np.array(image))
+    image = to_tensor(image)
     return image
 
 
@@ -230,6 +229,4 @@ def pick_device(
     elif option in ['cpu', 'cuda']:
         return option
     else:
-        raise ValueError(
-            "Invalid device option. Please specify 'cpu', 'cuda', or 'auto'.",
-        )  # TODO: device gpu exists? cuda, cuda:0, cuda:1. this is gpu?
+        raise ValueError("Invalid device option. Please specify 'cpu', 'cuda', or 'auto'.")
