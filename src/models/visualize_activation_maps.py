@@ -1,96 +1,95 @@
 import json
+import logging
 import os.path
 from glob import glob
 
 import cv2
+import hydra
 import numpy as np
 import tifffile
 import torch
+from omegaconf import DictConfig, OmegaConf
 from PIL import Image
+from pytorch_grad_cam import GradCAM
 from pytorch_grad_cam.utils.image import show_cam_on_image
 
+from src import PROJECT_DIR
 from src.data.utils import CLASS_COLORS_RGB, CLASS_IDS_REVERSED
 from src.models.smp.model import OCTSegmentationModel
+from src.models.smp.utils import pick_device, preprocessing_img
+
+log = logging.getLogger(__name__)
+log.setLevel(logging.INFO)
 
 
-def to_tensor(
-        x: np.ndarray,
-) -> np.ndarray:
-    return x.transpose([2, 0, 1]).astype('float32')
+class SemanticSegmentationTarget:
+    """Represents a semantic segmentation target.
+
+    Attributes:
+        category (int): The category of the target.
+        mask (torch.Tensor): The mask associated with the target.
+
+    Methods:
+        __init__: Initializes a SemanticSegmentationTarget instance.
+        __call__: Computes the target based on the model output.
+    """
+
+    def __init__(self, category, mask):
+        self.category = category
+        self.mask = torch.from_numpy(mask)
+        if torch.cuda.is_available():
+            self.mask = self.mask.cuda()
+
+    def __call__(self, model_output):
+        return (model_output[self.category, :, :] * self.mask).sum()
 
 
-def preprocessing_img(
-        img_path: str,
-        input_size: int,
-):
-    image = cv2.imread(img_path)
-    image = cv2.resize(image, (input_size, input_size))
-    image = to_tensor(np.array(image))
-    return image
+@hydra.main(
+    config_path=os.path.join(PROJECT_DIR, 'configs'),
+    config_name='visualize_activation_maps',
+    version_base=None,
+)
+def main(cfg: DictConfig) -> None:
+    log.info(f'Config:\n\n{OmegaConf.to_yaml(cfg)}')
 
+    # Define absolute paths
+    model_dir = str(os.path.join(PROJECT_DIR, cfg.model_dir))
+    img_dir = str(os.path.join(PROJECT_DIR, cfg.img_dir))
+    save_dir = str(os.path.join(PROJECT_DIR, cfg.save_dir))
 
-if __name__ == '__main__':
-    model_path = '/home/vladislav/MaNet_resnet50'
-    data_path = 'data/visualization/img'
-    save_dir = 'data/act_map'
+    device = pick_device(cfg.device)
 
-    for img_path in glob(f'{data_path}/*.png'):
+    for img_path in glob(f'{img_dir}/*.png'):
         img_name = os.path.basename(img_path)
-        with open(f'{model_path}/config.json', 'r') as file:
+        with open(f'{model_dir}/config.json', 'r') as file:
             model_cfg = json.load(file)
         model = OCTSegmentationModel.load_from_checkpoint(
-            checkpoint_path=f'{model_path}/weights.ckpt',
+            checkpoint_path=f'{model_dir}/weights.ckpt',
             encoder_weights=None,
             arch=model_cfg['architecture'],
             encoder_name=model_cfg['encoder'],
             model_name=model_cfg['model_name'],
             in_channels=3,
             classes=model_cfg['classes'],
-            map_location='cuda:0',
+            map_location=device,
         )
         model.eval()
-        image = preprocessing_img(
-            img_path,
-            input_size=model_cfg['input_size'],
-        )
-
-        masks = model.predict(
-            images=np.array([image]),
-            device='cuda',
-        )[0]
-
-        from pytorch_grad_cam import GradCAM
-
-
-        class SemanticSegmentationTarget:
-            def __init__(self, category, mask):
-                self.category = category
-                self.mask = torch.from_numpy(mask)
-                if torch.cuda.is_available():
-                    self.mask = self.mask.cuda()
-
-            def __call__(self, model_output):
-                return (model_output[self.category, :, :] * self.mask).sum()
-
-
+        image = preprocessing_img(img_path, input_size=model_cfg['input_size'])
+        masks = model.predict(images=np.array([image]), device=device)[0]
         target_layers = [model.model.encoder.layer4[-1]]
 
         if not os.path.exists(f'{save_dir}/{img_name.split(".")[0]}'):
             os.makedirs(f'{save_dir}/{img_name.split(".")[0]}')
 
-        mask_gr = tifffile.imread(f"{img_path.replace('img', 'mask').split('.')[0]}.tiff")
-        mask_gr = cv2.resize(
-            mask_gr,
-            (1024, 1024),
-            interpolation=cv2.INTER_NEAREST,
-        )
+        mask_gt = tifffile.imread(f"{img_path.replace('img', 'mask').split('.')[0]}.tiff")
+        mask_gt = cv2.resize(mask_gt, (1024, 1024), interpolation=cv2.INTER_NEAREST)
 
         for class_detection in range(3):
             class_name = CLASS_IDS_REVERSED[class_detection + 1]
             mask_class = np.float32(np.array(masks[:, :, class_detection]).astype(bool))
             targets = [SemanticSegmentationTarget(class_detection, mask_class)]
             input_tensor = image.copy()
-            input_tensor = torch.Tensor(np.array(input_tensor)).to('cuda')
+            input_tensor = torch.Tensor(np.array(input_tensor)).to(device)
 
             rgb_img = Image.open(img_path).resize(
                 (model_cfg['input_size'], model_cfg['input_size']),
@@ -98,15 +97,8 @@ if __name__ == '__main__':
             rgb_img = np.float32(rgb_img) / 255
             rgb_img = np.array(rgb_img)
 
-            with GradCAM(
-                    model=model,
-                    target_layers=target_layers,
-                    # use_cuda=torch.cuda.is_available()
-            ) as cam:
-                grayscale_cam = cam(
-                    input_tensor=input_tensor,
-                    targets=targets,
-                )[0, :]
+            with GradCAM(model=model, target_layers=target_layers) as cam:
+                grayscale_cam = cam(input_tensor=input_tensor, targets=targets)[0, :]
                 cam_image = show_cam_on_image(rgb_img, grayscale_cam, use_rgb=True)
                 cam_image = Image.fromarray(cam_image).resize((1024, 1024))
                 output = Image.new('RGB', (cam_image.size[0] * 3, cam_image.size[1]), (0, 0, 0))
@@ -131,7 +123,7 @@ if __name__ == '__main__':
                 color_mask_gt.paste(
                     color,
                     (0, 0),
-                    Image.fromarray(mask_gr[:, :, class_detection]).resize((1024, 1024)),
+                    Image.fromarray(mask_gt[:, :, class_detection]).resize((1024, 1024)),
                 )
                 output.paste(color_mask_gt, (cam_image.size[0], 0))
 
@@ -149,3 +141,7 @@ if __name__ == '__main__':
                     f'{save_dir}/{img_name.split(".")[0]}/{class_name}.png',
                 )
                 # output.show()
+
+
+if __name__ == '__main__':
+    main()
