@@ -60,18 +60,19 @@ class CAMProcessor:
             raise ValueError(f'Invalid CAM method: {cam_method}')
         return self.CAM_METHODS[cam_method]
 
-    def process_image(
+    def extract_activation_map(
         self,
-        img: np.ndarray,
+        image: np.ndarray,
         class_idx: int,
         class_mask: np.ndarray,
     ):
-        input_tensor = torch.Tensor(np.array(img)).to(self.device)
+        image = image.transpose([2, 0, 1]).astype('float32')
+        input_tensor = torch.Tensor(image).to(self.device)
         targets = [SemanticSegmentationTarget(class_idx, class_mask)]
         with self.cam_method(model=self.model, target_layers=self.target_layers) as cam:
-            img_cam = cam(input_tensor=input_tensor, targets=targets)[0, :]
+            mask_cam = cam(input_tensor=input_tensor, targets=targets)[0, :]
 
-        return img_cam
+        return mask_cam
 
 
 class SemanticSegmentationTarget:
