@@ -66,14 +66,31 @@ class CAMProcessor:
             raise ValueError(f'Invalid CAM method: {cam_method}')
         return self.CAM_METHODS[cam_method]
 
+    def _preprocess_image(
+        self,
+        image: np.ndarray,
+    ) -> torch.Tensor:
+        image = (image / 255).astype('float32')
+        image = image.transpose([2, 0, 1]).astype('float32')
+        input_tensor = torch.Tensor(image).to(self.device)
+        return input_tensor
+
+    @staticmethod
+    def _deprocess_image(
+        image: torch.Tensor,
+    ) -> np.ndarray:
+        image = image.detach().cpu().numpy()
+        image = image.squeeze().transpose([1, 2, 0])
+        image = (image * 255).astype('uint8')
+        return image
+
     def extract_activation_map(
         self,
         image: np.ndarray,
         class_idx: int,
         class_mask: np.ndarray,
     ):
-        image = image.transpose([2, 0, 1]).astype('float32')
-        input_tensor = torch.Tensor(image).to(self.device)
+        input_tensor = self._preprocess_image(image)
         targets = [SemanticSegmentationTarget(class_idx, class_mask)]
         with self.cam_method(model=self.model, target_layers=self.target_layers) as cam:
             mask_cam = cam(input_tensor=input_tensor, targets=targets)[0, :]
@@ -88,8 +105,7 @@ class CAMProcessor:
         class_mask: np.ndarray,
     ) -> np.ndarray:
         targets = [SemanticSegmentationTarget(class_idx, class_mask)]
-        image = image.transpose([2, 0, 1]).astype('float32')
-        input_tensor = torch.Tensor([image]).to(self.device)
+        input_tensor = self._preprocess_image(image)
         score_road, vis = self.cam_metric_road(
             input_tensor=input_tensor,
             cams=np.array([mask]),
@@ -97,10 +113,11 @@ class CAMProcessor:
             model=self.model,
             return_visualization=True,
         )
-        # TODO: visualization?
-        vis = vis.cpu().detach()
-        vis = vis.permute(0, 2, 3, 1).numpy().round()
-        vis = vis[0]
+        vis_out = self._deprocess_image(vis)
+        # # TODO: visualization?
+        # vis = vis.cpu().detach()
+        # vis = vis.permute(0, 2, 3, 1).numpy().round()
+        # vis = vis[0]
 
         score_conf, vis = self.cam_metric_conf(
             input_tensor=input_tensor,
