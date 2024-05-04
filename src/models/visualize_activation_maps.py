@@ -90,15 +90,16 @@ def main(cfg: DictConfig) -> None:
     img_paths = glob(os.path.join(img_dir, '*.png'))
     class_names = model_cfg['classes']
     metrics = {}
-    for cl in class_names:
-        metrics[cl] = {
+    for class_name in class_names:
+        metrics[class_name] = {
             'confidence increase when removing 25%': 0,
             'confidence increase percent': 0,
         }
     input_size = (model_cfg['input_size'],) * 2
 
     # Extract activation maps and save with overlay images
-    for img_path in tqdm(img_paths, desc='Save activation maps', unit='image'):
+    # img_paths = img_paths[:1] # FIXME: used only for debugging
+    for img_path in tqdm(img_paths, desc='Extract and save activation maps', unit='image'):
         img = cv2.imread(img_path)
         img = cv2.resize(img, input_size)
         mask_pred = model.predict(images=np.array([img]), device=device)[0]
@@ -152,13 +153,16 @@ def main(cfg: DictConfig) -> None:
                 image_name=f'{img_stem}_{class_name}_{cfg.cam_method}.png',
                 save_dir=os.path.join(save_dir, model_cfg['model_name']),
             )
-            print('')
-    for cl in class_names:
-        metrics[cl]['confidence increase when removing 25%'] /= len(img_paths)
-        metrics[cl]['confidence increase percent'] /= len(img_paths)
-    print(metrics)
+
+    # TODO: Incompatible types in assignment (expression has type "float", target has type "int")
+    for class_name in class_names:
+        metrics[class_name]['confidence increase when removing 25%'] /= len(img_paths)
+        metrics[class_name]['confidence increase percent'] /= len(img_paths)
+    log.info(metrics)
     with open('metrics.json', 'w') as file:
         json.dump(metrics, file, indent=4)
+
+    log.info('Complete!')
 
 
 if __name__ == '__main__':
