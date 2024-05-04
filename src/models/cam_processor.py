@@ -13,6 +13,8 @@ from pytorch_grad_cam import (
     LayerCAM,
     XGradCAM,
 )
+from pytorch_grad_cam.metrics.cam_mult_image import CamMultImageConfidenceChange
+from pytorch_grad_cam.metrics.road import ROADMostRelevantFirst
 from pytorch_grad_cam.utils.image import show_cam_on_image
 
 
@@ -50,9 +52,12 @@ class CAMProcessor:
         device: str = 'cpu',
         cam_method: str = 'GradCAM',
         target_layers: List = None,
+            percentile: int = 75,
     ) -> None:
         self.model = model
         self.cam_method = self._get_cam_method(cam_method)
+        self.cam_metric_road = ROADMostRelevantFirst(percentile=percentile)
+        self.cam_metric_conf = CamMultImageConfidenceChange()
         self.device = device
         self.target_layers = target_layers
 
@@ -74,6 +79,38 @@ class CAMProcessor:
             mask_cam = cam(input_tensor=input_tensor, targets=targets)[0, :]
 
         return mask_cam
+
+    def compute_metrics(
+            self,
+            image: np.ndarray,
+            mask: np.ndarray,
+            class_idx: int,
+            class_mask: np.ndarray,
+    ) -> np.ndarray:
+        targets = [SemanticSegmentationTarget(class_idx, class_mask)]
+        image = image.transpose([2, 0, 1]).astype('float32')
+        input_tensor = torch.Tensor([image]).to(self.device)
+        score_road, vis = self.cam_metric_road(
+            input_tensor=input_tensor,
+            cams=np.array([mask]),
+            targets=targets,
+            model=self.model,
+            return_visualization=True,
+        )
+        # TODO: visualization?
+        vis = vis.cpu().detach()
+        vis = vis.permute(0, 2, 3, 1).numpy().round()
+        vis = vis[0]
+
+        score_conf, vis = self.cam_metric_conf(
+            input_tensor=input_tensor,
+            cams=np.array([1 - mask]),
+            targets=targets,
+            model=self.model,
+            return_visualization=True,
+        )
+
+        return score_road[0], score_conf[0]
 
     @staticmethod
     def overlay_activation_map(

@@ -81,6 +81,7 @@ def main(cfg: DictConfig) -> None:
         cam_method=cfg.cam_method,
         device=device,
         target_layers=target_layers,
+        percentile=10,
     )
 
     # Define additional parameters
@@ -88,6 +89,12 @@ def main(cfg: DictConfig) -> None:
     mask_dir = os.path.join(data_dir, 'mask')
     img_paths = glob(os.path.join(img_dir, '*.png'))
     class_names = model_cfg['classes']
+    metrics = {}
+    for cl in class_names:
+        metrics[cl] = {
+            'confidence increase when removing 25%': 0,
+            'confidence increase percent': 0,
+        }
     input_size = (model_cfg['input_size'],) * 2
 
     # Extract activation maps and save with overlay images
@@ -107,6 +114,15 @@ def main(cfg: DictConfig) -> None:
                 class_idx=class_idx,
                 class_mask=class_mask_pred,
             )
+            scores = cam_processor.compute_metrics(
+                image=img,
+                mask=mask_cam,
+                class_idx=class_idx,
+                class_mask=class_mask_pred,
+            )
+            metrics[class_names[class_idx]]['confidence increase when removing 25%'] += scores[0]
+            metrics[class_names[class_idx]]['confidence increase percent'] += scores[1]
+
             img_cam = cam_processor.overlay_activation_map(
                 image=img,
                 mask=mask_cam,
@@ -137,6 +153,12 @@ def main(cfg: DictConfig) -> None:
                 save_dir=os.path.join(save_dir, model_cfg['model_name']),
             )
             print('')
+    for cl in class_names:
+        metrics[cl]['confidence increase when removing 25%'] /= len(img_paths)
+        metrics[cl]['confidence increase percent'] /= len(img_paths)
+    print(metrics)
+    with open('metrics.json', 'w') as file:
+        json.dump(metrics, file, indent=4)
 
 
 if __name__ == '__main__':
