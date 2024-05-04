@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Tuple
 
 import numpy as np
 import torch
@@ -103,31 +103,32 @@ class CAMProcessor:
         mask: np.ndarray,
         class_idx: int,
         class_mask: np.ndarray,
-    ) -> np.ndarray:
+    ) -> Tuple[float, float]:
         targets = [SemanticSegmentationTarget(class_idx, class_mask)]
-        input_tensor = self._preprocess_image(image)
-        score_road, vis = self.cam_metric_road(
+        # input_tensor = self._preprocess_image(image)  # TODO: debug preprocessing
+        image = image.transpose([2, 0, 1]).astype('float32')
+        input_tensor = torch.Tensor([image]).to(self.device)
+        score_road, vis_road_ = self.cam_metric_road(
             input_tensor=input_tensor,
             cams=np.array([mask]),
             targets=targets,
             model=self.model,
             return_visualization=True,
         )
-        vis_out = self._deprocess_image(vis)
-        # # TODO: visualization?
-        # vis = vis.cpu().detach()
-        # vis = vis.permute(0, 2, 3, 1).numpy().round()
-        # vis = vis[0]
+        score_road = float(score_road[0])
+        vis_road = self._deprocess_image(vis_road_)
 
-        score_conf, vis = self.cam_metric_conf(
+        score_conf, vis_conf_ = self.cam_metric_conf(
             input_tensor=input_tensor,
             cams=np.array([1 - mask]),
             targets=targets,
             model=self.model,
             return_visualization=True,
         )
+        vis_conf = self._deprocess_image(vis_conf_)
+        score_conf = float(score_conf[0])
 
-        return score_road[0], score_conf[0]
+        return score_road, score_conf
 
     @staticmethod
     def overlay_activation_map(
