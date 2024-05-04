@@ -70,11 +70,11 @@ class CAMProcessor:
         self,
         image: np.ndarray,
     ) -> torch.Tensor:
-        image = (image / 255).astype('float32')
         image = image.transpose([2, 0, 1]).astype('float32')
         input_tensor = torch.Tensor(image).to(self.device)
         return input_tensor
 
+    # TODO (Vlad): check if we need this method
     @staticmethod
     def _deprocess_image(
         image: torch.Tensor,
@@ -93,6 +93,7 @@ class CAMProcessor:
         input_tensor = self._preprocess_image(image)
         targets = [SemanticSegmentationTarget(class_idx, class_mask)]
         with self.cam_method(model=self.model, target_layers=self.target_layers) as cam:
+            # TODO (Vlad): check aug_smooth=True and eigen_smooth=True
             mask_cam = cam(input_tensor=input_tensor, targets=targets)[0, :]
 
         return mask_cam
@@ -105,7 +106,7 @@ class CAMProcessor:
         class_mask: np.ndarray,
     ) -> Tuple[float, float]:
         targets = [SemanticSegmentationTarget(class_idx, class_mask)]
-        # input_tensor = self._preprocess_image(image)  # TODO: debug preprocessing
+        # input_tensor = self._preprocess_image(image)  # TODO (Vlad): try this method
         image = image.transpose([2, 0, 1]).astype('float32')
         input_tensor = torch.Tensor([image]).to(self.device)
         score_road, vis_road_ = self.cam_metric_road(
