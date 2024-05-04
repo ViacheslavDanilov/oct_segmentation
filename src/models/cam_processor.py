@@ -52,7 +52,7 @@ class CAMProcessor:
         device: str = 'cpu',
         cam_method: str = 'GradCAM',
         target_layers: List = None,
-            percentile: int = 75,
+        percentile: int = 75,
     ) -> None:
         self.model = model
         self.cam_method = self._get_cam_method(cam_method)
@@ -81,11 +81,11 @@ class CAMProcessor:
         return mask_cam
 
     def compute_metrics(
-            self,
-            image: np.ndarray,
-            mask: np.ndarray,
-            class_idx: int,
-            class_mask: np.ndarray,
+        self,
+        image: np.ndarray,
+        mask: np.ndarray,
+        class_idx: int,
+        class_mask: np.ndarray,
     ) -> np.ndarray:
         targets = [SemanticSegmentationTarget(class_idx, class_mask)]
         image = image.transpose([2, 0, 1]).astype('float32')
@@ -146,9 +146,10 @@ class SemanticSegmentationTarget:
         mask: np.ndarray,
     ) -> None:
         self.category = category
-        self.mask = (
-            torch.from_numpy(mask).cuda() if torch.cuda.is_available() else torch.from_numpy(mask)
-        )
+        if torch.cuda.is_available():
+            self.mask = torch.from_numpy(mask).cuda()
+        else:
+            self.mask = torch.from_numpy(mask)
 
     def __call__(self, model_output):
         return (model_output[self.category, :, :] * self.mask).sum()
