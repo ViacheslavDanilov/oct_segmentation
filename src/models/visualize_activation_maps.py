@@ -23,26 +23,31 @@ logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
 
 
-def combine_images(
+def save_images(
     images: List[np.ndarray],
+    image_names: List[str],
     output_size: Tuple[int, int],
-) -> np.ndarray:
-    resized_images = [
-        cv2.resize(img, output_size, interpolation=cv2.INTER_NEAREST) for img in images
-    ]
-    combined_image = np.hstack(resized_images)
-    return combined_image
-
-
-def save_image(
-    image: np.ndarray,
-    image_name: str,
     save_dir: str,
+    num_colors_threshold: int = 10,
 ) -> None:
-    image_name = image_name.replace(' ', '_')
     os.makedirs(save_dir, exist_ok=True)
-    save_path = os.path.join(save_dir, image_name)
-    cv2.imwrite(save_path, image, [cv2.IMWRITE_PNG_COMPRESSION, 1])
+    for image, image_name in zip(images, image_names):
+        image_name = image_name.replace(' ', '_')
+
+        # Calculate the number of unique colors in the image
+        flat_image = image.reshape(-1, 3)
+        unique_colors = np.unique(flat_image, axis=0)
+        num_unique_colors = len(unique_colors)
+
+        # Choose interpolation method based on the number of unique colors
+        interpolation = (
+            cv2.INTER_NEAREST if num_unique_colors <= num_colors_threshold else cv2.INTER_LANCZOS4
+        )
+
+        # Resize and save the image
+        if output_size:
+            image = cv2.resize(image, output_size, interpolation=interpolation)
+        cv2.imwrite(os.path.join(save_dir, image_name), image)
 
 
 @hydra.main(
@@ -98,7 +103,7 @@ def main(cfg: DictConfig) -> None:
     input_size = (model_cfg['input_size'],) * 2
 
     # Extract activation maps and save with overlay images
-    # img_paths = img_paths[:1] # FIXME: used only for debugging
+    # img_paths = img_paths[:1]  # FIXME: used only for debugging
     for img_path in tqdm(img_paths, desc='Extract and save activation maps', unit='image'):
         img = cv2.imread(img_path)
         img = cv2.resize(img, input_size)
@@ -115,14 +120,14 @@ def main(cfg: DictConfig) -> None:
                 class_idx=class_idx,
                 class_mask=class_mask_pred,
             )
-            scores = cam_processor.compute_metrics(
-                image=img,
-                mask=mask_cam,
-                class_idx=class_idx,
-                class_mask=class_mask_pred,
-            )
-            metrics[class_names[class_idx]]['confidence increase when removing 25%'] += scores[0]
-            metrics[class_names[class_idx]]['confidence increase percent'] += scores[1]
+            # scores = cam_processor.compute_metrics(
+            #     image=img,
+            #     mask=mask_cam,
+            #     class_idx=class_idx,
+            #     class_mask=class_mask_pred,
+            # )
+            # metrics[class_names[class_idx]]['confidence increase when removing 25%'] += scores[0]
+            # metrics[class_names[class_idx]]['confidence increase percent'] += scores[1]
 
             img_cam = cam_processor.overlay_activation_map(
                 image=img,
@@ -143,24 +148,25 @@ def main(cfg: DictConfig) -> None:
             )
             color_class_mask_pred = cv2.cvtColor(color_class_mask_pred, cv2.COLOR_BGR2RGB)
 
-            img_stack = combine_images(
+            save_images(
                 images=[img, img_cam, color_class_mask_pred, color_class_mask_gt],
+                image_names=[
+                    f'{img_stem}_input.png',
+                    f'{img_stem}_{class_name}_{cfg.cam_method}.png',
+                    f'{img_stem}_{class_name}_pred.png',
+                    f'{img_stem}_{class_name}_gt.png',
+                ],
                 output_size=cfg.output_size,
-            )
-
-            save_image(
-                image=img_stack,
-                image_name=f'{img_stem}_{class_name}_{cfg.cam_method}.png',
                 save_dir=os.path.join(save_dir, model_cfg['model_name']),
             )
 
     # TODO: Incompatible types in assignment (expression has type "float", target has type "int")
-    for class_name in class_names:
-        metrics[class_name]['confidence increase when removing 25%'] /= len(img_paths)
-        metrics[class_name]['confidence increase percent'] /= len(img_paths)
-    log.info(metrics)
-    with open('metrics.json', 'w') as file:
-        json.dump(metrics, file, indent=4)
+    # for class_name in class_names:
+    #     metrics[class_name]['confidence increase when removing 25%'] /= len(img_paths)
+    #     metrics[class_name]['confidence increase percent'] /= len(img_paths)
+    # log.info(metrics)
+    # with open('metrics.json', 'w') as file:
+    #     json.dump(metrics, file, indent=4)
 
     log.info('Complete!')
 
