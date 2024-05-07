@@ -3,13 +3,14 @@ import logging
 import os
 from glob import glob
 from pathlib import Path
-from typing import List, Tuple
+from typing import Dict, List, Tuple
 
 import cv2
 import hydra
 import numpy as np
 import tifffile
 from omegaconf import DictConfig, OmegaConf
+from sklearn.metrics import f1_score, jaccard_score, precision_score, recall_score
 from tqdm import tqdm
 
 from src import PROJECT_DIR
@@ -17,10 +18,30 @@ from src.data.convert_int_to_cv import colorize_mask
 from src.data.utils import CLASS_IDS_REVERSED
 from src.models.cam_processor import CAMProcessor
 from src.models.smp.model import OCTSegmentationModel
-from src.models.smp.utils import calculate_dice, calculate_iou, pick_device
+from src.models.smp.utils import pick_device
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
+
+
+def compute_metrics(
+    y_true: np.ndarray,
+    y_pred: np.ndarray,
+    average: str = 'micro',
+) -> Dict[str, float]:
+    dice = f1_score(y_true=y_true, y_pred=y_pred, average=average)
+    iou = jaccard_score(y_true=y_true, y_pred=y_pred, average=average)
+    precision = precision_score(y_true=y_true, y_pred=y_pred, average=average)
+    recall = recall_score(y_true=y_true, y_pred=y_pred, average=average)
+    f1 = f1_score(y_true=y_true, y_pred=y_pred, average=average)
+    metrics = {
+        'Dice': dice,
+        'IoU': iou,
+        'Precision': precision,
+        'Recall': recall,
+        'F1': f1,
+    }
+    return metrics
 
 
 def save_images(
@@ -86,7 +107,6 @@ def main(cfg: DictConfig) -> None:
         cam_method=cfg.cam_method,
         device=device,
         target_layers=target_layers,
-        percentile=10,
     )
 
     # Define additional parameters
@@ -95,15 +115,10 @@ def main(cfg: DictConfig) -> None:
     img_paths = glob(os.path.join(img_dir, '*.png'))
     class_names = model_cfg['classes']
     metrics = {}
-    for class_name in class_names:
-        metrics[class_name] = {
-            'Dice': 0.0,
-            'IOU': 0.0,
-        }
     input_size = (model_cfg['input_size'],) * 2
 
     # Extract activation maps and save with overlay images
-    # img_paths = img_paths[:1]  # FIXME: used only for debugging
+    img_paths = img_paths[:1]  # FIXME: used only for debugging
     for img_path in tqdm(img_paths, desc='Extract and save activation maps', unit='image'):
         img = cv2.imread(img_path)
         img = cv2.resize(img, input_size)
@@ -125,18 +140,6 @@ def main(cfg: DictConfig) -> None:
                 aug_smooth=cfg.aug_smooth,
                 eigen_smooth=cfg.eigen_smooth,
             )
-            pred_mask = mask_cam.copy()
-            pred_mask[pred_mask > cfg.map_threch] = 255
-            pred_mask[pred_mask != 255] = 0
-
-            metrics[class_names[class_idx]]['Dice'] += calculate_dice(
-                pred_mask=cv2.resize(pred_mask, (mask_gt.shape[0], mask_gt.shape[1])),
-                gt_mask=mask_gt[:, :, class_idx],
-            )
-            metrics[class_names[class_idx]]['IOU'] += calculate_iou(
-                pred_mask=cv2.resize(pred_mask, (mask_gt.shape[0], mask_gt.shape[1])),
-                gt_mask=mask_gt[:, :, class_idx],
-            )
 
             img_cam = cam_processor.overlay_activation_map(
                 image=img,
@@ -157,11 +160,26 @@ def main(cfg: DictConfig) -> None:
             )
             color_class_mask_pred = cv2.cvtColor(color_class_mask_pred, cv2.COLOR_BGR2RGB)
 
+            # Calculate metrics
+            mask_cam_bin = (mask_cam > cfg.map_threshold).astype('uint8') * 255
+            mask_cam_bin = cv2.resize(
+                mask_cam_bin,
+                (mask_gt.shape[1], mask_gt.shape[0]),
+                interpolation=cv2.INTER_NEAREST,
+            )
+            metrics_class = compute_metrics(
+                y_true=mask_gt[:, :, class_idx],
+                y_pred=mask_cam_bin,
+            )
+            metrics[class_name] = metrics_class
+
+            # Save images and masks
             save_images(
-                images=[img, img_cam, color_class_mask_pred, color_class_mask_gt],
+                images=[img, img_cam, mask_cam_bin, color_class_mask_pred, color_class_mask_gt],
                 image_names=[
                     f'{img_stem}_input.png',
                     f'{img_stem}_{class_name}_{cfg.cam_method}.png',
+                    f'{img_stem}_{class_name}_{cfg.cam_method}_mask.png',
                     f'{img_stem}_{class_name}_pred.png',
                     f'{img_stem}_{class_name}_gt.png',
                 ],
@@ -169,14 +187,14 @@ def main(cfg: DictConfig) -> None:
                 save_dir=os.path.join(save_dir, model_cfg['model_name']),
             )
 
-    # # TODO: Incompatible types in assignment (expression has type "float", target has type "int")
-    for class_name in class_names:
-        metrics[class_name]['IOU'] /= len(img_paths)
-        metrics[class_name]['Dice'] /= len(img_paths)
-    log.info(f'Metrics: {metrics}')
-    with open('metrics.json', 'w') as file:
-        json.dump(metrics, file, indent=4)
-    log.info('Complete!')
+    # # # TODO: Incompatible types in assignment (expression has type "float", target has type "int")
+    # for class_name in class_names:
+    #     metrics[class_name]['IOU'] /= len(img_paths)
+    #     metrics[class_name]['Dice'] /= len(img_paths)
+    # log.info(f'Metrics: {metrics}')
+    # with open('metrics.json', 'w') as file:
+    #     json.dump(metrics, file, indent=4)
+    # log.info('Complete!')
 
 
 if __name__ == '__main__':
