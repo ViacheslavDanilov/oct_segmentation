@@ -13,8 +13,6 @@ from pytorch_grad_cam import (
     LayerCAM,
     XGradCAM,
 )
-from pytorch_grad_cam.metrics.cam_mult_image import CamMultImageConfidenceChange
-from pytorch_grad_cam.metrics.road import ROADMostRelevantFirst
 from pytorch_grad_cam.utils.image import show_cam_on_image
 
 
@@ -32,6 +30,10 @@ class CAMProcessor:
         __init__: Initializes a CAMProcessor instance.
         process_image: Processes an image with the specified CAM method.
         _get_cam_method: Internal method to retrieve the CAM class based on the method name.
+        _preprocess_image: Preprocesses the input image.
+        get_targets: Gets the target for CAM processing.
+        extract_activation_map: Extracts the activation map for the input image.
+        overlay_activation_map: Overlays the activation map on the input image.
     """
 
     CAM_METHODS = {
@@ -52,12 +54,9 @@ class CAMProcessor:
         device: str = 'cpu',
         cam_method: str = 'GradCAM',
         target_layers: List = None,
-        percentile: int = 75,
     ) -> None:
         self.model = model
         self.cam_method = self._get_cam_method(cam_method)
-        self.cam_metric_road = ROADMostRelevantFirst(percentile=percentile)
-        self.cam_metric_conf = CamMultImageConfidenceChange()
         self.device = device
         self.target_layers = target_layers
 
@@ -76,17 +75,17 @@ class CAMProcessor:
 
     @staticmethod
     def get_targets(
-            class_idx: int,
-            class_mask: np.ndarray,
+        class_idx: int,
+        class_mask: np.ndarray,
     ):
         return [SemanticSegmentationTarget(class_idx, class_mask)]
 
     def extract_activation_map(
         self,
         image: np.ndarray,
-            targets: List,
-            eigen_smooth: bool = False,
-            aug_smooth: bool = False,
+        targets: List,
+        eigen_smooth: bool = False,
+        aug_smooth: bool = False,
     ):
         input_tensor = self._preprocess_image(image)
         with self.cam_method(model=self.model, target_layers=self.target_layers) as cam:
