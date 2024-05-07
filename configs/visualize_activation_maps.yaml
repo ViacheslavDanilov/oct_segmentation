@@ -7,7 +7,7 @@ data_dir: data/visualization
 cam_method: XGradCAM # GradCAM, HiResCAM, GradCAMElementWise, GradCAMPlusPlus, XGradCAM, AblationCAM, EigenCAM, EigenGradCAM, LayerCAM
 output_size: [1000, 1000]
 device: auto  # cpu, gpu, or auto
-save_dir: eval/activation_maps
 aug_smooth: false
 eigen_smooth: false
-map_threch: 0.75
+map_threshold: 0.5
+save_dir: eval/activation_maps
