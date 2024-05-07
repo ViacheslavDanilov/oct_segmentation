@@ -8,6 +8,7 @@ from typing import Dict, List, Tuple
 import cv2
 import hydra
 import numpy as np
+import pandas as pd
 import tifffile
 from omegaconf import DictConfig, OmegaConf
 from sklearn.metrics import f1_score, jaccard_score, precision_score, recall_score
@@ -114,11 +115,11 @@ def main(cfg: DictConfig) -> None:
     mask_dir = os.path.join(data_dir, 'mask')
     img_paths = glob(os.path.join(img_dir, '*.png'))
     class_names = model_cfg['classes']
-    metrics = {}
     input_size = (model_cfg['input_size'],) * 2
 
     # Extract activation maps and save with overlay images
     img_paths = img_paths[:1]  # FIXME: used only for debugging
+    metrics = []
     for img_path in tqdm(img_paths, desc='Extract and save activation maps', unit='image'):
         img = cv2.imread(img_path)
         img = cv2.resize(img, input_size)
@@ -171,7 +172,17 @@ def main(cfg: DictConfig) -> None:
                 y_true=mask_gt[:, :, class_idx],
                 y_pred=mask_cam_bin,
             )
-            metrics[class_name] = metrics_class
+
+            metrics.append(
+                {
+                    'Image path': img_path,
+                    'Image name': Path(img_path).name,
+                    'Class': class_name,
+                    'Class ID': class_idx,
+                    'CAM': cfg.cam_method,
+                    **metrics_class,
+                },
+            )
 
             # Save images and masks
             save_images(
@@ -186,15 +197,15 @@ def main(cfg: DictConfig) -> None:
                 output_size=cfg.output_size,
                 save_dir=os.path.join(save_dir, model_cfg['model_name']),
             )
+    # TODO: exclude csv files from git
+    # TODO: change absolute to relative path
+    # Convert the metrics list to a DataFrame and save it to a CSV file
+    df = pd.DataFrame(metrics)
+    model_name = model_cfg['model_name']
+    save_path = os.path.join(save_dir, f'{model_name}_{cfg.cam_method}_metrics.csv')
+    df.to_csv(save_path, index=False)
 
-    # # # TODO: Incompatible types in assignment (expression has type "float", target has type "int")
-    # for class_name in class_names:
-    #     metrics[class_name]['IOU'] /= len(img_paths)
-    #     metrics[class_name]['Dice'] /= len(img_paths)
-    # log.info(f'Metrics: {metrics}')
-    # with open('metrics.json', 'w') as file:
-    #     json.dump(metrics, file, indent=4)
-    # log.info('Complete!')
+    log.info('Complete!')
 
 
 if __name__ == '__main__':
