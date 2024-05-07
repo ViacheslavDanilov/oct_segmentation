@@ -195,14 +195,13 @@ def main(cfg: DictConfig) -> None:
                     f'{img_stem}_{class_name}_gt.png',
                 ],
                 output_size=cfg.output_size,
-                save_dir=os.path.join(save_dir, model_cfg['model_name']),
+                save_dir=os.path.join(save_dir, model_cfg['architecture']),
             )
 
     # Convert the metric list to a DataFrame and save it to a CSV file
     df = pd.DataFrame(metrics)
     df['Image path'] = df['Image path'].apply(lambda x: os.path.relpath(x, PROJECT_DIR))
-    model_name = model_cfg['architecture']
-    save_path = os.path.join(save_dir, f'{model_name}_{cfg.cam_method}_metrics.csv')
+    save_path = os.path.join(save_dir, f"{model_cfg['architecture']}_{cfg.cam_method}_metrics.csv")
     df.to_csv(save_path, index=False)
 
     log.info('Complete!')
