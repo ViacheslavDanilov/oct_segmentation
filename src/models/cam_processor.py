@@ -1,4 +1,4 @@
-from typing import List, Tuple
+from typing import List
 
 import numpy as np
 import torch
@@ -74,62 +74,29 @@ class CAMProcessor:
         input_tensor = torch.Tensor(image).to(self.device)
         return input_tensor
 
-    # TODO (Vlad): check if we need this method
     @staticmethod
-    def _deprocess_image(
-        image: torch.Tensor,
-    ) -> np.ndarray:
-        image = image.detach().cpu().numpy()
-        image = image.squeeze().transpose([1, 2, 0])
-        image = (image * 255).astype('uint8')
-        return image
+    def get_targets(
+            class_idx: int,
+            class_mask: np.ndarray,
+    ):
+        return [SemanticSegmentationTarget(class_idx, class_mask)]
 
     def extract_activation_map(
         self,
         image: np.ndarray,
-        class_idx: int,
-        class_mask: np.ndarray,
+            targets: List,
+            eigen_smooth: bool = False,
+            aug_smooth: bool = False,
     ):
         input_tensor = self._preprocess_image(image)
-        targets = [SemanticSegmentationTarget(class_idx, class_mask)]
         with self.cam_method(model=self.model, target_layers=self.target_layers) as cam:
-            # TODO (Vlad): check aug_smooth=True and eigen_smooth=True
-            mask_cam = cam(input_tensor=input_tensor, targets=targets)[0, :]
-
+            mask_cam = cam(
+                input_tensor=input_tensor,
+                targets=targets,
+                eigen_smooth=eigen_smooth,
+                aug_smooth=aug_smooth,
+            )[0, :]
         return mask_cam
-
-    def compute_metrics(
-        self,
-        image: np.ndarray,
-        mask: np.ndarray,
-        class_idx: int,
-        class_mask: np.ndarray,
-    ) -> Tuple[float, float]:
-        targets = [SemanticSegmentationTarget(class_idx, class_mask)]
-        # input_tensor = self._preprocess_image(image)  # TODO (Vlad): try this method
-        image = image.transpose([2, 0, 1]).astype('float32')
-        input_tensor = torch.Tensor([image]).to(self.device)
-        score_road, vis_road_ = self.cam_metric_road(
-            input_tensor=input_tensor,
-            cams=np.array([mask]),
-            targets=targets,
-            model=self.model,
-            return_visualization=True,
-        )
-        score_road = float(score_road[0])
-        vis_road = self._deprocess_image(vis_road_)
-
-        score_conf, vis_conf_ = self.cam_metric_conf(
-            input_tensor=input_tensor,
-            cams=np.array([1 - mask]),
-            targets=targets,
-            model=self.model,
-            return_visualization=True,
-        )
-        vis_conf = self._deprocess_image(vis_conf_)
-        score_conf = float(score_conf[0])
-
-        return score_road, score_conf
 
     @staticmethod
     def overlay_activation_map(

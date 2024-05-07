@@ -6,8 +6,9 @@ import cv2
 import numpy as np
 import segmentation_models_pytorch as smp
 import torch
-import wandb
 from PIL import Image
+
+import wandb
 
 
 def get_metrics(
@@ -146,6 +147,13 @@ def calculate_iou(gt_mask, pred_mask):
     union = (pred_mask + gt_mask) > 0
     iou = overlap.sum() / float(union.sum())
     return iou
+
+
+def calculate_dice(pred_mask, gt_mask):
+    gt_mask[gt_mask > 0] = 1
+    pred_mask[pred_mask > 0] = 1
+    intersection = 2 * (gt_mask * pred_mask).sum()
+    return 2 * intersection / (gt_mask.sum() + pred_mask.sum())
 
 
 def get_img_mask_union(

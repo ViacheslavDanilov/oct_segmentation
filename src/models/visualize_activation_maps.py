@@ -17,7 +17,7 @@ from src.data.convert_int_to_cv import colorize_mask
 from src.data.utils import CLASS_IDS_REVERSED
 from src.models.cam_processor import CAMProcessor
 from src.models.smp.model import OCTSegmentationModel
-from src.models.smp.utils import pick_device
+from src.models.smp.utils import calculate_dice, calculate_iou, pick_device
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
@@ -97,8 +97,8 @@ def main(cfg: DictConfig) -> None:
     metrics = {}
     for class_name in class_names:
         metrics[class_name] = {
-            'confidence increase when removing 25%': 0,
-            'confidence increase percent': 0,
+            'Dice': 0.0,
+            'IOU': 0.0,
         }
     input_size = (model_cfg['input_size'],) * 2
 
@@ -115,19 +115,28 @@ def main(cfg: DictConfig) -> None:
 
         for class_idx in range(len(class_names)):
             class_mask_pred = mask_pred[:, :, class_idx]
-            mask_cam = cam_processor.extract_activation_map(
-                image=img,
+            targets = cam_processor.get_targets(
                 class_idx=class_idx,
                 class_mask=class_mask_pred,
             )
-            # scores = cam_processor.compute_metrics(
-            #     image=img,
-            #     mask=mask_cam,
-            #     class_idx=class_idx,
-            #     class_mask=class_mask_pred,
-            # )
-            # metrics[class_names[class_idx]]['confidence increase when removing 25%'] += scores[0]
-            # metrics[class_names[class_idx]]['confidence increase percent'] += scores[1]
+            mask_cam = cam_processor.extract_activation_map(
+                image=img,
+                targets=targets,
+                aug_smooth=cfg.aug_smooth,
+                eigen_smooth=cfg.eigen_smooth,
+            )
+            pred_mask = mask_cam.copy()
+            pred_mask[pred_mask > cfg.map_threch] = 255
+            pred_mask[pred_mask != 255] = 0
+
+            metrics[class_names[class_idx]]['Dice'] += calculate_dice(
+                pred_mask=cv2.resize(pred_mask, (mask_gt.shape[0], mask_gt.shape[1])),
+                gt_mask=mask_gt[:, :, class_idx],
+            )
+            metrics[class_names[class_idx]]['IOU'] += calculate_iou(
+                pred_mask=cv2.resize(pred_mask, (mask_gt.shape[0], mask_gt.shape[1])),
+                gt_mask=mask_gt[:, :, class_idx],
+            )
 
             img_cam = cam_processor.overlay_activation_map(
                 image=img,
@@ -160,14 +169,13 @@ def main(cfg: DictConfig) -> None:
                 save_dir=os.path.join(save_dir, model_cfg['model_name']),
             )
 
-    # TODO: Incompatible types in assignment (expression has type "float", target has type "int")
-    # for class_name in class_names:
-    #     metrics[class_name]['confidence increase when removing 25%'] /= len(img_paths)
-    #     metrics[class_name]['confidence increase percent'] /= len(img_paths)
-    # log.info(metrics)
-    # with open('metrics.json', 'w') as file:
-    #     json.dump(metrics, file, indent=4)
-
+    # # TODO: Incompatible types in assignment (expression has type "float", target has type "int")
+    for class_name in class_names:
+        metrics[class_name]['IOU'] /= len(img_paths)
+        metrics[class_name]['Dice'] /= len(img_paths)
+    log.info(f'Metrics: {metrics}')
+    with open('metrics.json', 'w') as file:
+        json.dump(metrics, file, indent=4)
     log.info('Complete!')
 
 
