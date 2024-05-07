@@ -118,7 +118,7 @@ def main(cfg: DictConfig) -> None:
     input_size = (model_cfg['input_size'],) * 2
 
     # Extract activation maps and save with overlay images
-    img_paths = img_paths[:1]  # FIXME: used only for debugging
+    # img_paths = img_paths[:1]  # Used only for debugging
     metrics = []
     for img_path in tqdm(img_paths, desc='Extract and save activation maps', unit='image'):
         img = cv2.imread(img_path)
@@ -172,7 +172,6 @@ def main(cfg: DictConfig) -> None:
                 y_true=mask_gt[:, :, class_idx],
                 y_pred=mask_cam_bin,
             )
-
             metrics.append(
                 {
                     'Image path': img_path,
@@ -197,10 +196,10 @@ def main(cfg: DictConfig) -> None:
                 output_size=cfg.output_size,
                 save_dir=os.path.join(save_dir, model_cfg['model_name']),
             )
-    # TODO: exclude csv files from git
-    # TODO: change absolute to relative path
-    # Convert the metrics list to a DataFrame and save it to a CSV file
+
+    # Convert the metric list to a DataFrame and save it to a CSV file
     df = pd.DataFrame(metrics)
+    df['Image path'] = df['Image path'].apply(lambda x: os.path.relpath(x, PROJECT_DIR))
     model_name = model_cfg['model_name']
     save_path = os.path.join(save_dir, f'{model_name}_{cfg.cam_method}_metrics.csv')
     df.to_csv(save_path, index=False)
