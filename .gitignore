@@ -166,5 +166,9 @@ data/cv*/
 /models/*/
 *.pth
 
+# Model evaluation
+/eval/activation_maps/*/
+/eval/activation_maps/*.csv
+
 # W&B
 /wandb/
