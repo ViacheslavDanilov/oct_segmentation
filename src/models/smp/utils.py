@@ -5,6 +5,7 @@ from typing import List, Tuple
 import cv2
 import numpy as np
 import segmentation_models_pytorch as smp
+import torch
 import wandb
 from PIL import Image
 
@@ -147,6 +148,13 @@ def calculate_iou(gt_mask, pred_mask):
     return iou
 
 
+def calculate_dice(pred_mask, gt_mask):
+    gt_mask[gt_mask > 0] = 1
+    pred_mask[pred_mask > 0] = 1
+    intersection = 2 * (gt_mask * pred_mask).sum()
+    return 2 * intersection / (gt_mask.sum() + pred_mask.sum())
+
+
 def get_img_mask_union(
     img_0: np.ndarray,
     alpha_0: float,
@@ -208,5 +216,24 @@ def preprocessing_img(
 ):
     image = cv2.imread(img_path)
     image = cv2.resize(image, (input_size, input_size))
-    image = to_tensor(np.array(image))
+    image = to_tensor(image)
     return image
+
+
+def pick_device(
+    option: str,
+) -> str:
+    """Pick the appropriate device based on the provided option.
+
+    Args:
+        option (str): Available device option ('cpu', 'cuda', 'auto').
+
+    Returns:
+        str: Selected device.
+    """
+    if option == 'auto':
+        return 'cuda' if torch.cuda.is_available() else 'cpu'
+    elif option in ['cpu', 'cuda']:
+        return option
+    else:
+        raise ValueError("Invalid device option. Please specify 'cpu', 'cuda', or 'auto'.")
