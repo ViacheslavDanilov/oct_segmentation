@@ -121,16 +121,15 @@ def main(cfg: DictConfig) -> None:
     # img_paths = img_paths[:1]  # Used only for debugging
     metrics = []
     for img_path in tqdm(img_paths, desc='Extract and save activation maps', unit='image'):
+        img_stem = Path(img_path).stem
         img = cv2.imread(img_path)
         img = cv2.resize(img, input_size)
+
         mask_pred = model.predict(images=np.array([img]), device=device)[0]
-        img_stem = Path(img_path).stem
         mask_gt_path = os.path.join(mask_dir, f'{img_stem}.tiff')
         mask_gt = tifffile.imread(mask_gt_path)
 
         for class_idx in range(len(class_names)):
-            if len(np.unique(mask_gt[:, :, class_idx])) < 2:
-                continue
             class_mask_pred = mask_pred[:, :, class_idx]
             targets = cam_processor.get_targets(
                 class_idx=class_idx,
