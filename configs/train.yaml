@@ -5,6 +5,7 @@ defaults:
 project_name: OCT segmentation
 data_dir: data/cv/fold_1
 classes:
+- Lipid core
 - Lumen
 - Fibrous cap
 - Lipid core

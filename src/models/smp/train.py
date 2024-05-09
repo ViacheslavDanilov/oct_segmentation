@@ -6,7 +6,6 @@ import ssl
 
 import hydra
 import pytorch_lightning as pl
-import torch
 import wandb
 from omegaconf import DictConfig, OmegaConf
 from pytorch_lightning import loggers as pl_loggers
@@ -15,6 +14,7 @@ from pytorch_lightning.callbacks import LearningRateMonitor, ModelCheckpoint
 from src import PROJECT_DIR
 from src.models.smp.dataset import OCTDataModule
 from src.models.smp.model import OCTSegmentationModel
+from src.models.smp.utils import pick_device
 
 ssl._create_default_https_context = ssl._create_unverified_context
 
@@ -22,25 +22,6 @@ log = logging.getLogger(__name__)
 log.setLevel(logging.INFO)
 
 os.environ['WANDB_API_KEY'] = '0a94ef68f2a7a8b709671d6ef76e61580d20da7f'
-
-
-def pick_device(
-    option: str,
-) -> str:
-    """Pick the appropriate device based on the provided option.
-
-    Args:
-        option (str): Available device option ('cpu', 'cuda', 'auto').
-
-    Returns:
-        str: Selected device.
-    """
-    if option == 'auto':
-        return 'gpu' if torch.cuda.is_available() else 'cpu'
-    elif option in ['cpu', 'gpu']:
-        return option
-    else:
-        raise ValueError("Invalid device option. Please specify 'cpu', 'gpu', or 'auto'.")
 
 
 @hydra.main(
