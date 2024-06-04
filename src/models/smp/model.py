@@ -8,8 +8,8 @@ import pytorch_lightning as pl
 import segmentation_models_pytorch as smp
 import tifffile
 import torch
-
 import wandb
+
 from src.data.utils import CLASS_COLORS_BGR, CLASS_IDS, CLASS_IDS_REVERSED
 from src.models.smp.utils import get_metrics, save_metrics_on_epoch
 
@@ -28,7 +28,7 @@ class OCTSegmentationModel(pl.LightningModule):
         weight_decay: float = 0.0001,
         optimizer_name: str = 'Adam',
         input_size: int = 512,
-            img_save_interval: int | None = 1,
+        img_save_interval: int | None = 1,
         save_wandb_media: bool = False,
         **kwargs,
     ):
@@ -92,6 +92,7 @@ class OCTSegmentationModel(pl.LightningModule):
         }
 
     def on_train_epoch_end(self):
+        # TODO: training_best_metrics is not used
         _ = save_metrics_on_epoch(
             metrics_epoch=self.training_step_outputs,
             split='train',
@@ -131,6 +132,7 @@ class OCTSegmentationModel(pl.LightningModule):
 
     def on_validation_epoch_end(self):
         if self.epoch > 0:
+            # TODO: validation_best_metrics is not used
             validation_best_metrics = save_metrics_on_epoch(
                 metrics_epoch=self.validation_step_outputs,
                 split='test',

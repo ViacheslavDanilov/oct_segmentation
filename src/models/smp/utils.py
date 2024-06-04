@@ -6,9 +6,8 @@ import cv2
 import numpy as np
 import segmentation_models_pytorch as smp
 import torch
-from PIL import Image
-
 import wandb
+from PIL import Image
 
 
 def get_metrics(
@@ -44,7 +43,7 @@ def save_metrics_on_epoch(
     classes: List[str],
     epoch: int,
     log_dict,
-        best_metrics: dict = None,
+    best_metrics: dict = None,
 ) -> dict:
     header_w = False
     if not os.path.exists(f'models/{model_name}/metrics.csv'):
