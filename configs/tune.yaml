@@ -1,50 +1,51 @@
 defaults:
-  - main
-  - _self_
+- main
+- _self_
 
 project_name: OCT_segmentation
 data_dir: data/cv/fold_1
 classes:
-  - Lipid core
-  - Lumen
-  - Fibrous cap
-  - Lipid core
-  - Vasa vasorum
+- Lipid core
+- Lumen
+- Fibrous cap
+- Lipid core
+- Vasa vasorum
 architecture:
-  - Unet
-  - UnetPlusPlus
-  - MAnet
-  - LinkNet
-  - FPN
-  - PSPNet
-  - PAN
-  - DeepLabV3
-  - DeepLabV3Plus
+- Unet
+- UnetPlusPlus
+- DeepLabV3
+- DeepLabV3Plus
+- FPN
+- LinkNet
+- PSPNet
+- PAN
+- MAnet
 encoder:
-  - resnet18
-  - timm-regnetx_002
-  - efficientnet-b0
-  - resnet50
-  - timm-regnetx_064
-  - efficientnet-b5
-  - timm-regnety_120
-  - resnet101
-  - efficientnet-b7
+- resnet18
+- timm-regnetx_002
+- efficientnet-b0
+- resnet50
+- timm-regnetx_064
+- efficientnet-b5
+- timm-regnety_120
+- resnet101
+- efficientnet-b7
 optimizer:
-  - Adam
-  - RAdam
-  - RMSprop
+- Adam
+- RAdam
+- RMSprop
 input_size_min: 512
 input_size_step: 128
 input_size_max: 896
 learning_rate:
-  - 0.0001
-  - 0.00001
-  - 0.000001
-cuda_num: [ 0 ]
+- 0.001   # TODO: Check if this LR is ok
+- 0.0001
+- 0.00001
+- 0.000001
+cuda_num: [0]
 batch_size: 1
 epochs: 50
 log_artifacts: false
 metric_type: test
-metric_name: F1 (mean)
+metric_name: F1 (mean)  # TODO: List of available metrics
 metric_sign: maximize
