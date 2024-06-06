@@ -6,8 +6,9 @@ import cv2
 import numpy as np
 import segmentation_models_pytorch as smp
 import torch
-import wandb
 from PIL import Image
+
+import wandb
 
 
 def get_metrics(
@@ -81,26 +82,33 @@ def save_metrics_on_epoch(
     }
 
     # best metrics
-    for metric_name in ['loss', 'iou', 'dice', 'precision', 'recall', 'f1']:
-        if metric_name not in best_metrics:
-            best_metrics[metric_name] = {
-                'value': metrics['metric_name'],
-                'epoch': epoch,
-            }
-        else:
-            match metric_name:
-                case 'loss' | 'iou':
-                    if metrics['metric_name'] < best_metrics[metric_name]['value']:
-                        best_metrics[metric_name] = {
-                            'value': metrics['metric_name'],
-                            'epoch': epoch,
-                        }
-                case _:
-                    if metrics['metric_name'] > best_metrics[metric_name]['value']:
-                        best_metrics[metric_name] = {
-                            'value': metrics['metric_name'],
-                            'epoch': epoch,
-                        }
+    if best_metrics is not None:
+        for metric_name in ['loss', 'iou', 'dice', 'precision', 'recall', 'f1']:
+            if metric_name not in best_metrics:
+                best_metrics[metric_name] = {
+                    'value': metrics[metric_name],
+                    'epoch': epoch,
+                }
+                wandb.run.summary[f'best_{metric_name}'] = metrics[metric_name]
+                wandb.run.summary[f'best_{metric_name}_epoch'] = epoch
+            else:
+                match metric_name:
+                    case 'loss' | 'iou':
+                        if metrics[metric_name] < best_metrics[metric_name]['value']:
+                            best_metrics[metric_name] = {
+                                'value': metrics[metric_name],
+                                'epoch': epoch,
+                            }
+                            wandb.run.summary[f'best_{metric_name}'] = metrics[metric_name]
+                            wandb.run.summary[f'best_{metric_name}_epoch'] = epoch
+                    case _:
+                        if metrics[metric_name] > best_metrics[metric_name]['value']:
+                            best_metrics[metric_name] = {
+                                'value': metrics[metric_name],
+                                'epoch': epoch,
+                            }
+                            wandb.run.summary[f'best_{metric_name}'] = metrics[metric_name]
+                            wandb.run.summary[f'best_{metric_name}_epoch'] = epoch
 
     metrics_l = metrics_log.copy()
     metrics_l['epoch'] = epoch
@@ -130,17 +138,23 @@ def save_metrics_on_epoch(
                 'recall',
                 'f1',
             ]:
-                metrics_log[f'{split}/{metric_name} ({cl})'] = metrics[metric_name][num]
-                metrics_log[f'{metric_name} {split}/{cl}'] = metrics[metric_name][num]
+                metrics_log[f'{split}/{metric_name} ({cl})'] = (
+                    metrics[metric_name][num] if len(classes) > 1 else metrics[metric_name]
+                )
+                metrics_log[f'{metric_name} {split}/{cl}'] = (
+                    metrics[metric_name][num] if len(classes) > 1 else metrics[metric_name]
+                )
             writer.writerow(
                 {
                     'Epoch': epoch,
                     'Loss': metrics['loss'],
-                    'IoU': metrics['iou'][num],
-                    'Dice': metrics['dice'][num],
-                    'Precision': metrics['precision'][num],
-                    'Recall': metrics['recall'][num],
-                    'F1': metrics['f1'][num],
+                    'IoU': metrics['iou'][num] if len(classes) > 1 else metrics['iou'],
+                    'Dice': metrics['dice'][num] if len(classes) > 1 else metrics['dice'],
+                    'Precision': (
+                        metrics['precision'][num] if len(classes) > 1 else metrics['precision']
+                    ),
+                    'Recall': metrics['recall'][num] if len(classes) > 1 else metrics['recall'],
+                    'F1': metrics['f1'][num] if len(classes) > 1 else metrics['f1'],
                     'Split': split,
                     'Class': cl,
                 },

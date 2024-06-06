@@ -2,13 +2,9 @@ defaults:
 - main
 - _self_
 
-project_name: OCT_segmentation
-data_dir: data/cv/fold_1
+project_name: OCT segmentation
+data_dir: data/cv_dev/fold_1
 classes:
-- Lipid core
-- Lumen
-- Fibrous cap
-- Lipid core
 - Vasa vasorum
 architecture:
 - Unet
@@ -38,7 +34,7 @@ input_size_min: 512
 input_size_step: 128
 input_size_max: 896
 learning_rate:
-- 0.001   # TODO: Check if this LR is ok
+  - 0.001
 - 0.0001
 - 0.00001
 - 0.000001
@@ -46,6 +42,6 @@ cuda_num: [0]
 batch_size: 1
 epochs: 50
 log_artifacts: false
-metric_type: test
-metric_name: F1 (mean)  # TODO: List of available metrics
+metric_type: val
+metric_name: f1
 metric_sign: maximize
