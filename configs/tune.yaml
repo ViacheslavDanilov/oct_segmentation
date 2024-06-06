@@ -5,7 +5,7 @@ defaults:
 project_name: OCT segmentation
 data_dir: data/cv_dev/fold_1
 classes:
-- Vasa vasorum
+- Vasa vasorum  # Available classes: Lumen, Fibrous cap, Lipid core, Vasa vasorum
 architecture:
 - Unet
 - UnetPlusPlus
@@ -34,7 +34,7 @@ input_size_min: 512
 input_size_step: 128
 input_size_max: 896
 learning_rate:
-  - 0.001
+- 0.001
 - 0.0001
 - 0.00001
 - 0.000001
