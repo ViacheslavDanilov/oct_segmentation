@@ -39,7 +39,7 @@ learning_rate:
 - 0.00001
 - 0.000001
 cuda_num: [0]
-batch_size: 1
+batch_size: 2
 epochs: 50
 log_artifacts: false
 metric_type: val
