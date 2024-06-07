@@ -8,8 +8,8 @@ import pytorch_lightning as pl
 import segmentation_models_pytorch as smp
 import tifffile
 import torch
-import wandb
 
+import wandb
 from src.data.utils import CLASS_COLORS_BGR, CLASS_IDS, CLASS_IDS_REVERSED
 from src.models.smp.utils import get_metrics, save_metrics_on_epoch
 
@@ -124,7 +124,7 @@ class OCTSegmentationModel(pl.LightningModule):
         )
         self.log(
             'val/f1',
-            np.mean(self.validation_step_outputs[-1]['f1']).mean(),
+            float(np.mean(self.validation_step_outputs[-1]['f1']).mean()),
             prog_bar=True,
             on_epoch=True,
         )

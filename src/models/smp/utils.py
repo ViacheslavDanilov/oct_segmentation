@@ -6,8 +6,9 @@ import cv2
 import numpy as np
 import segmentation_models_pytorch as smp
 import torch
-import wandb
 from PIL import Image
+
+import wandb
 
 
 def get_metrics(
@@ -171,7 +172,7 @@ def save_metrics_on_epoch(
                 'Class': 'Mean',
             },
         )
-        log_dict(metrics_log, on_epoch=True)
+        # log_dict(metrics_log, on_epoch=True)
         f_object.close()
     return best_metrics
 
