@@ -43,7 +43,6 @@ def save_metrics_on_epoch(
     model_name: str,
     classes: List[str],
     epoch: int,
-    log_dict,
     best_metrics: dict = None,
 ) -> dict:
     header_w = False
@@ -172,7 +171,6 @@ def save_metrics_on_epoch(
                 'Class': 'Mean',
             },
         )
-        # log_dict(metrics_log, on_epoch=True)
         f_object.close()
     return best_metrics
 

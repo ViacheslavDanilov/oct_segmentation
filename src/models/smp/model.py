@@ -98,7 +98,6 @@ class OCTSegmentationModel(pl.LightningModule):
             model_name=self.model_name,
             classes=self.classes,
             epoch=self.epoch,
-            log_dict=self.log_dict,
         )
         self.training_step_outputs.clear()
         self.epoch += 1
@@ -138,7 +137,6 @@ class OCTSegmentationModel(pl.LightningModule):
                 model_name=self.model_name,
                 classes=self.classes,
                 epoch=self.epoch,
-                log_dict=self.log_dict,
                 best_metrics=self.validation_best_metrics,
             )
             if self.img_save_interval is not None and self.epoch % self.img_save_interval == 0:
