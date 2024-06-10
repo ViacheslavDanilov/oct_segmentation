@@ -6,9 +6,8 @@ import cv2
 import numpy as np
 import segmentation_models_pytorch as smp
 import torch
-from PIL import Image
-
 import wandb
+from PIL import Image
 
 
 def get_metrics(
