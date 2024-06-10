@@ -89,7 +89,8 @@ class OCTDataset(Dataset):
         self.use_augmentation = use_augmentation
 
         mask_paths = glob(os.path.join(data_dir, 'mask', '*.tiff'))
-        pair_list = Parallel(n_jobs=-1)(
+        num_jobs = int(os.cpu_count() * 0.5)
+        pair_list = Parallel(n_jobs=num_jobs)(
             delayed(self.verify_pairs)(
                 img_dir=os.path.join(data_dir, 'img'),
                 mask_path=mask_path,
