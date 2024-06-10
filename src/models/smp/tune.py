@@ -128,7 +128,7 @@ def main(cfg: DictConfig) -> None:
 
     sweep_config = create_sweep_config(cfg)
     sweep_id = wandb.sweep(sweep=sweep_config, entity='vladislavlaptev', project=cfg.project_name)
-    wandb.agent(sweep_id=sweep_id, function=tune, count=350)
+    wandb.agent(sweep_id=sweep_id, function=tune, count=cfg.num_trials)
 
     # If the tuning is interrupted, use a specific sweep_id to keep tuning on the next call
     # wandb.agent(sweep_id='3t2kelpq', function=tune, count=200, entity='vladislavlaptev', project=cfg.project_name)
