@@ -28,7 +28,7 @@ class OCTSegmentationModel(pl.LightningModule):
         weight_decay: float = 0.0001,
         optimizer_name: str = 'Adam',
         input_size: int = 512,
-        img_save_interval: int = 1,
+        img_save_interval: int | None = 1,
         save_wandb_media: bool = False,
         **kwargs,
     ):
@@ -48,6 +48,7 @@ class OCTSegmentationModel(pl.LightningModule):
         self.register_buffer('mean', torch.tensor(params['mean']).view(1, 3, 1, 1))
         self.training_step_outputs = []  # type: ignore
         self.validation_step_outputs = []  # type: ignore
+        self.validation_best_metrics = {}  # type: ignore
         self.loss_fn = smp.losses.DiceLoss(smp.losses.MULTILABEL_MODE, from_logits=True)
         self.model_name = model_name
         self.lr = lr
@@ -91,13 +92,12 @@ class OCTSegmentationModel(pl.LightningModule):
         }
 
     def on_train_epoch_end(self):
-        save_metrics_on_epoch(
+        _ = save_metrics_on_epoch(
             metrics_epoch=self.training_step_outputs,
             split='train',
             model_name=self.model_name,
             classes=self.classes,
             epoch=self.epoch,
-            log_dict=self.log_dict,
         )
         self.training_step_outputs.clear()
         self.epoch += 1
@@ -123,20 +123,20 @@ class OCTSegmentationModel(pl.LightningModule):
         )
         self.log(
             'val/f1',
-            np.mean(self.validation_step_outputs[-1]['f1']).mean(),
+            float(np.mean(self.validation_step_outputs[-1]['f1']).mean()),
             prog_bar=True,
             on_epoch=True,
         )
 
     def on_validation_epoch_end(self):
         if self.epoch > 0:
-            save_metrics_on_epoch(
+            self.validation_best_metrics = save_metrics_on_epoch(
                 metrics_epoch=self.validation_step_outputs,
                 split='test',
                 model_name=self.model_name,
                 classes=self.classes,
                 epoch=self.epoch,
-                log_dict=self.log_dict,
+                best_metrics=self.validation_best_metrics,
             )
             if self.img_save_interval is not None and self.epoch % self.img_save_interval == 0:
                 self.log_predict_model_on_epoch()

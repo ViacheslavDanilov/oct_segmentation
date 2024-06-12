@@ -1,0 +1,48 @@
+defaults:
+- main
+- _self_
+
+project_name: OCT segmentation
+data_dir: data/cv_dev/fold_1
+classes:
+- Vasa vasorum  # Available classes: Lumen, Fibrous cap, Lipid core, Vasa vasorum
+architecture:
+- Unet
+- UnetPlusPlus
+- DeepLabV3
+- DeepLabV3Plus
+- FPN
+- LinkNet
+- PSPNet
+- PAN
+- MAnet
+encoder:
+- resnet18
+- timm-regnetx_002
+- efficientnet-b0
+- resnet50
+- timm-regnetx_064
+- efficientnet-b5
+- timm-regnety_120
+- resnet101
+- efficientnet-b7
+optimizer:
+- Adam
+- RAdam
+- RMSprop
+input_size_min: 512
+input_size_step: 128
+input_size_max: 896
+learning_rate:
+- 0.001
+- 0.0001
+- 0.00001
+- 0.000001
+cuda_num: [0]
+batch_size: 2
+epochs: 50
+num_trials: 350
+log_artifacts: false
+metric_type: val
+metric_name: f1
+metric_sign: maximize
