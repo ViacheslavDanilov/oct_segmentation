@@ -6,8 +6,9 @@ import cv2
 import numpy as np
 import segmentation_models_pytorch as smp
 import torch
-import wandb
 from PIL import Image
+
+import wandb
 
 
 def get_metrics(
@@ -81,32 +82,22 @@ def save_metrics_on_epoch(
 
     # best metrics
     if best_metrics is not None:
-        for metric_name in ['loss', 'iou', 'dice', 'precision', 'recall', 'f1']:
+        for metric_name in ['iou', 'dice', 'precision', 'recall']:
             if metric_name not in best_metrics:
                 best_metrics[metric_name] = {
-                    'value': metrics[metric_name],
+                    'value': metrics_log[f'{split}/{metric_name}'],
                     'epoch': epoch,
                 }
-                wandb.run.summary[f'best_{metric_name}'] = metrics[metric_name]
+                wandb.run.summary[f'best_{metric_name}'] = metrics_log[f'{split}/{metric_name}']
                 wandb.run.summary[f'best_{metric_name}_epoch'] = epoch
             else:
-                match metric_name:
-                    case 'loss' | 'iou':
-                        if metrics[metric_name] < best_metrics[metric_name]['value']:
-                            best_metrics[metric_name] = {
-                                'value': metrics[metric_name],
-                                'epoch': epoch,
-                            }
-                            wandb.run.summary[f'best_{metric_name}'] = metrics[metric_name]
-                            wandb.run.summary[f'best_{metric_name}_epoch'] = epoch
-                    case _:
-                        if metrics[metric_name] > best_metrics[metric_name]['value']:
-                            best_metrics[metric_name] = {
-                                'value': metrics[metric_name],
-                                'epoch': epoch,
-                            }
-                            wandb.run.summary[f'best_{metric_name}'] = metrics[metric_name]
-                            wandb.run.summary[f'best_{metric_name}_epoch'] = epoch
+                if metrics_log[f'{split}/{metric_name}'] > best_metrics[metric_name]['value']:
+                    best_metrics[metric_name] = {
+                        'value': metrics_log[f'{split}/{metric_name}'],
+                        'epoch': epoch,
+                    }
+                    wandb.run.summary[f'best_{metric_name}'] = metrics_log[f'{split}/{metric_name}']
+                    wandb.run.summary[f'best_{metric_name}_epoch'] = epoch
 
     metrics_l = metrics_log.copy()
     metrics_l['epoch'] = epoch

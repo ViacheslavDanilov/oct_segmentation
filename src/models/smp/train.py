@@ -6,11 +6,10 @@ import ssl
 
 import hydra
 import pytorch_lightning as pl
-import wandb
 from omegaconf import DictConfig, OmegaConf
-from pytorch_lightning import loggers as pl_loggers
 from pytorch_lightning.callbacks import LearningRateMonitor, ModelCheckpoint
 
+import wandb
 from src import PROJECT_DIR
 from src.models.smp.dataset import OCTDataModule
 from src.models.smp.model import OCTSegmentationModel
@@ -89,9 +88,6 @@ def main(cfg: DictConfig) -> None:
         num_workers=os.cpu_count(),
         use_augmentation=cfg.use_augmentation,
     )
-    tb_logger = pl_loggers.TensorBoardLogger(
-        save_dir='logs/',
-    )
 
     # Initialize model
     model = OCTSegmentationModel(
@@ -128,7 +124,6 @@ def main(cfg: DictConfig) -> None:
         devices='auto',
         accelerator=device,
         max_epochs=hyperparams['epochs'],
-        logger=tb_logger,
         callbacks=callbacks,
         enable_checkpointing=True,
         log_every_n_steps=hyperparams['batch_size'],

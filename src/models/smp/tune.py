@@ -5,11 +5,10 @@ import os
 import hydra
 import pytorch_lightning as pl
 import torch
-import wandb
 from omegaconf import DictConfig, OmegaConf
-from pytorch_lightning import loggers as pl_loggers
 from pytorch_lightning.callbacks import LearningRateMonitor
 
+import wandb
 from src.models.smp.dataset import OCTDataModule
 from src.models.smp.model import OCTSegmentationModel
 
@@ -53,12 +52,11 @@ def create_sweep_config(cfg):
     }
 
 
-def create_trainer(config, model_dir, callbacks, logger):
+def create_trainer(config, model_dir, callbacks):
     return pl.Trainer(
         devices=config.cuda_num,
         accelerator='cuda',
         max_epochs=config.epochs,
-        logger=logger,
         callbacks=callbacks,
         enable_checkpointing=True,
         log_every_n_steps=config.batch_size,
@@ -88,8 +86,6 @@ def tune(config=None):
             use_augmentation=True,
         )
 
-        tb_logger = pl_loggers.TensorBoardLogger(save_dir='logs/')
-
         model = OCTSegmentationModel(
             arch=config.architecture,
             encoder_name=config.encoder,
@@ -101,7 +97,7 @@ def tune(config=None):
             img_save_interval=None,
         )
 
-        trainer = create_trainer(config, model_dir, callbacks, tb_logger)
+        trainer = create_trainer(config, model_dir, callbacks)
 
         try:
             trainer.fit(model, datamodule=oct_data_module)
@@ -131,7 +127,7 @@ def main(cfg: DictConfig) -> None:
     wandb.agent(sweep_id=sweep_id, function=tune, count=cfg.num_trials)
 
     # If the tuning is interrupted, use a specific sweep_id to keep tuning on the next call
-    # wandb.agent(sweep_id='3t2kelpq', function=tune, count=200, entity='vladislavlaptev', project=cfg.project_name)
+    # wandb.agent(sweep_id='pg768keb', function=tune, count=cfg.num_trials, entity='vladislavlaptev', project=cfg.project_name)
 
     print('\n\033[92m' + '-' * 100 + '\033[0m')
     print('\033[92m' + 'Tuning has finished!' + '\033[0m')
