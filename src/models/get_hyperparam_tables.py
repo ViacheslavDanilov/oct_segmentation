@@ -108,11 +108,13 @@ def combine_excel_files(
 
 
 # Usage
-directory_path = 'data/temp'  # Replace with your directory path
-output_file_1 = 'hyperparameters_all.xlsx'
-output_file_2 = 'hyperparameters_best.xlsx'
+dir_path = 'eval/tuning'
+output_file_1 = 'eval/tuning/hyperparameters_all.xlsx'
+output_file_2 = 'eval/tuning/hyperparameters_best.xlsx'
 
-combined_df = combine_excel_files(directory_path)
+os.makedirs(dir_path, exist_ok=True)
+
+combined_df = combine_excel_files(dir_path)
 combined_df.to_excel(output_file_1, index=False)
 
 best_configs = get_best_architectures(combined_df)
