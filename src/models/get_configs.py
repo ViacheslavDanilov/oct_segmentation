@@ -1,7 +1,15 @@
+import logging
 import os
 from typing import List
 
+import hydra
 import pandas as pd
+from omegaconf import DictConfig, OmegaConf
+
+from src import PROJECT_DIR
+
+log = logging.getLogger(__name__)
+log.setLevel(logging.INFO)
 
 
 def get_best_architectures(
@@ -17,17 +25,17 @@ def get_best_architectures(
 
 
 def combine_excel_files(
-    dir_path: str,
+    data_dir: str,
 ) -> pd.DataFrame:
     # List to store all dataframes
     all_dataframes: List[pd.DataFrame] = []
 
     # Get all xlsx files in the directory
-    excel_files = [f for f in os.listdir(dir_path) if f.endswith('.xlsx')]
+    excel_files = [f for f in os.listdir(data_dir) if f.endswith('.xlsx')]
 
     # Read each Excel file
     for file in excel_files:
-        df = pd.read_excel(os.path.join(dir_path, file))
+        df = pd.read_excel(os.path.join(data_dir, file))
         all_dataframes.append(df)
 
     # Find common columns
@@ -107,15 +115,32 @@ def combine_excel_files(
     return combined_df
 
 
-# Usage
-dir_path = 'eval/tuning'
-output_file_1 = 'eval/tuning/hyperparameters_all.xlsx'
-output_file_2 = 'eval/tuning/hyperparameters_best.xlsx'
+@hydra.main(
+    config_path=os.path.join(PROJECT_DIR, 'configs'),
+    config_name='get_configs',
+    version_base=None,
+)
+def main(cfg: DictConfig) -> None:
+    log.info(f'Config:\n\n{OmegaConf.to_yaml(cfg)}')
 
-os.makedirs(dir_path, exist_ok=True)
+    # Define absolute paths
+    data_dir = str(os.path.join(PROJECT_DIR, cfg.data_dir))
+    save_dir = str(os.path.join(PROJECT_DIR, cfg.save_dir))
 
-combined_df = combine_excel_files(dir_path)
-combined_df.to_excel(output_file_1, index=False)
+    os.makedirs(data_dir, exist_ok=True)
 
-best_configs = get_best_architectures(combined_df)
-best_configs.to_excel(output_file_2, index=False)
+    # Create a dataframe with all configs
+    save_path_all = os.path.join(save_dir, 'configs_all.xlsx')
+    combined_df = combine_excel_files(data_dir)
+    combined_df.to_excel(save_path_all, index=False)
+
+    # Create a dataframe with the best configs
+    save_path_best = os.path.join(save_dir, 'configs_best.xlsx')
+    best_configs = get_best_architectures(combined_df)
+    best_configs.to_excel(save_path_best, index=False)
+
+    log.info('Complete')
+
+
+if __name__ == '__main__':
+    main()
