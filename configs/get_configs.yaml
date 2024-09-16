@@ -1,0 +1,6 @@
+defaults:
+- main
+- _self_
+
+data_dir: eval/tuning
+save_dir: eval/tuning
