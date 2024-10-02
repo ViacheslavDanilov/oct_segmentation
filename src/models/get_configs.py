@@ -25,17 +25,14 @@ def get_best_architectures(
 
 
 def combine_excel_files(
-    data_dir: str,
+    tuning_file_paths: List[str],
 ) -> pd.DataFrame:
     # List to store all dataframes
     all_dataframes: List[pd.DataFrame] = []
 
-    # Get all xlsx files in the directory
-    excel_files = [f for f in os.listdir(data_dir) if f.endswith('.xlsx')]
-
     # Read each Excel file
-    for file in excel_files:
-        df = pd.read_excel(os.path.join(data_dir, file))
+    for file_path in tuning_file_paths:
+        df = pd.read_excel(file_path)
         all_dataframes.append(df)
 
     # Find common columns
@@ -124,14 +121,14 @@ def main(cfg: DictConfig) -> None:
     log.info(f'Config:\n\n{OmegaConf.to_yaml(cfg)}')
 
     # Define absolute paths
-    data_dir = str(os.path.join(PROJECT_DIR, cfg.data_dir))
+    tuning_file_paths = [str(os.path.join(PROJECT_DIR, f)) for f in cfg.tuning_file_paths]
     save_dir = str(os.path.join(PROJECT_DIR, cfg.save_dir))
 
-    os.makedirs(data_dir, exist_ok=True)
+    os.makedirs(save_dir, exist_ok=True)
 
     # Create a dataframe with all configs
     save_path_all = os.path.join(save_dir, 'configs_all.xlsx')
-    combined_df = combine_excel_files(data_dir)
+    combined_df = combine_excel_files(tuning_file_paths)
     combined_df.to_excel(save_path_all, index=False)
 
     # Create a dataframe with the best configs
