@@ -1,0 +1,12 @@
+{
+  "model_name": "UnetPlusPlus_resnet101",
+  "architecture": "UnetPlusPlus",
+  "encoder": "resnet101",
+  "input_size": 512,
+  "classes": [
+    "Lumen"
+  ],
+  "batch_size": 4,
+  "optimizer": "RMSprop",
+  "lr": 1e-05
+}
