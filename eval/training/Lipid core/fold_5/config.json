@@ -1,0 +1,12 @@
+{
+  "model_name": "MAnet_resnet101",
+  "architecture": "MAnet",
+  "encoder": "resnet101",
+  "input_size": 640,
+  "classes": [
+    "Lipid core"
+  ],
+  "batch_size": 4,
+  "optimizer": "RAdam",
+  "lr": 0.0001
+}

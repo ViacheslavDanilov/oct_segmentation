@@ -89,7 +89,8 @@ class OCTDataset(Dataset):
         self.use_augmentation = use_augmentation
 
         mask_paths = glob(os.path.join(data_dir, 'mask', '*.tiff'))
-        pair_list = Parallel(n_jobs=-1)(
+        num_jobs = int(os.cpu_count() * 0.5)
+        pair_list = Parallel(n_jobs=num_jobs)(
             delayed(self.verify_pairs)(
                 img_dir=os.path.join(data_dir, 'img'),
                 mask_path=mask_path,
@@ -184,23 +185,23 @@ class OCTDataset(Dataset):
                 border_mode=0,
             ),
             albu.GaussNoise(
-                p=0.20,
-                var_limit=(3.0, 10.0),
+                p=0.15,
+                var_limit=(1.5, 6.5),
             ),
             albu.Perspective(
                 p=0.20,
                 scale=(0.05, 0.1),
             ),
             albu.RandomBrightnessContrast(
-                p=0.20,
-                brightness_limit=0.2,
-                contrast_limit=0.2,
+                p=0.15,
+                brightness_limit=0.15,
+                contrast_limit=0.15,
             ),
             albu.HueSaturationValue(
-                p=0.20,
-                hue_shift_limit=20,
-                sat_shift_limit=30,
-                val_shift_limit=20,
+                p=0.15,
+                hue_shift_limit=15,
+                sat_shift_limit=20,
+                val_shift_limit=15,
             ),
         ]
         return albu.Compose(transform)
