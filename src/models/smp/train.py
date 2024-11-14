@@ -6,10 +6,10 @@ import ssl
 
 import hydra
 import pytorch_lightning as pl
+import wandb
 from omegaconf import DictConfig, OmegaConf
 from pytorch_lightning.callbacks import LearningRateMonitor, ModelCheckpoint
 
-import wandb
 from src import PROJECT_DIR
 from src.models.smp.dataset import OCTDataModule
 from src.models.smp.model import OCTSegmentationModel

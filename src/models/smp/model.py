@@ -9,8 +9,8 @@ import pytorch_lightning as pl
 import segmentation_models_pytorch as smp
 import tifffile
 import torch
-
 import wandb
+
 from src.data.utils import CLASS_COLORS_BGR, CLASS_IDS, CLASS_IDS_REVERSED
 from src.models.smp.utils import get_metrics, save_metrics_on_epoch
 
