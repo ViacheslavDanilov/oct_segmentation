@@ -1,0 +1,12 @@
+{
+  "model_name": "Unet_timm-regnetx_064",
+  "architecture": "Unet",
+  "encoder": "timm-regnetx_064",
+  "input_size": 896,
+  "classes": [
+    "Vasa vasorum"
+  ],
+  "batch_size": 4,
+  "optimizer": "RAdam",
+  "lr": 0.001
+}

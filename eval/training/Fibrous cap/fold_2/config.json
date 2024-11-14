@@ -1,0 +1,12 @@
+{
+  "model_name": "LinkNet_efficientnet-b7",
+  "architecture": "LinkNet",
+  "encoder": "efficientnet-b7",
+  "input_size": 896,
+  "classes": [
+    "Fibrous cap"
+  ],
+  "batch_size": 4,
+  "optimizer": "RMSprop",
+  "lr": 1e-05
+}

@@ -1,0 +1,12 @@
+defaults:
+- main
+- _self_
+
+class_dirs:
+- eval/training/Fibrous cap
+- eval/training/Lipid core
+- eval/training/Lumen
+- eval/training/Vasa vasorum
+split: test   # train, test
+metric: Dice  # Loss, IoU, Dice, Precision, Recall, F1
+save_dir: eval/training

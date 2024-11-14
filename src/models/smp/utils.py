@@ -42,8 +42,8 @@ def save_metrics_on_epoch(
     model_name: str,
     classes: List[str],
     epoch: int,
-    log_dict,
-) -> None:
+    best_metrics: dict = None,
+) -> dict:
     header_w = False
     if not os.path.exists(f'models/{model_name}/metrics.csv'):
         header_w = True
@@ -63,7 +63,9 @@ def save_metrics_on_epoch(
                 )
             else:
                 if batch[metric_name].size == 1:
-                    metrics[metric_name] = np.mean((batch[metric_name], metrics[metric_name]))
+                    metrics[metric_name] = np.mean(
+                        (np.squeeze(batch[metric_name]), np.squeeze(metrics[metric_name])),
+                    )
                 else:
                     metrics[metric_name] = np.mean(
                         (np.mean(batch[metric_name], axis=0), metrics[metric_name]),
@@ -78,6 +80,25 @@ def save_metrics_on_epoch(
         f'{split}/recall': metrics['recall'].mean(),
         f'{split}/f1': metrics['f1'].mean(),
     }
+
+    # best metrics
+    if best_metrics is not None:
+        for metric_name in ['iou', 'dice', 'precision', 'recall']:
+            if metric_name not in best_metrics:
+                best_metrics[metric_name] = {
+                    'value': metrics_log[f'{split}/{metric_name}'],
+                    'epoch': epoch,
+                }
+                wandb.run.summary[f'best_{metric_name}'] = metrics_log[f'{split}/{metric_name}']
+                wandb.run.summary[f'best_{metric_name}_epoch'] = epoch
+            else:
+                if metrics_log[f'{split}/{metric_name}'] > best_metrics[metric_name]['value']:
+                    best_metrics[metric_name] = {
+                        'value': metrics_log[f'{split}/{metric_name}'],
+                        'epoch': epoch,
+                    }
+                    wandb.run.summary[f'best_{metric_name}'] = metrics_log[f'{split}/{metric_name}']
+                    wandb.run.summary[f'best_{metric_name}_epoch'] = epoch
 
     metrics_l = metrics_log.copy()
     metrics_l['epoch'] = epoch
@@ -107,17 +128,23 @@ def save_metrics_on_epoch(
                 'recall',
                 'f1',
             ]:
-                metrics_log[f'{split}/{metric_name} ({cl})'] = metrics[metric_name][num]
-                metrics_log[f'{metric_name} {split}/{cl}'] = metrics[metric_name][num]
+                metrics_log[f'{split}/{metric_name} ({cl})'] = (
+                    metrics[metric_name][num] if len(classes) > 1 else metrics[metric_name]
+                )
+                metrics_log[f'{metric_name} {split}/{cl}'] = (
+                    metrics[metric_name][num] if len(classes) > 1 else metrics[metric_name]
+                )
             writer.writerow(
                 {
                     'Epoch': epoch,
                     'Loss': metrics['loss'],
-                    'IoU': metrics['iou'][num],
-                    'Dice': metrics['dice'][num],
-                    'Precision': metrics['precision'][num],
-                    'Recall': metrics['recall'][num],
-                    'F1': metrics['f1'][num],
+                    'IoU': metrics['iou'][num] if len(classes) > 1 else metrics['iou'],
+                    'Dice': metrics['dice'][num] if len(classes) > 1 else metrics['dice'],
+                    'Precision': (
+                        metrics['precision'][num] if len(classes) > 1 else metrics['precision']
+                    ),
+                    'Recall': metrics['recall'][num] if len(classes) > 1 else metrics['recall'],
+                    'F1': metrics['f1'][num] if len(classes) > 1 else metrics['f1'],
                     'Split': split,
                     'Class': cl,
                 },
@@ -135,8 +162,8 @@ def save_metrics_on_epoch(
                 'Class': 'Mean',
             },
         )
-        log_dict(metrics_log, on_epoch=True)
         f_object.close()
+    return best_metrics
 
 
 def calculate_iou(gt_mask, pred_mask):
@@ -179,8 +206,8 @@ def get_img_mask_union_pil(
     color: tuple[int],
     alpha: float = 0.85,
 ):
-    mask *= alpha
-    mask *= 255
+    mask = mask * alpha
+    mask = mask * 255
     class_img = Image.new('RGB', size=img.size, color=color)
     img.paste(class_img, (0, 0), Image.fromarray(mask.astype('uint8')))
     return img
