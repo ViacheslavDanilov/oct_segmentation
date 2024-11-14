@@ -1,3 +1,4 @@
+import os.path
 from glob import glob
 from pathlib import Path
 from typing import List
@@ -8,8 +9,8 @@ import pytorch_lightning as pl
 import segmentation_models_pytorch as smp
 import tifffile
 import torch
-import wandb
 
+import wandb
 from src.data.utils import CLASS_COLORS_BGR, CLASS_IDS, CLASS_IDS_REVERSED
 from src.models.smp.utils import get_metrics, save_metrics_on_epoch
 
@@ -25,6 +26,7 @@ class OCTSegmentationModel(pl.LightningModule):
         in_channels: int,
         classes: List[str],
         lr: float = 0.0001,
+        data_dir: str = None,
         weight_decay: float = 0.0001,
         optimizer_name: str = 'Adam',
         input_size: int = 512,
@@ -42,6 +44,7 @@ class OCTSegmentationModel(pl.LightningModule):
         )
 
         self.classes = classes
+        self.data_dir = data_dir
         self.epoch = 0
         params = smp.encoders.get_preprocessing_params(encoder_name)
         self.register_buffer('std', torch.tensor(params['std']).view(1, 3, 1, 1))
@@ -206,62 +209,63 @@ class OCTSegmentationModel(pl.LightningModule):
         self,
     ):
         wandb_images = []
-        for idx, img_path in enumerate(glob('data/visualization/img/*.png')):
-            img = cv2.imread(img_path)
-            img = cv2.resize(img, (self.input_size, self.input_size))
-            mask = tifffile.imread(f"{img_path.replace('img', 'mask').split('.')[0]}.tiff")
-            mask = cv2.resize(
-                mask,
-                (self.input_size, self.input_size),
-                interpolation=cv2.INTER_NEAREST,
-            )
-
-            pred_mask = self.predict(
-                images=np.array([self.to_tensor_shape(img.copy())]),
-                device='cuda',
-            )[0]
-            color_mask_gt = np.zeros(img.shape, dtype=np.uint8)
-            color_mask_pred = np.zeros(img.shape, dtype=np.uint8)
-            color_mask_pred[:, :] = (128, 128, 128)
-            color_mask_gt[:, :] = (128, 128, 128)
-
-            wandb_mask_inference = np.zeros((img.shape[0], img.shape[1]))
-            wandb_mask_ground_truth = np.zeros((img.shape[0], img.shape[1]))
-            for idy, cl in enumerate(self.classes):
-                class_id = CLASS_IDS[cl] - 1
-                color_mask_gt[mask[:, :, class_id] == 255] = CLASS_COLORS_BGR[cl]
-                color_mask_pred[pred_mask[:, :, idy] == 1] = CLASS_COLORS_BGR[cl]
-                wandb_mask_inference[pred_mask[:, :, idy] == 1] = CLASS_IDS[cl]
-                wandb_mask_ground_truth[mask[:, :, class_id] == 255] = CLASS_IDS[cl]
-
-            res = np.hstack((img, color_mask_gt))
-            res = np.hstack((res, color_mask_pred))
-
-            img_stem = Path(img_path).stem
-            cv2.imwrite(
-                f'models/{self.model_name}/images_per_epoch/{img_stem}_epoch_{str(self.epoch).zfill(3)}.png',
-                res,
-            )
-
-            if self.save_wandb_media:
-                wandb_images.append(
-                    wandb.Image(
-                        cv2.cvtColor(img, cv2.COLOR_BGR2RGB),
-                        masks={
-                            'predictions': {
-                                'mask_data': wandb_mask_inference,
-                                'class_labels': CLASS_IDS_REVERSED,
-                            },
-                            'ground_truth': {
-                                'mask_data': wandb_mask_ground_truth,
-                                'class_labels': CLASS_IDS_REVERSED,
-                            },
-                        },
-                        caption=f'Example-{idx}',
-                    ),
+        if os.path.exists(f'{self.data_dir}/vis/img'):
+            for idx, img_path in enumerate(glob(f'{self.data_dir}/vis/img/*.[pj][np][ge]*')):
+                img = cv2.imread(img_path)
+                img = cv2.resize(img, (self.input_size, self.input_size))
+                mask = tifffile.imread(f"{img_path.replace('img', 'mask').split('.')[0]}.tiff")
+                mask = cv2.resize(
+                    mask,
+                    (self.input_size, self.input_size),
+                    interpolation=cv2.INTER_NEAREST,
                 )
-        if self.save_wandb_media:
-            wandb.log(
-                {'Examples': wandb_images},
-                step=self.epoch,
-            )
+
+                pred_mask = self.predict(
+                    images=np.array([self.to_tensor_shape(img.copy())]),
+                    device='cuda',
+                )[0]
+                color_mask_gt = np.zeros(img.shape, dtype=np.uint8)
+                color_mask_pred = np.zeros(img.shape, dtype=np.uint8)
+                color_mask_pred[:, :] = (128, 128, 128)
+                color_mask_gt[:, :] = (128, 128, 128)
+
+                wandb_mask_inference = np.zeros((img.shape[0], img.shape[1]))
+                wandb_mask_ground_truth = np.zeros((img.shape[0], img.shape[1]))
+                for idy, cl in enumerate(self.classes):
+                    class_id = CLASS_IDS[cl] - 1
+                    color_mask_gt[mask[:, :, class_id] == 255] = CLASS_COLORS_BGR[cl]
+                    color_mask_pred[pred_mask[:, :, idy] == 1] = CLASS_COLORS_BGR[cl]
+                    wandb_mask_inference[pred_mask[:, :, idy] == 1] = CLASS_IDS[cl]
+                    wandb_mask_ground_truth[mask[:, :, class_id] == 255] = CLASS_IDS[cl]
+
+                res = np.hstack((img, color_mask_gt))
+                res = np.hstack((res, color_mask_pred))
+
+                img_stem = Path(img_path).stem
+                cv2.imwrite(
+                    f'models/{self.model_name}/images_per_epoch/{img_stem}_epoch_{str(self.epoch).zfill(3)}.png',
+                    res,
+                )
+
+                if self.save_wandb_media:
+                    wandb_images.append(
+                        wandb.Image(
+                            cv2.cvtColor(img, cv2.COLOR_BGR2RGB),
+                            masks={
+                                'predictions': {
+                                    'mask_data': wandb_mask_inference,
+                                    'class_labels': CLASS_IDS_REVERSED,
+                                },
+                                'ground_truth': {
+                                    'mask_data': wandb_mask_ground_truth,
+                                    'class_labels': CLASS_IDS_REVERSED,
+                                },
+                            },
+                            caption=f'Example-{idx}',
+                        ),
+                    )
+            if self.save_wandb_media:
+                wandb.log(
+                    {'Examples': wandb_images},
+                    step=self.epoch,
+                )

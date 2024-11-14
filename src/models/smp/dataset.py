@@ -185,23 +185,23 @@ class OCTDataset(Dataset):
                 border_mode=0,
             ),
             albu.GaussNoise(
-                p=0.20,
-                var_limit=(3.0, 10.0),
+                p=0.15,
+                var_limit=(1.5, 6.5),
             ),
             albu.Perspective(
                 p=0.20,
                 scale=(0.05, 0.1),
             ),
             albu.RandomBrightnessContrast(
-                p=0.20,
-                brightness_limit=0.2,
-                contrast_limit=0.2,
+                p=0.15,
+                brightness_limit=0.15,
+                contrast_limit=0.15,
             ),
             albu.HueSaturationValue(
-                p=0.20,
-                hue_shift_limit=20,
-                sat_shift_limit=30,
-                val_shift_limit=20,
+                p=0.15,
+                hue_shift_limit=15,
+                sat_shift_limit=20,
+                val_shift_limit=15,
             ),
         ]
         return albu.Compose(transform)

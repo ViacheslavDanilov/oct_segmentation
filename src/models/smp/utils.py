@@ -6,8 +6,9 @@ import cv2
 import numpy as np
 import segmentation_models_pytorch as smp
 import torch
-import wandb
 from PIL import Image
+
+import wandb
 
 
 def get_metrics(
@@ -63,7 +64,9 @@ def save_metrics_on_epoch(
                 )
             else:
                 if batch[metric_name].size == 1:
-                    metrics[metric_name] = np.mean((batch[metric_name], metrics[metric_name]))
+                    metrics[metric_name] = np.mean(
+                        (np.squeeze(batch[metric_name]), np.squeeze(metrics[metric_name])),
+                    )
                 else:
                     metrics[metric_name] = np.mean(
                         (np.mean(batch[metric_name], axis=0), metrics[metric_name]),
@@ -204,8 +207,8 @@ def get_img_mask_union_pil(
     color: tuple[int],
     alpha: float = 0.85,
 ):
-    mask *= alpha
-    mask *= 255
+    mask = mask * alpha
+    mask = mask * 255
     class_img = Image.new('RGB', size=img.size, color=color)
     img.paste(class_img, (0, 0), Image.fromarray(mask.astype('uint8')))
     return img
