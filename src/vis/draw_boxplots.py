@@ -108,6 +108,8 @@ def main(cfg: DictConfig) -> None:
         y=cfg.metric,
         data=df_best,
         palette=palette,
+        hue='Class',
+        legend=False,
         showfliers=False,
         order=class_order,
         linewidth=2.0,
@@ -124,7 +126,7 @@ def main(cfg: DictConfig) -> None:
     plt.tight_layout()
 
     # Save the plot as a high-quality image file in PNG format
-    save_path = os.path.join(save_dir, f'Boxplot_{cfg.metric}.png')
+    save_path = os.path.join(save_dir, f'Boxplot_{cfg.metric}_{cfg.split}.png')
     plt.savefig(save_path, dpi=600, bbox_inches='tight')
     plt.show()
     plt.close()
