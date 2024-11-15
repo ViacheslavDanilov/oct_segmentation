@@ -116,11 +116,13 @@ def main(cfg: DictConfig) -> None:
     )
 
     # Label the y-axis with the metric name
+    metric_name = 'DSC' if cfg.metric == 'Dice' else cfg.metric
     plt.ylabel(cfg.metric, fontsize=36)
     plt.xticks(rotation=90, fontsize=30)
     plt.yticks(fontsize=30)
     ax.set_xlabel('')
-    ax.set_ylim(0.4, 1)
+    ax.set_ylabel(metric_name)
+    ax.set_ylim(0.5, 1)
 
     sns.despine()
     plt.tight_layout()
