@@ -57,13 +57,15 @@ def main(cfg: DictConfig) -> None:
     palette = sns.color_palette('bright', 2)
 
     # Draw line plots with confidence intervals
+    train_metric = 'DSC' if cfg.train_metric == 'Dice' else cfg.train_metric
+    test_metric = 'DSC' if cfg.test_metric == 'Dice' else cfg.test_metric
     sns.lineplot(
         data=df_filt[df_filt['Split'] == 'train'],
         x='Epoch',
         y=cfg.train_metric,
         color=palette[0],
         linewidth=3.0,
-        label=f'{cfg.train_metric} (Train)',
+        label=f'{train_metric} (Train)',
         err_style='band',
         errorbar=('ci', 95),
     )
@@ -73,7 +75,7 @@ def main(cfg: DictConfig) -> None:
         y=cfg.test_metric,
         color=palette[1],
         linewidth=3.0,
-        label=f'{cfg.test_metric} (Test)',
+        label=f'{test_metric} (Test)',
         err_style='band',
         errorbar=('ci', 95),
     )
