@@ -77,7 +77,7 @@ def main(cfg: DictConfig) -> None:
     df = read_model_metrics(csv_paths)
 
     # Drop unnecessary rows and find best epoch
-    df = df[(df['Class'] != 'Mean') & (df['Split'] == cfg.split)]
+    df = df[df['Split'] == cfg.split]
     df_best = get_best_epoch(df, metric=cfg.metric)
 
     # Save best epochs
