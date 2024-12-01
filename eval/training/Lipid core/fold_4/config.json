@@ -1,12 +1,13 @@
 {
-  "model_name": "MAnet_resnet101",
-  "architecture": "MAnet",
-  "encoder": "resnet101",
-  "input_size": 640,
+  "model_name": "LinkNet_efficientnet-b7",
+  "architecture": "LinkNet",
+  "encoder": "efficientnet-b7",
+  "input_size": 896,
   "classes": [
+    "Fibrous cap",
     "Lipid core"
   ],
-  "batch_size": 4,
-  "optimizer": "RAdam",
-  "lr": 0.0001
+  "batch_size": 2,
+  "optimizer": "RMSprop",
+  "lr": 1e-05
 }

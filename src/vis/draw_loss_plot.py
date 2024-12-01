@@ -93,7 +93,10 @@ def main(cfg: DictConfig) -> None:
     plt.tight_layout(pad=0.9)
 
     # Save plot
-    save_path = os.path.join(save_dir, f'{class_name}_{cfg.train_metric}_{cfg.test_metric}.png')
+    save_path = os.path.join(
+        save_dir,
+        f'{cfg.train_metric}_{cfg.test_metric}_{class_name.replace(" ", "_")}.png',
+    )
     plt.savefig(save_path, dpi=600)
     plt.show()
     log.info(f'{class_name} plot saved')

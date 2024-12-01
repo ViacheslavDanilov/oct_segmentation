@@ -4,9 +4,10 @@
   "encoder": "efficientnet-b7",
   "input_size": 896,
   "classes": [
-    "Fibrous cap"
+    "Fibrous cap",
+    "Lipid core"
   ],
-  "batch_size": 4,
+  "batch_size": 2,
   "optimizer": "RMSprop",
   "lr": 1e-05
 }
