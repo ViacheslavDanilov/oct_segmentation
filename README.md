@@ -102,7 +102,8 @@ An ensemble approach combining U-Net++, LinkNet, and U-Net further improved over
 <br>
 
 <a name="conclusion"></a>
-## 🏁 Conclusion - TO BE UPDATED SOON
+## 🏁 Conclusion
+This project leverages optimized machine learning models to automate atherosclerotic plaque segmentation in OCT images, achieving high accuracy for key features such as lumen (DSC: 0.987), fibrous cap (DSC: 0.736), lipid core (DSC: 0.751), and vasa vasorum (DSC: 0.610). The hybrid segmentation strategy and targeted optimization effectively handled dataset imbalances and feature complexities, ensuring robust performance across diverse plaque morphologies. This work underscores the potential of ML-driven OCT imaging in detecting vulnerable plaques, guiding interventions, and advancing cardiovascular diagnostics. Openly shared resources promote further innovation in this field.
 
 <a name="requirements"></a>
 ## 💻 Requirements
