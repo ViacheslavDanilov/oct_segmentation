@@ -19,7 +19,7 @@
 
 <a name="introduction"></a>
 ## 🎯 Introduction
-This repository provides a comprehensive approach for deep learning-based segmentation and quantification of atherosclerotic plaque features in optical coherence tomography ([OCT](https://en.wikipedia.org/wiki/Optical_coherence_tomography)) images. The accurate analysis of plaques is critical for preventing cardiovascular events and guiding therapeutic interventions. By leveraging state-of-the-art deep learning models, this project enables precise identification of lumen, fibrous cap, lipid core, and vasa vasorum features, contributing to advancements in cardiovascular diagnostics.
+This repository provides a comprehensive approach for deep learning-based segmentation and quantification of atherosclerotic plaque features in [optical coherence tomography](https://en.wikipedia.org/wiki/Optical_coherence_tomography) (OCT) images. The accurate analysis of plaques is critical for preventing cardiovascular events and guiding therapeutic interventions. By leveraging state-of-the-art deep learning models, this project enables precise identification of lumen, fibrous cap, lipid core, and vasa vasorum features, contributing to advancements in cardiovascular diagnostics.
 
 <a name="data"></a>
 ## 📁 Data
@@ -54,6 +54,52 @@ Each model underwent a comprehensive tuning process to optimize its performance,
 
 <a name="results"></a>
 ## 📈 Results - TO BE UPDATED SOON
+The models exhibited varying levels of accuracy across features. U-Net++ excelled in lumen segmentation, achieving a Dice Similarity Coefficient (DSC) of 0.987. This performance reflects the advantage of a single-class model dedicated to the lumen, leveraging its high representation in the dataset to capture clear and distinct boundaries effectively.
+
+For fibrous cap and lipid core segmentation, LinkNet performed strongly with DSCs of 0.736 and 0.751, respectively. These results highlight the effectiveness of a two-class model trained jointly on these features, allowing it to better handle their shared morphological characteristics, such as overlapping and intricate boundaries.
+
+The segmentation of vasa vasorum, a rare and subtle feature, was tackled using a dedicated single-class U-Net model, achieving a DSC of 0.610. Despite the inherent challenges due to its sparse representation in the dataset, this approach ensured focused learning on the vasa vasorum's unique structure, yielding promising results.
+
+An ensemble approach combining U-Net++, LinkNet, and U-Net further improved overall segmentation accuracy, achieving an average DSC of 0.882. These results demonstrate the effectiveness of tailoring model architectures and strategies to the specific requirements of each plaque feature. Performance metrics, including precision, recall, and IoU, are detailed in <a href="#table-1">Table 1</a>, with training dynamics and segmentation outcomes visualized in <a href="#figure-2">Figure 2</a>, <a href="#figure-3">Figure 3</a>, and <a href="#figure-4">Figure 4</a>.
+
+<p align="left">
+  <i><strong id="table-1">Table 1.</strong> Segmentation performance metrics for each plaque morphological feature, averaged over 5 folds.</i>
+</p>
+
+|   **PMF**    | **Precision** | **Recall** | **F1** | **IoU** | **DSC** |
+|:------------:|:-------------:|:----------:|:------:|:-------:|:-------:|
+|    Lumen     |     0.986     |   0.988    | 0.987  |  0.975  |  0.987  |
+| Fibrous cap  |     0.737     |   0.784    | 0.736  |  0.608  |  0.736  |
+|  Lipid core  |     0.815     |   0.772    | 0.751  |  0.639  |  0.751  |
+| Vasa vasorum |     0.664     |   0.630    | 0.610  |  0.511  |  0.610  |
+<br>
+
+<p align="center">
+  <img id="figure-2" width="90%" height="90%" src=".assets/loss_and_dsc_evolution.png" alt="Loss and DSC evolution">
+</p>
+
+<p align="center">
+    <em><strong>Figure 2.</strong> Comparative analysis of loss and DSC evolution during training and testing phases over 5-fold cross-validation with 95% confidence interval.</em>
+</p>
+<br>
+
+<p align="center">
+  <img id="figure-3" width="100%" height="100%" src=".assets/prediction_comparison.jpg" alt="Comparison GT with predictions">
+</p>
+
+<p align="center">
+    <em><strong>Figure 3.</strong> Comparison between ground truth segmentation and ensemble predictions.</em>
+</p>
+<br>
+
+<p align="center">
+  <img id="figure-4" width="100%" height="100%" src=".assets/activation_maps.jpg" alt="Class Activation Maps">
+</p>
+
+<p align="center">
+    <em><strong>Figure 4.</strong> Class Activation Maps highlighting key regions for lumen segmentation.</em>
+</p>
+<br>
 
 <a name="conclusion"></a>
 ## 🏁 Conclusion - TO BE UPDATED SOON
