@@ -18,14 +18,33 @@
 - [How to Cite](#how-to-cite)
 
 <a name="introduction"></a>
-## 🎯 Introduction - TO BE UPDATED SOON
+## 🎯 Introduction
+This repository provides a comprehensive approach for deep learning-based segmentation and quantification of atherosclerotic plaque features in optical coherence tomography ([OCT](https://en.wikipedia.org/wiki/Optical_coherence_tomography)) images. The accurate analysis of plaques is critical for preventing cardiovascular events and guiding therapeutic interventions. By leveraging state-of-the-art deep learning models, this project enables precise identification of _lumen (LM)_, _fibrous cap (FC)_, _lipid core (LC)_, and _vasa vasorum (VV)_ features, contributing to advancements in cardiovascular diagnostics.
 
 <a name="data"></a>
-## 📁 Data - TO BE UPDATED SOON
+## 📁 Data
+The dataset comprises OCT images from 103 patients, collected across multiple centers. These images include 25,698 annotated slices, detailing four key plaque features:
 
-|  ![Source image](.assets/source_img.png "Source image")  |  ![Pre-processed image](.assets/gray_img.png "Pre-processed image")  |
-|:------------------------------------------------------:|:------------------------------------------------------------------:|
-|                     *Source image*                     |                       *Pre-processed image*                        |
+- **Lumen (LM):** Vascular opening
+- **Fibrous Cap (FC):** Thin protective layer over lipid core
+- **Lipid Core (LC)**: Lipid-rich region associated with vulnerable plaques
+- **Vasa Vasorum (VV)**: Microvessels supplying the arterial wall
+
+Annotations were performed by cardiologists using [Supervisely](https://supervisely.com/), with double-verification for accuracy (refer to Figure 1). The dataset is structured for 5-fold cross-validation to ensure robust model evaluation. For more details, refer to the Dataset Repository at [https://doi.org/10.5281/zenodo.14478209](https://doi.org/10.5281/zenodo.14478209).
+
+
+| ![Input slice](.assets/input_slice.png "Input slice") | ![Grayscale slice](.assets/input_slice_grayscale.png "Grayscale slice") | ![Superimposed mask](.assets/mask.png "Superimposed mask") |
+|:-----------------------------------------------------:|:-----------------------------------------------------------------------:|:----------------------------------------------------------:|
+|                     *Input slice*                     |      *Pre-processed grayscale image used for annotation purposes*       |                *Segmentation mask overlay*                 |
+
+| <img src=".assets/input_slice.png" alt="Input slice" title="Input slice" width="500"/> | <img src=".assets/input_slice_grayscale.png" alt="Grayscale slice" title="Grayscale slice" width="500"/> | <img src=".assets/mask.png" alt="Superimposed mask" title="Superimposed mask" width="500"/> |
+|:--------------------------------------------------------------------------------------:|:--------------------------------------------------------------------------------------------------------:|:-------------------------------------------------------------------------------------------:|
+|                                     *Input slice*                                      |                       *Pre-processed grayscale image used for annotation purposes*                       |                                 *Segmentation mask overlay*                                 |
+
+| <img src=".assets/input_slice.png" alt="Input slice" title="Input slice" style="width:100%;"/> | <img src=".assets/input_slice_grayscale.png" alt="Grayscale slice" title="Grayscale slice" style="width:100%;"/> | <img src=".assets/mask.png" alt="Superimposed mask" title="Superimposed mask" style="width:100%;"/> |
+|:----------------------------------------------------------------------------------------------:|:--------------------------------------------------------------------------------------------------------------:|:-----------------------------------------------------------------------------------------------:|
+|                                         *Input slice*                                          |                         *Pre-processed grayscale image used for annotation purposes*                          |                           *Segmentation mask overlay*                            |
+
 
 <a name="methods"></a>
 ## 🔬 Methods - TO BE UPDATED SOON
