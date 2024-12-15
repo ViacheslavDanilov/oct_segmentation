@@ -145,10 +145,11 @@ python src/models/smp/predict.py
 ```
 
 <a name="data-access"></a>
-## 🔐 Data Access - TO BE UPDATED SOON
-All essential components of the study, including the curated dataset and trained models, have been made publicly available:
-- **Dataset:** [https://zenodo.org](https://zenodo.org)
-- **Models:** [https://zenodo.org](https://zenodo.org)
+## 🔐 Data Access
+All essential components of the study, including the curated source code, dataset, and trained models, are publicly available:
+- **Source code:** [https://github.com/ViacheslavDanilov/oct_segmentation](https://github.com/ViacheslavDanilov/oct_segmentation)
+- **Dataset:** [https://doi.org/10.5281/zenodo.14478209](https://doi.org/10.5281/zenodo.14478209)
+- **Models:** [https://doi.org/10.5281/zenodo.14481678](https://doi.org/10.5281/zenodo.14481678)
 
 <a name="how-to-cite"></a>
 ## 🖊️ How to Cite - TO BE UPDATED SOON
