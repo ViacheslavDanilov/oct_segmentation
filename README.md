@@ -19,7 +19,7 @@
 
 <a name="introduction"></a>
 ## 🎯 Introduction
-This repository provides a comprehensive approach for deep learning-based segmentation and quantification of atherosclerotic plaque features in optical coherence tomography ([OCT](https://en.wikipedia.org/wiki/Optical_coherence_tomography)) images. The accurate analysis of plaques is critical for preventing cardiovascular events and guiding therapeutic interventions. By leveraging state-of-the-art deep learning models, this project enables precise identification of _lumen (LM)_, _fibrous cap (FC)_, _lipid core (LC)_, and _vasa vasorum (VV)_ features, contributing to advancements in cardiovascular diagnostics.
+This repository provides a comprehensive approach for deep learning-based segmentation and quantification of atherosclerotic plaque features in optical coherence tomography ([OCT](https://en.wikipedia.org/wiki/Optical_coherence_tomography)) images. The accurate analysis of plaques is critical for preventing cardiovascular events and guiding therapeutic interventions. By leveraging state-of-the-art deep learning models, this project enables precise identification of lumen, fibrous cap, lipid core, and vasa vasorum features, contributing to advancements in cardiovascular diagnostics.
 
 <a name="data"></a>
 ## 📁 Data
@@ -30,20 +30,15 @@ The dataset comprises OCT images from 103 patients, collected across multiple ce
 - **Lipid Core (LC)**: Lipid-rich region associated with vulnerable plaques
 - **Vasa Vasorum (VV)**: Microvessels supplying the arterial wall
 
-Annotations were performed by cardiologists using [Supervisely](https://supervisely.com/), with double-verification for accuracy (refer to Figure 1). The dataset is structured for 5-fold cross-validation to ensure robust model evaluation. For more details, refer to the Dataset Repository at [https://doi.org/10.5281/zenodo.14478209](https://doi.org/10.5281/zenodo.14478209).
+Annotations were performed by cardiologists using [Supervisely](https://supervisely.com/), with double-verification for accuracy (refer to <a href="#figure-1">Figure 1</a>). The dataset is structured for 5-fold cross-validation to ensure robust model evaluation. For more details, refer to the Dataset Repository at [https://doi.org/10.5281/zenodo.14478209](https://doi.org/10.5281/zenodo.14478209).
 
+<p align="center">
+  <img id="figure-1" width="80%" height="80%" src=".assets/annotation_methodology.png" alt="Annotation methodology">
+</p>
 
-| ![Input slice](.assets/input_slice.png "Input slice") | ![Grayscale slice](.assets/input_slice_grayscale.png "Grayscale slice") | ![Superimposed mask](.assets/mask.png "Superimposed mask") |
-|:-----------------------------------------------------:|:-----------------------------------------------------------------------:|:----------------------------------------------------------:|
-|                     *Input slice*                     |      *Pre-processed grayscale image used for annotation purposes*       |                *Segmentation mask overlay*                 |
-
-| ![Input slice](.assets/input_slice.png "Input slice") | ![Grayscale slice](.assets/input_slice_grayscale.png "Grayscale slice") | ![Superimposed mask](.assets/mask.png "Superimposed mask") |
-|:-----------------------------------------------------:|:-----------------------------------------------------------------------:|:----------------------------------------------------------:|
-|                     *Input slice*                     |      *Pre-processed grayscale image used for annotation purposes*       |                *Segmentation mask overlay*                 |
-
-| <img src=".assets/input_slice.png" alt="Input slice" title="Input slice" width="500"/> | <img src=".assets/input_slice_grayscale.png" alt="Grayscale slice" title="Grayscale slice" width="500"/> | <img src=".assets/mask.png" alt="Superimposed mask" title="Superimposed mask" width="500"/> |
-|:--------------------------------------------------------------------------------------:|:-----------------------------------------------------------------------------------------------------:|:------------------------------------------------------------------------------------------:|
-|                                     *Input slice*                                      |                     *Pre-processed grayscale image used for annotation purposes*                     |                          *Segmentation mask overlay*                          |
+<p align="left">
+    <em><strong>Figure 1.</strong> Annotation methodology for optical coherence tomography images depicting plaque morphological features associated with atherosclerotic plaque development. The feature annotations delineated with segmentation masks include the lumen (pink), fibrous cap (blue), lipid core (blue), and vasa vasorum (red).</em>
+</p>
 
 
 <a name="methods"></a>
