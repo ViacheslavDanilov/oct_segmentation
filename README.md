@@ -37,13 +37,13 @@ Annotations were performed by cardiologists using [Supervisely](https://supervis
 |:-----------------------------------------------------:|:-----------------------------------------------------------------------:|:----------------------------------------------------------:|
 |                     *Input slice*                     |      *Pre-processed grayscale image used for annotation purposes*       |                *Segmentation mask overlay*                 |
 
-| <img src=".assets/input_slice.png" alt="Input slice" title="Input slice" width="500"/> | <img src=".assets/input_slice_grayscale.png" alt="Grayscale slice" title="Grayscale slice" width="500"/> | <img src=".assets/mask.png" alt="Superimposed mask" title="Superimposed mask" width="500"/> |
-|:--------------------------------------------------------------------------------------:|:--------------------------------------------------------------------------------------------------------:|:-------------------------------------------------------------------------------------------:|
-|                                     *Input slice*                                      |                       *Pre-processed grayscale image used for annotation purposes*                       |                                 *Segmentation mask overlay*                                 |
+| ![Input slice](.assets/input_slice.png "Input slice") | ![Grayscale slice](.assets/input_slice_grayscale.png "Grayscale slice") | ![Superimposed mask](.assets/mask.png "Superimposed mask") |
+|:-----------------------------------------------------:|:-----------------------------------------------------------------------:|:----------------------------------------------------------:|
+|                     *Input slice*                     |      *Pre-processed grayscale image used for annotation purposes*       |                *Segmentation mask overlay*                 |
 
-| <img src=".assets/input_slice.png" alt="Input slice" title="Input slice" style="width:100%;"/> | <img src=".assets/input_slice_grayscale.png" alt="Grayscale slice" title="Grayscale slice" style="width:100%;"/> | <img src=".assets/mask.png" alt="Superimposed mask" title="Superimposed mask" style="width:100%;"/> |
-|:----------------------------------------------------------------------------------------------:|:--------------------------------------------------------------------------------------------------------------:|:-----------------------------------------------------------------------------------------------:|
-|                                         *Input slice*                                          |                         *Pre-processed grayscale image used for annotation purposes*                          |                           *Segmentation mask overlay*                            |
+| <img src=".assets/input_slice.png" alt="Input slice" title="Input slice" width="500"/> | <img src=".assets/input_slice_grayscale.png" alt="Grayscale slice" title="Grayscale slice" width="500"/> | <img src=".assets/mask.png" alt="Superimposed mask" title="Superimposed mask" width="500"/> |
+|:--------------------------------------------------------------------------------------:|:-----------------------------------------------------------------------------------------------------:|:------------------------------------------------------------------------------------------:|
+|                                     *Input slice*                                      |                     *Pre-processed grayscale image used for annotation purposes*                     |                          *Segmentation mask overlay*                          |
 
 
 <a name="methods"></a>
