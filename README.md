@@ -40,9 +40,17 @@ Annotations were performed by cardiologists using [Supervisely](https://supervis
     <em><strong>Figure 1.</strong> Annotation methodology for optical coherence tomography images depicting plaque morphological features associated with atherosclerotic plaque development. The feature annotations delineated with segmentation masks include the lumen (pink), fibrous cap (blue), lipid core (blue), and vasa vasorum (red).</em>
 </p>
 
-
 <a name="methods"></a>
-## 🔬 Methods - TO BE UPDATED SOON
+## 🔬 Methods
+We employed nine advanced deep learning architectures — [U-Net](https://link.springer.com/chapter/10.1007/978-3-319-24574-4_28), [U-Net++](https://link.springer.com/chapter/10.1007/978-3-030-00889-5_1), [DeepLabV3](https://arxiv.org/abs/1706.05587), [DeepLabV3+](https://link.springer.com/chapter/10.1007/978-3-030-01234-2_49), [FPN](http://presentations.cocodataset.org/COCO17-Stuff-FAIR.pdf), [LinkNet](https://ieeexplore.ieee.org/document/8305148), [PSPNet](https://arxiv.org/abs/1612.01105), [PAN](https://arxiv.org/abs/1805.10180), and [MA-Net](https://ieeexplore.ieee.org/document/9201310) — to address the segmentation of atherosclerotic plaque features. To enhance performance, we applied a hybrid segmentation strategy, which involves designing specialized models for each plaque feature based on their prevalence and complexity:
+- **Lumen Segmentation:** A single-class model trained exclusively for the lumen, leveraging its high representation in the dataset.
+- **Fibrous Cap and Lipid Core Segmentation:** A two-class model trained jointly on these features due to their shared morphological characteristics and moderate dataset representation.
+- **Vasa Vasorum Segmentation:** A separate single-class model focused on this rare feature to better capture its unique characteristics.
+
+Each model underwent a comprehensive tuning process to optimize its performance, which included:
+- **Hyperparameter Tuning:** We employed Bayesian optimization, combined with the HyperBand early stopping strategy, to explore different configurations and identify the most effective hyperparameters for each model.
+- **Data Augmentation:** To enhance the robustness of the models and prevent overfitting, various augmentation techniques were applied, such as random brightness adjustments, rotations, and scaling.
+- **Cross-Validation:** A 5-fold cross-validation strategy was used to partition the data, ensuring that each model was trained and evaluated on different subsets of the dataset, which prevented data leakage and helped assess model generalizability.
 
 <a name="results"></a>
 ## 📈 Results - TO BE UPDATED SOON
