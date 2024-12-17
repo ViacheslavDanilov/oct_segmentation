@@ -21,7 +21,7 @@ log = logging.getLogger(__name__)
 log.setLevel(logging.INFO)
 models_meta = {
     'Lumen': {
-        'model_dir': 'LN',
+        'model_dir': 'LM',
         'index': 0,
     },
     'Lipid core': {
