@@ -176,7 +176,7 @@ def data_processing(
     else:
         images_path = glob(f'{data_path}/*.[pj][np][ge]*')
 
-    images, masks, images_name = [], [], []
+    images, masks, image_names = [], [], []
     for img_path in tqdm(
         images_path,
         total=len(images_path),
@@ -187,8 +187,8 @@ def data_processing(
         mask = np.zeros((output_size[0], output_size[1], 4))
         images.append(img)
         masks.append(mask)
-        images_name.append(os.path.basename(img_path).split('.')[0])
-    return images, masks, images_name
+        image_names.append(os.path.basename(img_path).split('.')[0])
+    return images, masks, image_names
 
 
 def save_results(
@@ -201,12 +201,12 @@ def save_results(
     for img, mask, image_name in tqdm(
         zip(images, masks, images_name),
         total=len(images),
-        desc='Image|Mask postprocessing',
+        desc='Image & mask post-processing',
         unit='image',
     ):
         color_mask = Image.new('RGB', size=img.size, color=(128, 128, 128))
         for class_name in classes:
-            m = mask[:, :, CLASS_IDS[class_name] - 1]
+            m = mask[:, :, CLASS_IDS[class_name] - 1]  # type: ignore
             m = cv2.morphologyEx(
                 m,
                 cv2.MORPH_CLOSE,
@@ -227,7 +227,7 @@ def save_results(
                 mask=m_d * 255,
                 color=CLASS_COLORS_RGB[class_name],
             )
-            m = mask[:, :, CLASS_IDS[class_name] - 1] * 255
+            m = mask[:, :, CLASS_IDS[class_name] - 1] * 255  # type: ignore
             class_img = Image.new('RGB', size=img.size, color=CLASS_COLORS_RGB[class_name])
             color_mask.paste(class_img, (0, 0), Image.fromarray(m).convert('L'))
         color_mask.save(f'{save_dir}/{image_name}_mask.png')
