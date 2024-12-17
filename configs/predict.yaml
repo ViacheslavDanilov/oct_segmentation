@@ -2,9 +2,9 @@ defaults:
 - main
 - _self_
 
-data_path: data/demo/input
+data_dir: data/demo/input
+models_dir: models
 save_dir: data/demo/output
-model_dir: models/cascade_models
 output_size: [1000, 1000]
 device: auto
 classes:
