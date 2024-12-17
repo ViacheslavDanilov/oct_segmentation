@@ -2,23 +2,23 @@ import json
 import logging
 import os
 import time
-from glob import glob
+from typing import List
 
 import cv2
 import hydra
 import numpy as np
-import torch
 from omegaconf import DictConfig, OmegaConf
 from PIL import Image
 from tqdm import tqdm
 
 from src import PROJECT_DIR
-from src.data.utils import CLASS_COLORS_RGB, CLASS_IDS
+from src.data.utils import CLASS_IDS, data_processing, preprocessing_img, save_results
 from src.models.smp.model import OCTSegmentationModel
-from src.models.smp.utils import get_img_mask_union_pil
+from src.models.smp.utils import pick_device
 
 log = logging.getLogger(__name__)
 log.setLevel(logging.INFO)
+
 models_meta = {
     'Lumen': {
         'model_dir': 'LM',
@@ -39,81 +39,15 @@ models_meta = {
 }
 
 
-def preprocessing_img(
-    img: Image,
-    input_size: int,
-):
-    image = np.array(img)
-    image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
-    image = cv2.resize(image, (input_size, input_size))
-    return image
-
-
-def pick_device(
-    option: str,
-) -> str:
-    """Pick the appropriate device based on the provided option.
-
-    Args:
-        option (str): Available device option ('cpu', 'cuda', 'auto').
-
-    Returns:
-        str: Selected device.
-    """
-    if option == 'auto':
-        return 'cuda' if torch.cuda.is_available() else 'cpu'
-    elif option in ['cpu', 'cuda']:
-        return option
-    else:
-        raise ValueError("Invalid device option. Please specify 'cpu', 'cuda', or 'auto'.")
-
-
-@hydra.main(
-    config_path=os.path.join(PROJECT_DIR, 'configs'),
-    config_name='predict',
-    version_base=None,
-)
-def main(cfg: DictConfig) -> None:
-    """Main function to perform histology image segmentation prediction.
-
-    Args:
-        cfg: Configuration parameters loaded from a YAML file using Hydra.
-    """
-    log.info(f'Config:\n\n{OmegaConf.to_yaml(cfg)}')
-
-    # Pick the appropriate device based on the provided option
-    device = pick_device(option=cfg.device)
-
-    # Define absolute paths for data, save directory, and model directory
-    data_path = os.path.join(PROJECT_DIR, cfg.data_path)
-    save_dir = os.path.join(PROJECT_DIR, cfg.save_dir)
-    model_dir = os.path.join(PROJECT_DIR, cfg.model_dir)
-
-    # Dataset processing
-    start = time.time()
-    os.makedirs(save_dir, exist_ok=True)
-    if os.path.isfile(data_path):
-        images_path = [data_path]
-    else:
-        images_path = glob(f'{data_path}/*.[pj][np][ge]*')
-    log.info(f'Number of images: {len(images_path)}')
-
-    images, masks, images_name = [], [], []
-    for img_path in tqdm(
-        images_path,
-        total=len(images_path),
-        desc='Image processing',
-        unit='image',
-    ):
-        img = Image.open(img_path).resize(cfg.output_size)
-        mask = np.zeros((cfg.output_size[0], cfg.output_size[1], 4))
-        images.append(img)
-        masks.append(mask)
-        images_name.append(os.path.basename(img_path).split('.')[0])
-    start_inference = time.time()
-
-    # Perform inference on the dataset
-    for class_name in cfg.classes:
+def images_segmentation(
+    images: List[Image],
+    masks: List[np.ndarray],
+    output_size: List[int],
+    classes: List[str],
+    model_dir: str,
+    device: str,
+) -> List[np.ndarray]:
+    for class_name in classes:
         # Load model configuration and initialize the model
         model_weights = f"{model_dir}/{models_meta[class_name]['model_dir']}/weights.ckpt"
         with open(f"{model_dir}/{models_meta[class_name]['model_dir']}/config.json", 'r') as file:
@@ -147,47 +81,62 @@ def main(cfg: DictConfig) -> None:
                 images=np.array([image]),
                 device='cuda',
             )[0]
-            predict_mask = cv2.resize(predict_mask, cfg.output_size)
+            predict_mask = cv2.resize(predict_mask, output_size)
             if len(predict_mask.shape) > 2:
                 predict_mask = predict_mask[:, :, models_meta[class_name]['index']]
             mask[:, :, CLASS_IDS[class_name] - 1] = predict_mask
+    return masks
+
+
+@hydra.main(
+    config_path=os.path.join(PROJECT_DIR, 'configs'),
+    config_name='predict',
+    version_base=None,
+)
+def main(cfg: DictConfig) -> None:
+    """Main function to perform histology image segmentation prediction.
+
+    Args:
+        cfg: Configuration parameters loaded from a YAML file using Hydra.
+    """
+    log.info(f'Config:\n\n{OmegaConf.to_yaml(cfg)}')
+
+    # Pick the appropriate device based on the provided option
+    device = pick_device(option=cfg.device)
+
+    # Define absolute paths for data, save directory, and model directory
+    save_dir = os.path.join(PROJECT_DIR, cfg.save_dir)
+    model_dir = os.path.join(PROJECT_DIR, cfg.model_dir)
+
+    # Dataset processing
+    start = time.time()
+    images, masks, images_name = data_processing(
+        data_path=os.path.join(PROJECT_DIR, cfg.data_path),
+        save_dir=save_dir,
+        output_size=cfg.output_size,
+    )
+    log.info(f'Number of images: {len(images_name)}')
+
+    # Perform inference on the dataset
+    start_inference = time.time()
+    masks = images_segmentation(
+        images=images,
+        masks=masks,
+        output_size=cfg.output_size,
+        classes=cfg.classes,
+        model_dir=model_dir,
+        device=device,
+    )
     end_inference = time.time()
 
     # Result processing
-    for img, mask, image_name in tqdm(
-        zip(images, masks, images_name),
-        total=len(images),
-        desc='Image|Mask postprocessing',
-        unit='image',
-    ):
-        color_mask = Image.new('RGB', size=img.size, color=(128, 128, 128))
-        for class_name in cfg.classes:
-            m = mask[:, :, CLASS_IDS[class_name] - 1]
-            m = cv2.morphologyEx(
-                m,
-                cv2.MORPH_CLOSE,
-                cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5)),
-                3,
-            )
-            m_d = cv2.dilate(m.copy(), cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (7, 7)))
-            m_e = cv2.erode(m.copy(), cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (7, 7)))
-            m = cv2.GaussianBlur(m, (5, 5), 0)
-            m_d[m_e > 0] = 0
-            img = get_img_mask_union_pil(
-                img=img,
-                mask=m * 64,
-                color=CLASS_COLORS_RGB[class_name],
-            )
-            img = get_img_mask_union_pil(
-                img=img,
-                mask=m_d * 255,
-                color=CLASS_COLORS_RGB[class_name],
-            )
-            m = mask[:, :, CLASS_IDS[class_name] - 1] * 255
-            class_img = Image.new('RGB', size=img.size, color=CLASS_COLORS_RGB[class_name])
-            color_mask.paste(class_img, (0, 0), Image.fromarray(m).convert('L'))
-        color_mask.save(f'{save_dir}/{image_name}_mask.png')
-        img.save(f'{save_dir}/{image_name}_overlay.png')
+    save_results(
+        images=images,
+        masks=masks,
+        images_name=images_name,
+        classes=cfg.classes,
+        save_dir=save_dir,
+    )
 
     log.info(f'Prediction time: {end_inference - start_inference:.1f} s')
     log.info(f'Overall computation time: {time.time() - start:.1f} s')
