@@ -139,9 +139,9 @@ chmod +x make_env.sh
 
 Specify the `data_path` and `save_dir` parameters in the [predict.yaml](configs/predict.yaml) configuration file. By default, all images within the specified `data_path` will be processed and saved to the `save_dir` directory.
 
-To run the pipeline, execute [predict.py](src/models/smp/predict.py) from your IDE or command prompt with:
+To run the pipeline, execute [predict.py](src/predict.py) from your IDE or command prompt with:
 ``` bash
-python src/models/smp/predict.py
+python src/predict.py
 ```
 
 <a name="data-access"></a>
