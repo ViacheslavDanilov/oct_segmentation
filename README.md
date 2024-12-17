@@ -135,7 +135,7 @@ chmod +x make_env.sh
 ```
 
 <a name="how-to-run"></a>
-## 🚀 How to Run - TO BE UPDATED SOON
+## 🚀 How to Run
 
 Specify the `data_path` and `save_dir` parameters in the [predict.yaml](configs/predict.yaml) configuration file. By default, all images within the specified `data_path` will be processed and saved to the `save_dir` directory.
 
