@@ -1,0 +1,6 @@
+outs:
+- md5: 361f6c1dfb22f74b0089c43fa38e4eaf.dir
+  size: 510807905
+  nfiles: 2
+  hash: md5
+  path: FC_LC
