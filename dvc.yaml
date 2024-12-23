@@ -47,9 +47,6 @@ stages:
     deps:
     - src/data/convert_sly_to_int.py
     - data/sly_output
-    outs:
-    - data/interim:
-        cache: false
 
   convert_int_to_cv:
     cmd:
@@ -59,6 +56,3 @@ stages:
     - src/data/convert_int_to_cv.py
     - data/interim
     - data/interim/metadata.csv
-    outs:
-    - data/cv:
-        cache: false
