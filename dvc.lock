@@ -1,0 +1,118 @@
+schema: '2.0'
+stages:
+  extract_metadata:
+    cmd:
+    - echo "STAGE I"
+    - rm data/dcm_metadata.csv || true
+    - python src/data/extract_metadata.py
+    deps:
+    - path: data/dcm
+      hash: md5
+      md5: 776e4b24b55ef408ffd324a3e6cfcd57.dir
+      size: 51636608570
+      nfiles: 210
+    - path: src/data/extract_metadata.py
+      hash: md5
+      md5: 93221105e879233bdb1dd812630b7b9b
+      size: 4190
+    outs:
+    - path: data/dcm_metadata.csv
+      hash: md5
+      md5: 9b30138a835d12cfee681a96dfc0715e
+      size: 35809
+  convert_dicoms:
+    cmd:
+    - rm -rf data/sly_input_rgb || true
+    - rm -rf data/sly_input_gray || true
+    - python src/data/convert_dicoms.py to_gray=false save_dir=data/sly_input_rgb
+    - python src/data/convert_dicoms.py to_gray=true save_dir=data/sly_input_gray
+    deps:
+    - path: data/dcm_metadata.csv
+      hash: md5
+      md5: 9b30138a835d12cfee681a96dfc0715e
+      size: 35809
+    - path: src/data/convert_dicoms.py
+      hash: md5
+      md5: 9bbc4995c7ea6c1b6c330f27d6783b2b
+      size: 4496
+    outs:
+    - path: data/sly_input_gray
+      hash: md5
+      md5: df209b549a4c8d5726c2ac792a9c0c2e.dir
+      size: 6279185933
+      nfiles: 25698
+    - path: data/sly_input_rgb
+      hash: md5
+      md5: 405e97e95a7138500e771dd69d56519b.dir
+      size: 23240758188
+      nfiles: 25698
+  stack_images:
+    cmd:
+    - rm -rf data/sly_input || true
+    - python src/data/stack_images.py output_type=video save_dir=data/sly_input
+    deps:
+    - path: data/sly_input_gray
+      hash: md5
+      md5: df209b549a4c8d5726c2ac792a9c0c2e.dir
+      size: 6279185933
+      nfiles: 25698
+    - path: data/sly_input_rgb
+      hash: md5
+      md5: 405e97e95a7138500e771dd69d56519b.dir
+      size: 23240758188
+      nfiles: 25698
+    - path: src/data/stack_images.py
+      hash: md5
+      md5: 72f001c3e0758d0d93f89d4dc5e03978
+      size: 4802
+    outs:
+    - path: data/sly_input
+      hash: md5
+      md5: 80703f3dc0b23aec771aa09c9af38f42.dir
+      size: 2161471795
+      nfiles: 103
+  convert_sly_to_int:
+    cmd:
+    - echo "STAGE II"
+    - rm -rf data/interim || true
+    - python src/data/convert_sly_to_int.py
+    deps:
+    - path: data/sly_output
+      hash: md5
+      md5: 890d284f5257c23a646e9f043310e31f.dir
+      size: 2852844372
+      nfiles: 208
+    - path: src/data/convert_sly_to_int.py
+      hash: md5
+      md5: a681d7b0c341fc751440ec014e31d60a
+      size: 9027
+    outs:
+    - path: data/interim
+      hash: md5
+      md5: 0072f23b64241c95b982184bca9f665e.dir
+      size: 21962754924
+      nfiles: 25699
+  convert_int_to_cv:
+    cmd:
+    - rm -rf data/cv || true
+    - python src/data/convert_int_to_cv.py
+    deps:
+    - path: data/interim
+      hash: md5
+      md5: 0072f23b64241c95b982184bca9f665e.dir
+      size: 21962754924
+      nfiles: 25699
+    - path: data/interim/metadata.csv
+      hash: md5
+      md5: 3a37fd50eb626dcc5c75d753410b0395
+      size: 56698879
+    - path: src/data/convert_int_to_cv.py
+      hash: md5
+      md5: 6ae9ec66137413ae3860e45eda051409
+      size: 9765
+    outs:
+    - path: data/cv
+      hash: md5
+      md5: 0ae855c1aebd27ca44c4763c356d5ff2.dir
+      size: 62377185745
+      nfiles: 320896
