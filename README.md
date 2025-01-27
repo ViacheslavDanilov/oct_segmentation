@@ -33,7 +33,7 @@ The dataset comprises OCT images from 103 patients, collected across multiple ce
 Annotations were performed by cardiologists using [Supervisely](https://supervisely.com/), with double-verification for accuracy (refer to <a href="#figure-1">Figure 1</a>). The dataset is structured for 5-fold cross-validation to ensure robust model evaluation. For more details, refer to the Dataset Repository at [https://doi.org/10.5281/zenodo.14478209](https://doi.org/10.5281/zenodo.14478209).
 
 <p align="center">
-  <img id="figure-1" width="100%" height="100%" src=".assets/annotation_methodology.png" alt="Annotation methodology">
+  <img id="figure-1" width="100%" height="100%" src=".assets/annotation-methodology.png" alt="Annotation methodology">
 </p>
 
 <p align="left">
@@ -53,14 +53,14 @@ Each model underwent a comprehensive tuning process to optimize its performance,
 - **Cross-Validation:** A 5-fold cross-validation strategy was used to partition the data, ensuring that each model was trained and evaluated on different subsets of the dataset, which prevented data leakage and helped assess model generalizability.
 
 <a name="results"></a>
-## 📈 Results - TO BE UPDATED SOON
+## 📈 Results
 The models exhibited varying levels of accuracy across features. U-Net++ excelled in lumen segmentation, achieving a Dice Similarity Coefficient (DSC) of 0.987. This performance reflects the advantage of a single-class model dedicated to the lumen, leveraging its high representation in the dataset to capture clear and distinct boundaries effectively.
 
 For fibrous cap and lipid core segmentation, LinkNet performed strongly with DSCs of 0.736 and 0.751, respectively. These results highlight the effectiveness of a two-class model trained jointly on these features, allowing it to better handle their shared morphological characteristics, such as overlapping and intricate boundaries.
 
 The segmentation of vasa vasorum, a rare and subtle feature, was tackled using a dedicated single-class U-Net model, achieving a DSC of 0.610. Despite the inherent challenges due to its sparse representation in the dataset, this approach ensured focused learning on the vasa vasorum's unique structure, yielding promising results.
 
-An ensemble approach combining U-Net++, LinkNet, and U-Net further improved overall segmentation accuracy, achieving an average DSC of 0.882. These results demonstrate the effectiveness of tailoring model architectures and strategies to the specific requirements of each plaque feature. Performance metrics, including precision, recall, and IoU, are detailed in <a href="#table-1">Table 1</a>, with training dynamics and segmentation outcomes visualized in <a href="#figure-2">Figure 2</a>, <a href="#figure-3">Figure 3</a>, and <a href="#figure-4">Figure 4</a>.
+An ensemble approach combining U-Net++, LinkNet, and U-Net further improved overall segmentation accuracy, achieving an average DSC of 0.882. These results demonstrate the effectiveness of tailoring model architectures and strategies to the specific requirements of each plaque feature. Performance metrics, including precision, recall, F1 score, IoU and DSC, are detailed in <a href="#table-1">Table 1</a>, with training dynamics and segmentation outcomes visualized in <a href="#figure-2">Figure 2</a>, <a href="#figure-3">Figure 3</a>, and <a href="#figure-4">Figure 4</a>.
 
 <p align="left">
   <i><strong id="table-1">Table 1.</strong> Segmentation performance metrics for each plaque morphological feature, averaged over 5 folds.</i>
@@ -75,7 +75,7 @@ An ensemble approach combining U-Net++, LinkNet, and U-Net further improved over
 <br>
 
 <p align="center">
-  <img id="figure-2" width="90%" height="90%" src=".assets/loss_and_dsc_evolution.png" alt="Loss and DSC evolution">
+  <img id="figure-2" width="90%" height="90%" src=".assets/loss-and-dsc-evolution.png" alt="Loss and DSC evolution">
 </p>
 
 <p align="center">
@@ -84,7 +84,7 @@ An ensemble approach combining U-Net++, LinkNet, and U-Net further improved over
 <br>
 
 <p align="center">
-  <img id="figure-3" width="100%" height="100%" src=".assets/prediction_comparison.jpg" alt="Comparison GT with predictions">
+  <img id="figure-3" width="100%" height="100%" src=".assets/prediction-vs-ground-truth.png" alt="Comparison GT with predictions">
 </p>
 
 <p align="center">
@@ -93,11 +93,11 @@ An ensemble approach combining U-Net++, LinkNet, and U-Net further improved over
 <br>
 
 <p align="center">
-  <img id="figure-4" width="100%" height="100%" src=".assets/activation_maps.jpg" alt="Class Activation Maps">
+  <img id="figure-4" width="100%" height="100%" src=".assets/activation-maps.png" alt="Class Activation Maps">
 </p>
 
 <p align="center">
-    <em><strong>Figure 4.</strong> Class Activation Maps highlighting key regions for lumen segmentation.</em>
+    <em><strong>Figure 4.</strong> Comparative class activation maps for the lumen region in patient 032.</em>
 </p>
 <br>
 
@@ -145,7 +145,7 @@ python src/predict.py
 ```
 
 <a name="data-access"></a>
-## 🔐 Data Access
+## 🔐 Data Access - TO BE UPDATED SOON
 All essential components of the study, including the curated source code, dataset, and trained models, are publicly available:
 - **Source code:** [https://github.com/ViacheslavDanilov/oct_segmentation](https://github.com/ViacheslavDanilov/oct_segmentation)
 - **Dataset:** [https://doi.org/10.5281/zenodo.14478209](https://doi.org/10.5281/zenodo.14478209)
