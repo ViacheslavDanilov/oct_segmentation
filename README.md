@@ -75,7 +75,7 @@ An ensemble approach combining U-Net++, LinkNet, and U-Net further improved over
 <br>
 
 <p align="center">
-  <img id="figure-2" width="90%" height="90%" src=".assets/loss-and-dsc-evolution.png" alt="Loss and DSC evolution">
+  <img id="figure-2" width="80%" height="80%" src=".assets/loss-and-dsc-evolution.png" alt="Loss and DSC evolution">
 </p>
 
 <p align="center">
@@ -84,7 +84,7 @@ An ensemble approach combining U-Net++, LinkNet, and U-Net further improved over
 <br>
 
 <p align="center">
-  <img id="figure-3" width="100%" height="100%" src=".assets/prediction-vs-ground-truth.png" alt="Comparison GT with predictions">
+  <img id="figure-3" width="80%" height="80%" src=".assets/prediction-vs-ground-truth.png" alt="Comparison GT with predictions">
 </p>
 
 <p align="center">
@@ -93,7 +93,7 @@ An ensemble approach combining U-Net++, LinkNet, and U-Net further improved over
 <br>
 
 <p align="center">
-  <img id="figure-4" width="100%" height="100%" src=".assets/activation-maps.png" alt="Class Activation Maps">
+  <img id="figure-4" width="80%" height="80%" src=".assets/activation-maps.png" alt="Class Activation Maps">
 </p>
 
 <p align="center">
