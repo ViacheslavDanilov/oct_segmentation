@@ -1,5 +1,5 @@
-[![DOI](http://img.shields.io/badge/DOI-TO.ADD.DATASET-blue)](https://TO.BE.UPDATED.SOON)
-[![DOI](http://img.shields.io/badge/DOI-TO.ADD.MODELS-blue)](https://TO.BE.UPDATED.SOON)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.14478209.svg)](https://doi.org/10.5281/zenodo.14478209)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.14481678.svg)](https://doi.org/10.5281/zenodo.14481678)
 [![DOI](http://img.shields.io/badge/DOI-TO.ADD.PAPER-B31B1B)](https://TO.BE.UPDATED.SOON)
 
 # Segmentation and analysis of OCT images
@@ -145,14 +145,14 @@ python src/predict.py
 ```
 
 <a name="data-access"></a>
-## 🔐 Data Access - TO BE UPDATED SOON
+## 🔐 Data Access
 All essential components of the study, including the curated source code, dataset, and trained models, are publicly available:
 - **Source code:** [https://github.com/ViacheslavDanilov/oct_segmentation](https://github.com/ViacheslavDanilov/oct_segmentation)
 - **Dataset:** [https://doi.org/10.5281/zenodo.14478209](https://doi.org/10.5281/zenodo.14478209)
 - **Models:** [https://doi.org/10.5281/zenodo.14481678](https://doi.org/10.5281/zenodo.14481678)
 
 <a name="how-to-cite"></a>
-## 🖊️ How to Cite - TO BE UPDATED SOON
+## 🖊️ How to Cite - TO BE UPDATED ONCE THE PAPER IS PUBLISHED
 Please cite [OUR PAPER](https://TO.BE.UPDATED.SOON) if you found our data, methods, or results helpful for your research:
 
 > Danilov V.V., Laptev V.V., Klyshnikov K.Yu., Ovcharenko E.A. (**2024**). _PAPER TITLE_. **Journal Title**. DOI: [TO.BE.UPDATED.SOON](TO.BE.UPDATED.SOON)
