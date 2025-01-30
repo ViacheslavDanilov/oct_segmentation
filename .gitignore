@@ -159,8 +159,10 @@ logs/
 data/dcm*/
 data/dcm*.csv
 data/sly*/
-data/interim*/
-data/cv*/
+data/interim*/*/
+data/interim*/*.zip
+data/cv*/*/
+data/cv*/*.zip
 
 # Models
 /models/*/

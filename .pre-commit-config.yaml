@@ -1,7 +1,7 @@
 # pre-commit hooks
 repos:
 - repo: https://github.com/pre-commit/pre-commit-hooks
-  rev: v4.6.0
+  rev: v5.0.0
   hooks:
   - id: check-yaml
   - id: check-toml
@@ -20,28 +20,28 @@ repos:
 
 # black formatter
 - repo: https://github.com/ambv/black
-  rev: 24.4.0
+  rev: 24.10.0
   hooks:
   - id: black
     args: [--config, pyproject.toml]
 
 # yaml formatter
 - repo: https://github.com/macisamuele/language-formatters-pre-commit-hooks
-  rev: v2.13.0
+  rev: v2.14.0
   hooks:
   - id: pretty-format-yaml
     args: [--autofix, --indent, '2', --preserve-quotes]
 
 # import cleaner
 - repo: https://github.com/hadialqattan/pycln
-  rev: v2.4.0
+  rev: v2.5.0
   hooks:
   - id: pycln
     args: [--config, pyproject.toml]
 
 # import sorter
 - repo: https://github.com/timothycrosley/isort
-  rev: 5.13.2
+  rev: 6.0.0
   hooks:
   - id: isort
     files: \.(py)$
@@ -49,7 +49,7 @@ repos:
 
 # ruff
 - repo: https://github.com/astral-sh/ruff-pre-commit
-  rev: 'v0.3.7'
+  rev: 'v0.9.3'
   hooks:
   - id: ruff
     args: [--fix, --exit-non-zero-on-fix]
@@ -64,7 +64,7 @@ repos:
 
 # static type checker
 - repo: https://github.com/pre-commit/mirrors-mypy
-  rev: v1.9.0
+  rev: v1.14.1
   hooks:
   - id: mypy
     args: [--config-file, pyproject.toml]

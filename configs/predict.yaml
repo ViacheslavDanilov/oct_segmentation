@@ -1,0 +1,14 @@
+defaults:
+- main
+- _self_
+
+data_dir: data/demo/input
+models_dir: models
+save_dir: data/demo/output
+output_size: [1000, 1000]
+device: auto
+classes:
+- Lumen
+- Fibrous cap
+- Lipid core
+- Vasa vasorum

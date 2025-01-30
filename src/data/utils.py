@@ -4,10 +4,14 @@ import os
 import zlib
 from glob import glob
 from pathlib import Path
-from typing import List, Union
+from typing import List, Tuple, Union
 
 import cv2
 import numpy as np
+from PIL import Image
+from tqdm import tqdm
+
+from src.models.smp.utils import get_img_mask_union_pil
 
 CLASS_MAP = {
     'Lumen': {
@@ -149,3 +153,82 @@ def convert_base64_to_numpy(
     else:
         raise RuntimeError('Wrong internal mask format')
     return mask
+
+
+def preprocessing_img(
+    img: Image,
+    input_size: int,
+):
+    image = np.array(img)
+    image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+    image = cv2.resize(image, (input_size, input_size))
+    return image
+
+
+def data_processing(
+    data_path: str,
+    save_dir: str,
+    output_size: List[int],
+) -> Tuple[List[Image], List[np.ndarray], List[str]]:
+    os.makedirs(save_dir, exist_ok=True)
+    if os.path.isfile(data_path):
+        images_path = [data_path]
+    else:
+        images_path = glob(f'{data_path}/*.[pj][np][ge]*')
+
+    images, masks, image_names = [], [], []
+    for img_path in tqdm(
+        images_path,
+        total=len(images_path),
+        desc='Image processing',
+        unit='image',
+    ):
+        img = Image.open(img_path).resize(output_size)
+        mask = np.zeros((output_size[0], output_size[1], 4))
+        images.append(img)
+        masks.append(mask)
+        image_names.append(os.path.basename(img_path).split('.')[0])
+    return images, masks, image_names
+
+
+def save_results(
+    images: List[Image],
+    masks: List[np.ndarray],
+    images_name: List[str],
+    classes: List[str],
+    save_dir: str,
+) -> None:
+    for img, mask, image_name in tqdm(
+        zip(images, masks, images_name),
+        total=len(images),
+        desc='Image & mask post-processing',
+        unit='image',
+    ):
+        color_mask = Image.new('RGB', size=img.size, color=(128, 128, 128))
+        for class_name in classes:
+            m = mask[:, :, CLASS_IDS[class_name] - 1]  # type: ignore
+            m = cv2.morphologyEx(
+                m,
+                cv2.MORPH_CLOSE,
+                cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5)),
+                3,
+            )
+            m_d = cv2.dilate(m.copy(), cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (7, 7)))
+            m_e = cv2.erode(m.copy(), cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (7, 7)))
+            m = cv2.GaussianBlur(m, (5, 5), 0)
+            m_d[m_e > 0] = 0
+            img = get_img_mask_union_pil(
+                img=img,
+                mask=m * 64,
+                color=CLASS_COLORS_RGB[class_name],
+            )
+            img = get_img_mask_union_pil(
+                img=img,
+                mask=m_d * 255,
+                color=CLASS_COLORS_RGB[class_name],
+            )
+            m = mask[:, :, CLASS_IDS[class_name] - 1] * 255  # type: ignore
+            class_img = Image.new('RGB', size=img.size, color=CLASS_COLORS_RGB[class_name])
+            color_mask.paste(class_img, (0, 0), Image.fromarray(m).convert('L'))
+        color_mask.save(f'{save_dir}/{image_name}_mask.png')
+        img.save(f'{save_dir}/{image_name}_overlay.png')
