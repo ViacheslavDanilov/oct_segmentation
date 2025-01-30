@@ -2,7 +2,8 @@
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.14481678.svg)](https://doi.org/10.5281/zenodo.14481678)
 [![DOI](http://img.shields.io/badge/DOI-TO.ADD.PAPER-B31B1B)](https://TO.BE.UPDATED.SOON)
 
-# Segmentation and analysis of OCT images
+<h1 align="center">Segmentation and quantification of atherosclerotic plaques in OCT images</h1>
+<br>
 
 <a name="contents"></a>
 ## 📖 Contents
