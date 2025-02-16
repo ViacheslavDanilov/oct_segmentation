@@ -7,6 +7,7 @@ import plotly.express as px
 import plotly.graph_objs as go
 import tifffile
 from PIL import Image
+from skimage import measure
 
 from src.data.utils import CLASS_COLORS_RGB, CLASS_IDS_REVERSED
 
@@ -25,18 +26,45 @@ def get_img_show(
     new_img = Image.new('RGB', (img.size[0] * 2, img.size[1]))
     new_img.paste(img, (0, 0))
     new_img.paste(color_mask, (img.size[0], 0))
-    fig = px.imshow(new_img)
+    fig = px.imshow(new_img, height=1024)
+    fig.update_traces(hoverinfo='skip', hovertemplate=None)
+    # fig = go.Figure()
+    # fig.add_trace(new_img)
     for idx in CLASS_IDS_REVERSED:
         # class_img = Image.new('RGB', size=img.size, color=CLASS_COLORS_RGB[CLASS_IDS_REVERSED[idx]])
         mask = Image.fromarray(masks[:, :, idx - 1].astype('uint8'))
-        fig.add_trace(
-            go.Contour(
-                z=mask,
-                showscale=True,
-                contours=dict(start=0, end=70, size=70, coloring='lines'),
-                line_width=2,
-            ),
-        )
+        contours = measure.find_contours(np.array(mask), 0.5)
+        for contour in contours:
+            y, x = contour.T - 1
+            fig.add_scatter(
+                x=x,
+                y=y,
+                opacity=0.8,
+                mode='lines',
+                fill='toself',
+                showlegend=False,
+                hoveron='points+fills',
+            )
+        # mask = mask / 255.0
+        # fig.add_trace(
+        #     go.Contour(
+        #         z=mask,
+        #         showscale=True,
+        #         # autocontour=True,
+        #         contours=dict(coloring='lines'),
+        #         # opacity=0.6,
+        #         # line_width=1,
+        #     ),
+        # )
+        # fig.add_trace(
+        #     go.Image(
+        #         z=mask,
+        #         opacity=0.5
+        #     )
+        # )
+        # fig.add_trace(
+        #     go.Heatmap(z=mask, showscale=False, zmin=0, zmax=1)
+        # )
     fig.update_layout(showlegend=False)
     return fig
 
@@ -108,7 +136,6 @@ def get_analysis(
     file,
 ):
     # TODO: inference model (dicom file analysis)
-    pass
 
     images = sorted(glob('data/demo_2/input/*.[pj][np][ge]*'))
     return (
@@ -140,7 +167,7 @@ def main():
                         slider = gr.Slider(visible=False)
                     with gr.Row():
                         with gr.Column(scale=5):
-                            img_show = gr.Plot(visible=False)
+                            img_show = gr.Plot(visible=False, container=False)
                         with gr.Column(scale=1):
                             with gr.Group(visible=True):
                                 gr.Markdown(
