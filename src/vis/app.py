@@ -1,10 +1,13 @@
 import os
 from glob import glob
+from typing import List
 
+import cv2
 import gradio as gr
 import numpy as np
 import plotly.express as px
 import plotly.graph_objs as go
+import pydicom
 import tifffile
 from PIL import Image
 from skimage import measure
@@ -13,82 +16,82 @@ from src.data.utils import CLASS_COLORS_RGB, CLASS_IDS_REVERSED
 
 
 def get_img_show(
-    img_num,
+    img_num: int = 0,
+    classes_vis: List[str] = None,
+    opacity: int = 20,
 ):
+    opacity *= 0.01
+    opacity = 1 - opacity
     images = os.listdir('data/demo_2/input')
     img = Image.open(f'data/demo_2/input/{images[img_num]}')
-    masks = tifffile.imread(f'data/demo_2/mask/{images[img_num].split(".")[0]}.tiff')
-    color_mask = Image.new('RGB', size=(1024, 1024), color=(128, 128, 128))
-    for idx in CLASS_IDS_REVERSED:
-        class_img = Image.new('RGB', size=img.size, color=CLASS_COLORS_RGB[CLASS_IDS_REVERSED[idx]])
-        mask = Image.fromarray(masks[:, :, idx - 1].astype('uint8'))
-        color_mask.paste(class_img, (0, 0), mask)
     new_img = Image.new('RGB', (img.size[0] * 2, img.size[1]))
+    color_mask = Image.new('RGB', size=img.size, color=(128, 128, 128))
     new_img.paste(img, (0, 0))
     new_img.paste(color_mask, (img.size[0], 0))
-    fig = px.imshow(new_img, height=1024)
+    fig = px.imshow(new_img, height=img.size[1])
     fig.update_traces(hoverinfo='skip', hovertemplate=None)
-    # fig = go.Figure()
-    # fig.add_trace(new_img)
-    for idx in CLASS_IDS_REVERSED:
-        # class_img = Image.new('RGB', size=img.size, color=CLASS_COLORS_RGB[CLASS_IDS_REVERSED[idx]])
-        mask = Image.fromarray(masks[:, :, idx - 1].astype('uint8'))
-        contours = measure.find_contours(np.array(mask), 0.5)
-        for contour in contours:
-            y, x = contour.T - 1
-            fig.add_scatter(
-                x=x,
-                y=y,
-                opacity=0.8,
-                mode='lines',
-                fill='toself',
-                showlegend=False,
-                hoveron='points+fills',
-            )
-        # mask = mask / 255.0
-        # fig.add_trace(
-        #     go.Contour(
-        #         z=mask,
-        #         showscale=True,
-        #         # autocontour=True,
-        #         contours=dict(coloring='lines'),
-        #         # opacity=0.6,
-        #         # line_width=1,
-        #     ),
-        # )
-        # fig.add_trace(
-        #     go.Image(
-        #         z=mask,
-        #         opacity=0.5
-        #     )
-        # )
-        # fig.add_trace(
-        #     go.Heatmap(z=mask, showscale=False, zmin=0, zmax=1)
-        # )
-    fig.update_layout(showlegend=False)
+    if classes_vis is not None and len(classes_vis) > 0:
+        masks = tifffile.imread(f'data/demo_2/mask/{images[img_num].split(".")[0]}.tiff')
+        for idx in CLASS_IDS_REVERSED:
+            if CLASS_IDS_REVERSED[idx] in classes_vis:
+                mask = Image.fromarray(masks[:, :, idx - 1].astype('uint8'))
+                contours = measure.find_contours(np.array(mask), 0.5)
+                for contour in contours:
+                    y, x = contour.T - 1
+                    hover_info = (
+                        '<br>' + f'{CLASS_IDS_REVERSED[idx]}/area: None' + ' <extra></extra>'
+                    )
+                    fig.add_scatter(
+                        x=x,
+                        y=y,
+                        opacity=opacity,
+                        mode='lines',
+                        fill='toself',
+                        showlegend=False,
+                        hoveron='points+fills',
+                        marker=dict(
+                            color='#%02x%02x%02x' % CLASS_COLORS_RGB[CLASS_IDS_REVERSED[idx]],
+                        ),
+                        hovertemplate=hover_info,
+                        name=f'{CLASS_IDS_REVERSED[idx]}/area: None',
+                    )
+                    fig.add_scatter(
+                        x=x + img.size[0],
+                        y=y,
+                        opacity=1.0,
+                        mode='lines',
+                        fill='toself',
+                        showlegend=False,
+                        hoveron='points+fills',
+                        marker=dict(
+                            color='#%02x%02x%02x' % CLASS_COLORS_RGB[CLASS_IDS_REVERSED[idx]],
+                        ),
+                        hovertemplate=hover_info,
+                        name=f'{CLASS_IDS_REVERSED[idx]}/area: None',
+                    )
+    fig.update_layout(
+        margin=dict(l=0, r=0, b=0, t=0),
+        xaxis_visible=False,
+        yaxis_visible=False,
+        showlegend=False,
+    )
     return fig
 
 
 def get_graph():
-    # TODO: for CLASS_IDX, CLASS_COLOR, optimize, class plot
     masks = sorted(glob('data/demo_2/mask/*.tiff'))
-    classes = {
-        0: [],
-        1: [],
-        2: [],
-        3: [],
-    }
+    classes = {idx: [] for idx in CLASS_IDS_REVERSED}
     for idx, mask_path in enumerate(masks):
         mask = tifffile.imread(mask_path)
-        for i in range(4):
-            if np.unique(mask[:, :, i]).shape[0] == 2:
-                classes[i].append(idx)
+        for idy in CLASS_IDS_REVERSED:
+            if np.unique(mask[:, :, idy - 1]).shape[0] == 2:
+                classes[idy].append(idx)
     fig = go.Figure()
-    for i in range(4):
-        if len(classes[i]) > 0:
+    for idy in CLASS_IDS_REVERSED:
+        if len(classes[idy]) > 0:
             traces = []
-            trace = [classes[i][0]]
-            for el in classes[i][1:]:
+            trace = [classes[idy][0]]
+            for el in classes[idy][1:]:
                 if el == trace[-1] + 1:
                     trace.append(el)
                 else:
@@ -96,52 +99,83 @@ def get_graph():
                     trace = [el]
             traces.append(trace)
             for trace in traces:
-                if i == 0:
-                    fig.add_trace(
-                        go.Scatter(
-                            x=trace,
-                            y=['Lumen' for _ in range(len(trace))],
-                            marker=dict(color='#636EFA'),
+                fig.add_trace(
+                    go.Scatter(
+                        x=trace,
+                        y=[CLASS_IDS_REVERSED[idy] for _ in range(len(trace))],
+                        marker=dict(
+                            color='#%02x%02x%02x' % CLASS_COLORS_RGB[CLASS_IDS_REVERSED[idy]],
                         ),
-                    )
-                if i == 1:
-                    fig.add_trace(
-                        go.Scatter(
-                            x=trace,
-                            y=['Lipid core' for _ in range(len(trace))],
-                            marker=dict(color='#19D3F3'),
-                        ),
-                    )
-                if i == 2:
-                    fig.add_trace(
-                        go.Scatter(
-                            x=trace,
-                            y=['Fibrous cap' for _ in range(len(trace))],
-                            marker=dict(color='#EF553B'),
-                        ),
-                    )
-                if i == 3:
-                    fig.add_trace(
-                        go.Scatter(
-                            x=trace,
-                            y=['Vasa vasorum' for _ in range(len(trace))],
-                            marker=dict(color='#FFA15A'),
-                        ),
-                    )
+                    ),
+                )
     fig.update_layout(showlegend=False)
     return fig
 
 
 def get_analysis(
     file,
+    progress=gr.Progress(),
 ):
+    # progress(0, desc="Processing")
+    # time.sleep(1)
+    # progress(0.05)
     # TODO: inference model (dicom file analysis)
+    study = pydicom.dcmread(file)
+    dcm = study.pixel_array
+    slices = dcm.shape[0]
+    for slice in progress.tqdm(range(slices), desc='Processing'):
+        img = dcm[slice]
+        img = cv2.normalize(
+            img,
+            None,
+            alpha=0,
+            beta=255,
+            norm_type=cv2.NORM_MINMAX,
+            dtype=cv2.CV_8U,
+        )
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
     images = sorted(glob('data/demo_2/input/*.[pj][np][ge]*'))
     return (
         get_graph(),
         gr.Slider(minimum=0, maximum=len(images), value=0, visible=True, label='Номер кадра'),
-        gr.Plot(visible=True, value=get_img_show(0)),
+        gr.Plot(
+            visible=True,
+            value=get_img_show(
+                img_num=0,
+                classes_vis=['Lumen', 'Lipid core', 'Fibrous cap', 'Vasa vasorum'],
+                opacity=20,
+            ),
+        ),
+        gr.Markdown(
+            """
+              # Параметры
+          """,
+            visible=True,
+        ),
+        gr.Checkboxgroup(
+            label='Объекты',
+            choices=(
+                'Lumen',
+                'Lipid core',
+                'Fibrous cap',
+                'Vasa vasorum',
+            ),
+            value=[
+                'Lumen',
+                'Lipid core',
+                'Fibrous cap',
+                'Vasa vasorum',
+            ],
+            visible=True,
+        ),
+        gr.Slider(
+            value=20,
+            minimum=0,
+            maximum=100,
+            label='Прозрачность, %',
+            visible=True,
+        ),
     )
 
 
@@ -149,8 +183,8 @@ def main():
     with gr.Blocks(title='KCC OCT analysis') as block:
         gr.Markdown(
             """
-                ## KCC: OCT analysis
-            """,
+          ## KCC: OCT analysis
+      """,
         )
         with gr.Tab(label='UX test'):
             with gr.Row(variant='panel'):
@@ -169,41 +203,48 @@ def main():
                         with gr.Column(scale=5):
                             img_show = gr.Plot(visible=False, container=False)
                         with gr.Column(scale=1):
-                            with gr.Group(visible=True):
-                                gr.Markdown(
-                                    """
-                                    # Параметры
-                                    """,
+                            with gr.Group():
+                                params_mark = gr.Markdown(
+                                    visible=False,
                                 )
                                 with gr.Row():
                                     classes = gr.Checkboxgroup(
-                                        label='Объекты',
-                                        choices=(
-                                            'Lumen',
-                                            'Lipid core',
-                                            'Fibrous cap',
-                                            'Vasa vasorum',
-                                        ),
+                                        visible=False,
                                     )
                                 with gr.Row():
                                     transparency = gr.Slider(
-                                        value=15,
-                                        minimum=0,
-                                        maximum=100,
-                                        label='Прозрачность, %',
+                                        visible=False,
                                     )
-            # with gr.Row():
-
-            # with gr.Row():
-            #     run = gr.Button()
             analysis.click(
                 fn=get_analysis,
                 inputs=input_data,
-                outputs=[graph, slider, img_show],
+                outputs=[graph, slider, img_show, params_mark, classes, transparency],
             )
             slider.change(
                 get_img_show,
-                inputs=slider,
+                inputs=[
+                    slider,
+                    classes,
+                    transparency,
+                ],
+                outputs=img_show,
+            )
+            classes.change(
+                get_img_show,
+                inputs=[
+                    slider,
+                    classes,
+                    transparency,
+                ],
+                outputs=img_show,
+            )
+            transparency.change(
+                get_img_show,
+                inputs=[
+                    slider,
+                    classes,
+                    transparency,
+                ],
                 outputs=img_show,
             )
         with gr.Tab(label='Inference mode'):
