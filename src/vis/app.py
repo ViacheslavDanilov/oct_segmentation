@@ -118,6 +118,7 @@ def get_graph():
 
 def get_graph_1(data):
     fig = go.Figure()
+    fig_2 = go.Figure()
     for class_name in data:
         if len(data[class_name]['object_id']) > 0:
             object_id = data[class_name]['object_id'][0]
@@ -129,32 +130,51 @@ def get_graph_1(data):
                     )
                 else:
                     trace = np.array(trace)
-                    fig.add_trace(
-                        go.Scatter(
-                            x=list(trace[:, 0]),
+                    if len(trace) >= 3:
+                        fig.add_trace(
+                            go.Scatter(
+                                x=list(trace[:, 0]),
+                                y=list(trace[:, 1]),
+                                marker=dict(
+                                    color='#%02x%02x%02x' % CLASS_COLORS_RGB[class_name],
+                                ),
+                                name=f'{class_name}, {object_id}',
+                            ),
+                        )
+
+                        fig_2.add_box(
                             y=list(trace[:, 1]),
+                            name=f'{class_name}, {object_id}',
                             marker=dict(
                                 color='#%02x%02x%02x' % CLASS_COLORS_RGB[class_name],
                             ),
-                            name=f'{class_name}, {object_id}',
-                        ),
-                    )
+                        )
+
                     object_id = object_id_
                     trace = [(data[class_name]['slice'][idx], data[class_name]['area'][idx])]
 
             trace = np.array(trace)
-            fig.add_trace(
-                go.Scatter(
-                    x=list(trace[:, 0]),
+            if len(trace) >= 3:
+                fig.add_trace(
+                    go.Scatter(
+                        x=list(trace[:, 0]),
+                        y=list(trace[:, 1]),
+                        marker=dict(
+                            color='#%02x%02x%02x' % CLASS_COLORS_RGB[class_name],
+                        ),
+                        name=f'{class_name}, {object_id}',
+                    ),
+                )
+                fig_2.add_box(
                     y=list(trace[:, 1]),
+                    name=f'{class_name}, {object_id}',
                     marker=dict(
                         color='#%02x%02x%02x' % CLASS_COLORS_RGB[class_name],
                     ),
-                    name=f'{class_name}, {object_id}',
-                ),
-            )
+                )
     fig.update_layout(showlegend=False)
-    return fig
+    fig_2.update_layout(showlegend=False)
+    return fig, fig_2
 
 
 def get_analysis(
@@ -208,6 +228,7 @@ def get_analysis(
                 data[CLASS_IDS_REVERSED[idy]]['area'].append(area)
 
     images = sorted(glob('data/demo_2/input/*.[pj][np][ge]*'))
+    fig_1, fig_2 = get_graph_1(data)
     return (
         get_graph(),
         gr.Slider(minimum=0, maximum=len(images), value=0, visible=True, label='Номер кадра'),
@@ -248,7 +269,8 @@ def get_analysis(
             label='Прозрачность, %',
             visible=True,
         ),
-        get_graph_1(data),
+        fig_1,
+        fig_2,
         gr.JSON(label='Metadata', value=data),
     )
 
@@ -290,9 +312,9 @@ def main():
                                         visible=False,
                                     )
                     with gr.Row(variant='panel'):
-                        areas_plot = gr.Plot()
-                    with gr.Row(variant='panel'):
                         areas_line = gr.Plot()
+                    with gr.Row(variant='panel'):
+                        areas_plot = gr.Plot()
                     with gr.Row(variant='panel'):
                         metadata = gr.JSON(label='Metadata')
             analysis.click(
@@ -306,6 +328,7 @@ def main():
                     classes,
                     transparency,
                     areas_line,
+                    areas_plot,
                     metadata,
                 ],
             )
