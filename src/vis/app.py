@@ -12,7 +12,7 @@ import tifffile
 from PIL import Image
 from skimage import measure
 
-from src.data.utils import CLASS_COLORS_RGB, CLASS_IDS_REVERSED
+from src.data.utils import CLASS_COLORS_RGB, CLASS_IDS, CLASS_IDS_REVERSED
 
 
 def get_img_show(
@@ -34,41 +34,45 @@ def get_img_show(
         masks = tifffile.imread(f'data/demo_2/mask/{images[img_num].split(".")[0]}.tiff')
         for idx in CLASS_IDS_REVERSED:
             if CLASS_IDS_REVERSED[idx] in classes_vis:
-                mask = Image.fromarray(masks[:, :, idx - 1].astype('uint8'))
-                contours = measure.find_contours(np.array(mask), 0.5)
-                for contour in contours:
-                    y, x = contour.T - 1
-                    hover_info = (
-                        '<br>' + f'{CLASS_IDS_REVERSED[idx]}/area: None' + ' <extra></extra>'
-                    )
-                    fig.add_scatter(
-                        x=x,
-                        y=y,
-                        opacity=opacity,
-                        mode='lines',
-                        fill='toself',
-                        showlegend=False,
-                        hoveron='points+fills',
-                        marker=dict(
-                            color='#%02x%02x%02x' % CLASS_COLORS_RGB[CLASS_IDS_REVERSED[idx]],
-                        ),
-                        hovertemplate=hover_info,
-                        name=f'{CLASS_IDS_REVERSED[idx]}/area: None',
-                    )
-                    fig.add_scatter(
-                        x=x + img.size[0],
-                        y=y,
-                        opacity=1.0,
-                        mode='lines',
-                        fill='toself',
-                        showlegend=False,
-                        hoveron='points+fills',
-                        marker=dict(
-                            color='#%02x%02x%02x' % CLASS_COLORS_RGB[CLASS_IDS_REVERSED[idx]],
-                        ),
-                        hovertemplate=hover_info,
-                        name=f'{CLASS_IDS_REVERSED[idx]}/area: None',
-                    )
+                mask = masks[:, :, idx - 1].astype('uint8')
+                area = np.nonzero(mask)
+                if len(area) > 0:
+                    area = pow(len(area[0]), 0.5)
+                    area = area // 8
+                    contours = measure.find_contours(mask, 0.5)
+                    for contour in contours:
+                        y, x = contour.T - 1
+                        hover_info = (
+                            '<br>' + f'{CLASS_IDS_REVERSED[idx]}/area: {area}' + ' <extra></extra>'
+                        )
+                        fig.add_scatter(
+                            x=x,
+                            y=y,
+                            opacity=opacity,
+                            mode='lines',
+                            fill='toself',
+                            showlegend=False,
+                            hoveron='points+fills',
+                            marker=dict(
+                                color='#%02x%02x%02x' % CLASS_COLORS_RGB[CLASS_IDS_REVERSED[idx]],
+                            ),
+                            hovertemplate=hover_info,
+                            name=f'{CLASS_IDS_REVERSED[idx]}/area: {area}',
+                        )
+                        fig.add_scatter(
+                            x=x + img.size[0],
+                            y=y,
+                            opacity=1.0,
+                            mode='lines',
+                            fill='toself',
+                            showlegend=False,
+                            hoveron='points+fills',
+                            marker=dict(
+                                color='#%02x%02x%02x' % CLASS_COLORS_RGB[CLASS_IDS_REVERSED[idx]],
+                            ),
+                            hovertemplate=hover_info,
+                            name=f'{CLASS_IDS_REVERSED[idx]}/area: {area}',
+                        )
     fig.update_layout(
         margin=dict(l=0, r=0, b=0, t=0),
         xaxis_visible=False,
@@ -112,17 +116,63 @@ def get_graph():
     return fig
 
 
+def get_graph_1(data):
+    fig = go.Figure()
+    for class_name in data:
+        if len(data[class_name]['object_id']) > 0:
+            object_id = data[class_name]['object_id'][0]
+            trace = []
+            for idx, object_id_ in enumerate(data[class_name]['object_id']):
+                if object_id_ == object_id:
+                    trace.append(
+                        (data[class_name]['slice'][idx], data[class_name]['area'][idx]),
+                    )
+                else:
+                    trace = np.array(trace)
+                    fig.add_trace(
+                        go.Scatter(
+                            x=list(trace[:, 0]),
+                            y=list(trace[:, 1]),
+                            marker=dict(
+                                color='#%02x%02x%02x' % CLASS_COLORS_RGB[class_name],
+                            ),
+                            name=f'{class_name}, {object_id}',
+                        ),
+                    )
+                    object_id = object_id_
+                    trace = [(data[class_name]['slice'][idx], data[class_name]['area'][idx])]
+
+            trace = np.array(trace)
+            fig.add_trace(
+                go.Scatter(
+                    x=list(trace[:, 0]),
+                    y=list(trace[:, 1]),
+                    marker=dict(
+                        color='#%02x%02x%02x' % CLASS_COLORS_RGB[class_name],
+                    ),
+                    name=f'{class_name}, {object_id}',
+                ),
+            )
+    fig.update_layout(showlegend=False)
+    return fig
+
+
 def get_analysis(
     file,
     progress=gr.Progress(),
 ):
-    # progress(0, desc="Processing")
-    # time.sleep(1)
-    # progress(0.05)
     # TODO: inference model (dicom file analysis)
     study = pydicom.dcmread(file)
     dcm = study.pixel_array
     slices = dcm.shape[0]
+    data = {
+        class_name: {
+            'area': [],
+            'slice': [],
+            'object_id': [],
+        }
+        for class_name in CLASS_IDS
+    }
     for slice in progress.tqdm(range(slices), desc='Processing'):
         img = dcm[slice]
         img = cv2.normalize(
@@ -134,6 +184,28 @@ def get_analysis(
             dtype=cv2.CV_8U,
         )
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+
+    masks = sorted(glob('data/demo_2/mask/*.tiff'))
+    for idx, mask_path in enumerate(masks):
+        mask = tifffile.imread(mask_path)
+        for idy in CLASS_IDS_REVERSED:
+            if np.unique(mask[:, :, idy - 1]).shape[0] == 2:
+                if len(data[CLASS_IDS_REVERSED[idy]]['object_id']) == 0:
+                    data[CLASS_IDS_REVERSED[idy]]['object_id'].append(0)
+                else:
+                    if idx == data[CLASS_IDS_REVERSED[idy]]['slice'][-1] + 1:
+                        data[CLASS_IDS_REVERSED[idy]]['object_id'].append(
+                            data[CLASS_IDS_REVERSED[idy]]['object_id'][-1],
+                        )
+                    else:
+                        data[CLASS_IDS_REVERSED[idy]]['object_id'].append(
+                            data[CLASS_IDS_REVERSED[idy]]['object_id'][-1] + 1,
+                        )
+                data[CLASS_IDS_REVERSED[idy]]['slice'].append(idx)
+                area = np.nonzero(mask[:, :, idy - 1])
+                area = pow(len(area[0]), 0.5)
+                area = area // 8
+                data[CLASS_IDS_REVERSED[idy]]['area'].append(area)
 
     images = sorted(glob('data/demo_2/input/*.[pj][np][ge]*'))
     return (
@@ -176,11 +248,13 @@ def get_analysis(
             label='Прозрачность, %',
             visible=True,
         ),
+        get_graph_1(data),
+        gr.JSON(label='Metadata', value=data),
     )
 
 
 def main():
-    with gr.Blocks(title='KCC OCT analysis') as block:
+    with gr.Blocks(title='KCC OCT analysis', theme=gr.themes.Origin(), fill_height=True) as block:
         gr.Markdown(
             """
           ## KCC: OCT analysis
@@ -215,10 +289,25 @@ def main():
                                     transparency = gr.Slider(
                                         visible=False,
                                     )
+                    with gr.Row(variant='panel'):
+                        areas_plot = gr.Plot()
+                    with gr.Row(variant='panel'):
+                        areas_line = gr.Plot()
+                    with gr.Row(variant='panel'):
+                        metadata = gr.JSON(label='Metadata')
             analysis.click(
                 fn=get_analysis,
                 inputs=input_data,
-                outputs=[graph, slider, img_show, params_mark, classes, transparency],
+                outputs=[
+                    graph,
+                    slider,
+                    img_show,
+                    params_mark,
+                    classes,
+                    transparency,
+                    areas_line,
+                    metadata,
+                ],
             )
             slider.change(
                 get_img_show,
@@ -276,7 +365,6 @@ def main():
         )
 
     block.launch(
-        # debug=True,
         server_name='0.0.0.0',
         server_port=7883,
         favicon_path='data/logo.ico',
