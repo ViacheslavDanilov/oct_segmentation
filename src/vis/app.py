@@ -25,6 +25,7 @@ def get_img_show(
     images = os.listdir('data/demo_2/input')
     img = Image.open(f'data/demo_2/input/{images[img_num]}')
     new_img = Image.new('RGB', (img.size[0] * 2, img.size[1]))
+    c = int(img.size[0] * 150 // 1000)
     color_mask = Image.new('RGB', size=img.size, color=(128, 128, 128))
     new_img.paste(img, (0, 0))
     new_img.paste(color_mask, (img.size[0], 0))
@@ -37,8 +38,7 @@ def get_img_show(
                 mask = masks[:, :, idx - 1].astype('uint8')
                 area = np.nonzero(mask)
                 if len(area) > 0:
-                    area = pow(len(area[0]), 0.5)
-                    area = area // 8
+                    area = pow(len(area[0]) // c, 0.5)
                     contours = measure.find_contours(mask, 0.5)
                     for contour in contours:
                         y, x = contour.T - 1
@@ -116,65 +116,109 @@ def get_graph():
     return fig
 
 
-def get_graph_1(data):
+def get_graph_1(classes, data):
     fig = go.Figure()
-    fig_2 = go.Figure()
-    for class_name in data:
-        if len(data[class_name]['object_id']) > 0:
-            object_id = data[class_name]['object_id'][0]
-            trace = []
-            for idx, object_id_ in enumerate(data[class_name]['object_id']):
-                if object_id_ == object_id:
-                    trace.append(
-                        (data[class_name]['slice'][idx], data[class_name]['area'][idx]),
-                    )
-                else:
-                    trace = np.array(trace)
-                    if len(trace) >= 3:
-                        fig.add_trace(
-                            go.Scatter(
-                                x=list(trace[:, 0]),
-                                y=list(trace[:, 1]),
-                                marker=dict(
-                                    color='#%02x%02x%02x' % CLASS_COLORS_RGB[class_name],
-                                ),
-                                name=f'{class_name}, {object_id}',
+    for class_name in data['objects']:
+        if class_name in classes:
+            if len(data['objects'][class_name]['object_id']) > 0:
+                object_id = data['objects'][class_name]['object_id'][0]
+                trace = []
+                for idx, object_id_ in enumerate(data['objects'][class_name]['object_id']):
+                    if object_id_ == object_id:
+                        trace.append(
+                            (
+                                data['objects'][class_name]['slice'][idx],
+                                data['objects'][class_name]['area'][idx],
                             ),
                         )
-
-                        fig_2.add_box(
+                    else:
+                        trace = np.array(trace)
+                        if len(trace) >= 3:
+                            fig.add_trace(
+                                go.Scatter(
+                                    x=list(trace[:, 0]),
+                                    y=list(trace[:, 1]),
+                                    marker=dict(
+                                        color='#%02x%02x%02x' % CLASS_COLORS_RGB[class_name],
+                                    ),
+                                    name=f'{class_name}, {object_id}',
+                                ),
+                            )
+                        object_id = object_id_
+                        trace = [
+                            (
+                                data['objects'][class_name]['slice'][idx],
+                                data['objects'][class_name]['area'][idx],
+                            ),
+                        ]
+                trace = np.array(trace)
+                if len(trace) >= 3:
+                    fig.add_trace(
+                        go.Scatter(
+                            x=list(trace[:, 0]),
                             y=list(trace[:, 1]),
-                            name=f'{class_name}, {object_id}',
                             marker=dict(
                                 color='#%02x%02x%02x' % CLASS_COLORS_RGB[class_name],
                             ),
+                            name=f'{class_name}, {object_id}',
+                        ),
+                    )
+    fig.update_layout(
+        showlegend=False,
+        xaxis_title='Samples',
+        yaxis_title='Area',
+    )
+    return fig
+
+
+def get_graph_2(classes, data):
+    fig = go.Figure()
+    for class_name in data['objects']:
+        if class_name in classes:
+            if len(data['objects'][class_name]['object_id']) > 0:
+                object_id = data['objects'][class_name]['object_id'][0]
+                trace = []
+                for idx, object_id_ in enumerate(data['objects'][class_name]['object_id']):
+                    if object_id_ == object_id:
+                        trace.append(
+                            (
+                                data['objects'][class_name]['slice'][idx],
+                                data['objects'][class_name]['area'][idx],
+                            ),
                         )
+                    else:
+                        trace = np.array(trace)
+                        if len(trace) >= 3:
+                            fig.add_box(
+                                y=list(trace[:, 1]),
+                                name=f'{class_name}, {object_id}',
+                                marker=dict(
+                                    color='#%02x%02x%02x' % CLASS_COLORS_RGB[class_name],
+                                ),
+                            )
 
-                    object_id = object_id_
-                    trace = [(data[class_name]['slice'][idx], data[class_name]['area'][idx])]
-
-            trace = np.array(trace)
-            if len(trace) >= 3:
-                fig.add_trace(
-                    go.Scatter(
-                        x=list(trace[:, 0]),
+                        object_id = object_id_
+                        trace = [
+                            (
+                                data['objects'][class_name]['slice'][idx],
+                                data['objects'][class_name]['area'][idx],
+                            ),
+                        ]
+                trace = np.array(trace)
+                if len(trace) >= 3:
+                    fig.add_box(
                         y=list(trace[:, 1]),
+                        name=f'{class_name}, {object_id}',
                         marker=dict(
                             color='#%02x%02x%02x' % CLASS_COLORS_RGB[class_name],
                         ),
-                        name=f'{class_name}, {object_id}',
-                    ),
-                )
-                fig_2.add_box(
-                    y=list(trace[:, 1]),
-                    name=f'{class_name}, {object_id}',
-                    marker=dict(
-                        color='#%02x%02x%02x' % CLASS_COLORS_RGB[class_name],
-                    ),
-                )
-    fig.update_layout(showlegend=False)
-    fig_2.update_layout(showlegend=False)
-    return fig, fig_2
+                    )
+    fig.update_layout(
+        showlegend=False,
+        xaxis_title='Objects',
+        yaxis_title='Area',
+    )
+    return fig
 
 
 def get_analysis(
@@ -186,12 +230,15 @@ def get_analysis(
     dcm = study.pixel_array
     slices = dcm.shape[0]
     data = {
-        class_name: {
-            'area': [],
-            'slice': [],
-            'object_id': [],
-        }
-        for class_name in CLASS_IDS
+        'ratio': int(dcm.shape[1] * 150 // 1000),
+        'objects': {
+            class_name: {
+                'area': [],
+                'slice': [],
+                'object_id': [],
+            }
+            for class_name in CLASS_IDS
+        },
     }
     for slice in progress.tqdm(range(slices), desc='Processing'):
         img = dcm[slice]
@@ -210,25 +257,25 @@ def get_analysis(
         mask = tifffile.imread(mask_path)
         for idy in CLASS_IDS_REVERSED:
             if np.unique(mask[:, :, idy - 1]).shape[0] == 2:
-                if len(data[CLASS_IDS_REVERSED[idy]]['object_id']) == 0:
-                    data[CLASS_IDS_REVERSED[idy]]['object_id'].append(0)
+                if len(data['objects'][CLASS_IDS_REVERSED[idy]]['object_id']) == 0:
+                    data['objects'][CLASS_IDS_REVERSED[idy]]['object_id'].append(0)
                 else:
-                    if idx == data[CLASS_IDS_REVERSED[idy]]['slice'][-1] + 1:
-                        data[CLASS_IDS_REVERSED[idy]]['object_id'].append(
-                            data[CLASS_IDS_REVERSED[idy]]['object_id'][-1],
+                    if idx == data['objects'][CLASS_IDS_REVERSED[idy]]['slice'][-1] + 1:
+                        data['objects'][CLASS_IDS_REVERSED[idy]]['object_id'].append(
+                            data['objects'][CLASS_IDS_REVERSED[idy]]['object_id'][-1],
                         )
                     else:
-                        data[CLASS_IDS_REVERSED[idy]]['object_id'].append(
-                            data[CLASS_IDS_REVERSED[idy]]['object_id'][-1] + 1,
+                        data['objects'][CLASS_IDS_REVERSED[idy]]['object_id'].append(
+                            data['objects'][CLASS_IDS_REVERSED[idy]]['object_id'][-1] + 1,
                         )
-                data[CLASS_IDS_REVERSED[idy]]['slice'].append(idx)
+                data['objects'][CLASS_IDS_REVERSED[idy]]['slice'].append(idx)
                 area = np.nonzero(mask[:, :, idy - 1])
-                area = pow(len(area[0]), 0.5)
-                area = area // 8
-                data[CLASS_IDS_REVERSED[idy]]['area'].append(area)
+                area = pow(len(area[0]) // data['ratio'], 0.5)
+                data['objects'][CLASS_IDS_REVERSED[idy]]['area'].append(area)
 
     images = sorted(glob('data/demo_2/input/*.[pj][np][ge]*'))
-    fig_1, fig_2 = get_graph_1(data)
+    fig_1 = get_graph_1(classes=['Lumen', 'Lipid core', 'Fibrous cap', 'Vasa vasorum'], data=data)
+    fig_2 = get_graph_2(classes=['Lumen', 'Lipid core', 'Fibrous cap', 'Vasa vasorum'], data=data)
     return (
         get_graph(),
         gr.Slider(minimum=0, maximum=len(images), value=0, visible=True, label='Номер кадра'),
@@ -243,7 +290,7 @@ def get_analysis(
         gr.Markdown(
             """
               # Параметры
-          """,
+            """,
             visible=True,
         ),
         gr.Checkboxgroup(
@@ -312,9 +359,57 @@ def main():
                                         visible=False,
                                     )
                     with gr.Row(variant='panel'):
-                        areas_line = gr.Plot()
+                        with gr.Column(scale=5):
+                            areas_line = gr.Plot()
+                        with gr.Column(scale=1):
+                            with gr.Group():
+                                gr.Markdown(
+                                    """
+                                      # Параметры
+                                    """,
+                                )
+                                with gr.Row():
+                                    classes_2 = gr.Checkboxgroup(
+                                        label='Объекты',
+                                        choices=(
+                                            'Lumen',
+                                            'Lipid core',
+                                            'Fibrous cap',
+                                            'Vasa vasorum',
+                                        ),
+                                        value=[
+                                            'Lumen',
+                                            'Lipid core',
+                                            'Fibrous cap',
+                                            'Vasa vasorum',
+                                        ],
+                                    )
                     with gr.Row(variant='panel'):
-                        areas_plot = gr.Plot()
+                        with gr.Column(scale=5):
+                            areas_plot = gr.Plot()
+                        with gr.Column(scale=1):
+                            with gr.Group():
+                                gr.Markdown(
+                                    """
+                                      # Параметры
+                                    """,
+                                )
+                                with gr.Row():
+                                    classes_3 = gr.Checkboxgroup(
+                                        label='Объекты',
+                                        choices=(
+                                            'Lumen',
+                                            'Lipid core',
+                                            'Fibrous cap',
+                                            'Vasa vasorum',
+                                        ),
+                                        value=[
+                                            'Lumen',
+                                            'Lipid core',
+                                            'Fibrous cap',
+                                            'Vasa vasorum',
+                                        ],
+                                    )
                     with gr.Row(variant='panel'):
                         metadata = gr.JSON(label='Metadata')
             analysis.click(
@@ -358,6 +453,22 @@ def main():
                     transparency,
                 ],
                 outputs=img_show,
+            )
+            classes_2.change(
+                get_graph_1,
+                inputs=[
+                    classes_2,
+                    metadata,
+                ],
+                outputs=areas_line,
+            )
+            classes_3.change(
+                get_graph_2,
+                inputs=[
+                    classes_3,
+                    metadata,
+                ],
+                outputs=areas_plot,
             )
         with gr.Tab(label='Inference mode'):
             with gr.Row(variant='panel'):
