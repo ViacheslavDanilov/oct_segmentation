@@ -1,10 +1,14 @@
+import base64
+import os
 from glob import glob
+from io import BytesIO
 
 import cv2
 import gradio as gr
 import numpy as np
 import pydicom
 import tifffile
+from PIL import Image
 
 from src.data.utils import CLASS_IDS, CLASS_IDS_REVERSED
 from src.vis.tools.img_viewer import get_img_show
@@ -26,6 +30,8 @@ def get_analysis(
                 'area': [],
                 'slice': [],
                 'object_id': [],
+                'masks': [],
+                'img_name': [],
             }
             for class_name in CLASS_IDS
         },
@@ -62,17 +68,23 @@ def get_analysis(
                 area = np.nonzero(mask[:, :, idy - 1])
                 area = pow(len(area[0]) // data['ratio'], 0.5)
                 data['objects'][CLASS_IDS_REVERSED[idy]]['area'].append(area)
-
-    images = sorted(glob('data/demo_2/input/*.[pj][np][ge]*'))
+                buff = BytesIO()
+                Image.fromarray(mask[:, :, idy - 1]).save(buff, format='png')
+                im_b64 = base64.b64encode(buff.getvalue()).decode('utf-8')
+                data['objects'][CLASS_IDS_REVERSED[idy]]['masks'].append(im_b64)
+                data['objects'][CLASS_IDS_REVERSED[idy]]['img_name'].append(
+                    os.path.basename(mask_path).split('.')[0]
+                )
     return (
         get_object_map(data),
-        gr.Slider(minimum=0, maximum=len(images), value=0, visible=True, label='Номер кадра'),
+        gr.Slider(minimum=0, maximum=len(masks), value=0, visible=True, label='Номер кадра'),
         gr.Plot(
             visible=True,
             value=get_img_show(
                 img_num=0,
                 classes_vis=[class_name for class_name in CLASS_IDS],
                 opacity=20,
+                data=data,
             ),
         ),
         gr.Markdown(
