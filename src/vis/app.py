@@ -96,6 +96,7 @@ def main():
             slider.change(
                 get_img_show,
                 inputs=[
+                    metadata,
                     slider,
                     classes,
                     transparency,
@@ -105,6 +106,7 @@ def main():
             classes.change(
                 get_img_show,
                 inputs=[
+                    metadata,
                     slider,
                     classes,
                     transparency,
@@ -114,6 +116,7 @@ def main():
             transparency.change(
                 get_img_show,
                 inputs=[
+                    metadata,
                     slider,
                     classes,
                     transparency,
