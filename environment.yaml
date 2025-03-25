@@ -12,6 +12,7 @@ dependencies:
   - dvc==3.49.0
   - dvc-gdrive==3.0.1
   - grad-cam==1.5.0
+  - gradio==5.23.0
   - hydra-core==1.3.2
   - imagecodecs==2024.1.1
   - imutils==0.5.4
@@ -23,6 +24,7 @@ dependencies:
   - openpyxl==3.1.2
   - pandas==2.1.4
   - Pillow==10.2.0
+  - plotly==6.0.1
   - pre-commit==3.7.0
   - ptflops==0.7.2.2
   - pytorch_lightning==2.2.1
