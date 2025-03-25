@@ -10,9 +10,9 @@ import pydicom
 import tifffile
 from PIL import Image
 
+from src.app.tools.img_viewer import get_img_show
+from src.app.tools.plotly_analytics import get_object_map, get_plot_area, get_trace_area
 from src.data.utils import CLASS_IDS, CLASS_IDS_REVERSED
-from src.vis.tools.img_viewer import get_img_show
-from src.vis.tools.plotly_analytics import get_object_map, get_plot_area, get_trace_area
 
 
 def get_analysis(
@@ -73,7 +73,7 @@ def get_analysis(
                 im_b64 = base64.b64encode(buff.getvalue()).decode('utf-8')
                 data['objects'][CLASS_IDS_REVERSED[idy]]['masks'].append(im_b64)
                 data['objects'][CLASS_IDS_REVERSED[idy]]['img_name'].append(
-                    os.path.basename(mask_path).split('.')[0]
+                    os.path.basename(mask_path).split('.')[0],
                 )
     return (
         get_object_map(data),

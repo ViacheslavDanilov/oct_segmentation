@@ -2,18 +2,18 @@ import os
 
 import gradio as gr
 
+from src.app.tools.analysis import get_analysis
+from src.app.tools.img_viewer import get_img_show
+from src.app.tools.plotly_analytics import get_plot_area, get_trace_area
 from src.data.utils import CLASS_IDS
-from src.vis.tools.analysis import get_analysis
-from src.vis.tools.img_viewer import get_img_show
-from src.vis.tools.plotly_analytics import get_plot_area, get_trace_area
 
 
 def main():
     with gr.Blocks(title='KCC OCT analysis', theme=gr.themes.Origin(), fill_height=True) as block:
         gr.Markdown(
             """
-          ## KCC: OCT analysis
-      """,
+            ## KCC: OCT analysis
+            """,
         )
         with gr.Tab(label='UX test'):
             with gr.Row(variant='panel'):
@@ -155,7 +155,7 @@ def main():
             # with gr.Row():
 
             with gr.Row():
-                run = gr.Button()
+                run = gr.Button()  # noqa: F841
             slider.change(
                 get_img_show,
                 inputs=slider,
@@ -170,7 +170,7 @@ def main():
     block.launch(
         server_name='0.0.0.0',
         server_port=7883,
-        favicon_path='data/logo.ico',
+        favicon_path='data/app/logo.ico',
         share=False,
     )
 
