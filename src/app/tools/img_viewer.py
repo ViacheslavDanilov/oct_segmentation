@@ -12,6 +12,7 @@ from src.data.utils import CLASS_COLORS_RGB, CLASS_IDS_REVERSED
 
 def get_img_show(
     data,
+    img_dir: str,
     img_num: int = 0,
     classes_vis: List[str] = None,
     opacity: float = 20,
@@ -19,7 +20,7 @@ def get_img_show(
     opacity *= 0.01
     opacity = 1 - opacity
     img = Image.open(
-        f"data/demo_2/input/{data['objects'][classes_vis[0]]['img_name'][img_num]}.png",
+        f"{img_dir}/{data['objects'][classes_vis[0]]['img_name'][img_num]}.png",
     )
     new_img = Image.new('RGB', (img.size[0] * 2, img.size[1]))
     color_mask = Image.new('RGB', size=img.size, color=(128, 128, 128))

@@ -1,5 +1,6 @@
 import base64
 import os
+import uuid
 from glob import glob
 from io import BytesIO
 
@@ -17,6 +18,7 @@ from src.data.utils import CLASS_IDS, CLASS_IDS_REVERSED
 
 def get_analysis(
     file,
+    inference_type: str,
     progress=gr.Progress(),
 ):
     # TODO: inference model (dicom file analysis)
@@ -36,19 +38,23 @@ def get_analysis(
             for class_name in CLASS_IDS
         },
     }
-    for slice in progress.tqdm(range(slices), desc='Processing'):
-        img = dcm[slice]
-        img = cv2.normalize(
-            img,
-            None,
-            alpha=0,
-            beta=255,
-            norm_type=cv2.NORM_MINMAX,
-            dtype=cv2.CV_8U,
-        )
-        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    if inference_type == 'demo':
+        work_dir = 'data/app/demo'
+        masks = sorted(glob(f'{work_dir}/mask/*.tiff'))
+    else:
+        work_dir = f'data/app/temp/{uuid.uuid4()}'
+        for slice in progress.tqdm(range(slices), desc='Processing'):
+            img = dcm[slice]
+            img = cv2.normalize(
+                img,
+                None,
+                alpha=0,
+                beta=255,
+                norm_type=cv2.NORM_MINMAX,
+                dtype=cv2.CV_8U,
+            )
+            img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
-    masks = sorted(glob('data/demo_2/mask/*.tiff'))
     for idx, mask_path in enumerate(masks):
         mask = tifffile.imread(mask_path)
         for idy in CLASS_IDS_REVERSED:
@@ -83,6 +89,7 @@ def get_analysis(
             value=get_img_show(
                 img_num=0,
                 classes_vis=[class_name for class_name in CLASS_IDS],
+                img_dir=f'{work_dir}/img',
                 opacity=20,
                 data=data,
             ),
@@ -109,4 +116,5 @@ def get_analysis(
         get_trace_area(classes=[class_name for class_name in CLASS_IDS], data=data),
         get_plot_area(classes=[class_name for class_name in CLASS_IDS], data=data),
         gr.JSON(label='Metadata', value=data),
+        f'{work_dir}/img'
     )
