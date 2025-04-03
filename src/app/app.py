@@ -18,9 +18,9 @@ def main():
             with gr.Row(variant='panel'):
                 with gr.Column(scale=1):
                     with gr.Row():
-                        input_data = gr.File(value='data/app/demo/source/IMG001', label='Исходный файл')
+                        input_data = gr.File(value='data/app/demo/source/IMG001', label='Source file')
                     with gr.Row():
-                        analysis = gr.Button('Провести анализ', variant='primary')
+                        analysis = gr.Button('Analysis', variant='primary')
                 with gr.Column(scale=3):
                     graph = gr.Plot()
             with gr.Row():
@@ -50,12 +50,12 @@ def main():
                             with gr.Group():
                                 gr.Markdown(
                                     """
-                                      # Параметры
+                                      # Options
                                     """,
                                 )
                                 with gr.Row():
                                     classes_trace = gr.Checkboxgroup(
-                                        label='Объекты',
+                                        label='Objects',
                                         choices=[class_name for class_name in CLASS_IDS],
                                         value=[class_name for class_name in CLASS_IDS],
                                     )
@@ -66,12 +66,12 @@ def main():
                             with gr.Group():
                                 gr.Markdown(
                                     """
-                                      # Параметры
+                                      # Options
                                     """,
                                 )
                                 with gr.Row():
                                     classes_plot = gr.Checkboxgroup(
-                                        label='Объекты',
+                                        label='Objects',
                                         choices=[class_name for class_name in CLASS_IDS],
                                         value=[class_name for class_name in CLASS_IDS],
                                     )
