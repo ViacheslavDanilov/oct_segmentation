@@ -135,7 +135,8 @@ def convert_base64_to_numpy(
     """Convert base64 encoded string to numpy array.
 
     import supervisely as sly
-    encoded_string = 'eJzrDPBz5+WS4mJgYOD19HAJAtLMIMwIInOeqf8BUmwBPiGuQPr///9Lb86/C2QxlgT5BTM4PLuRBuTwebo4hlTMSa44sKHhISMDuxpTYrr03F6gDIOnq5/LOqeEJgDM5ht6'
+    encoded_string = 'eJzrDPBz5+WS4mJgYOD19HAJAtLMIMwIInOeqf8BUmwBPiGuQPr///9Lb86
+    /C2QxlgT5BTM4PLuRBuTwebo4hlTMSa44sKHhISMDuxpTYrr03F6gDIOnq5/LOqeEJgDM5ht6'
     figure_data = sly.Bitmap.base64_2_data(encoded_string)
     print(figure_data)
     #  [[ True  True  True]
@@ -169,7 +170,7 @@ def data_processing(
     data_path: str,
     save_dir: str,
     output_size: List[int],
-) -> Tuple[List[Image], List[np.ndarray], List[str]]:
+) -> Tuple[List[Image.Image], List[np.ndarray], List[str]]:
     os.makedirs(save_dir, exist_ok=True)
     if os.path.isfile(data_path):
         images_path = [data_path]
@@ -192,7 +193,7 @@ def data_processing(
 
 
 def save_results(
-    images: List[Image],
+    images: List[Image.Image],
     masks: List[np.ndarray],
     images_name: List[str],
     classes: List[str],
