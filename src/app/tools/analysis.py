@@ -37,6 +37,7 @@ def get_analysis(
             }
             for class_name in CLASS_IDS
         },
+        'images': []
     }
     if inference_type == 'demo':
         work_dir = 'data/app/demo'
@@ -79,8 +80,9 @@ def get_analysis(
                 im_b64 = base64.b64encode(buff.getvalue()).decode('utf-8')
                 data['objects'][CLASS_IDS_REVERSED[idy]]['masks'].append(im_b64)
                 data['objects'][CLASS_IDS_REVERSED[idy]]['img_name'].append(
-                    os.path.basename(mask_path).split('.')[0],
+                    os.path.basename(mask_path).split('.')[0]
                 )
+        data['images'].append(os.path.basename(mask_path).split('.')[0])
     return (
         get_object_map(data),
         gr.Slider(minimum=0, maximum=len(masks), value=0, visible=True, label='Номер кадра'),
