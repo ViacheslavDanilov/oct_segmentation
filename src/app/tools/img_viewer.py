@@ -35,12 +35,18 @@ def get_img_show(
                     id = data['objects'][CLASS_IDS_REVERSED[idx]]['slice'].index(img_num)
                     mask_b64 = data['objects'][CLASS_IDS_REVERSED[idx]]['masks'][id]
                     mask = np.array(Image.open(BytesIO(base64.b64decode(mask_b64))))
-                    area = data['objects'][CLASS_IDS_REVERSED[idx]]['area'][id]
+                    ths_mean = round(data['objects'][CLASS_IDS_REVERSED[idx]]['thickness_mean'][id], 2)
+                    ths_min = round(data['objects'][CLASS_IDS_REVERSED[idx]]['thickness_min'][id], 2)
+                    area = round(data['objects'][CLASS_IDS_REVERSED[idx]]['area'][id], 2)
                     contours = measure.find_contours(mask, 0.5)
                     for contour in contours:
                         y, x = contour.T - 1
                         hover_info = (
-                            '<br>' + f'{CLASS_IDS_REVERSED[idx]}/area: {area}' + ' <extra></extra>'
+                            f"{CLASS_IDS_REVERSED[idx]}<br>"
+                            f"Area: {area}<br>"
+                            f"Ths_mean: {ths_mean}<br>"
+                            f"Ths_min: {ths_min}"
+                            "<extra></extra>"
                         )
                         fig.add_scatter(
                             x=x,
@@ -54,7 +60,10 @@ def get_img_show(
                                 color='#%02x%02x%02x' % CLASS_COLORS_RGB[CLASS_IDS_REVERSED[idx]],
                             ),
                             hovertemplate=hover_info,
-                            name=f'{CLASS_IDS_REVERSED[idx]}/area: {area}',
+                            name=f"{CLASS_IDS_REVERSED[idx]}<br>"
+                                 f"Area: {area}<br>"
+                                 f"Ths_mean: {ths_mean}<br>"
+                                 f"Ths_min: {ths_min}",
                         )
                         fig.add_scatter(
                             x=x + img.size[0],
@@ -68,7 +77,10 @@ def get_img_show(
                                 color='#%02x%02x%02x' % CLASS_COLORS_RGB[CLASS_IDS_REVERSED[idx]],
                             ),
                             hovertemplate=hover_info,
-                            name=f'{CLASS_IDS_REVERSED[idx]}/area: {area}',
+                            name=f"{CLASS_IDS_REVERSED[idx]}<br>"
+                                 f"Area: {area}<br>"
+                                 f"Ths_mean: {ths_mean}<br>"
+                                 f"Ths_min: {ths_min}",
                         )
     fig.update_layout(
         margin=dict(l=0, r=0, b=0, t=0),
