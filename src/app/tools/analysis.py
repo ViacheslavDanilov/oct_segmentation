@@ -16,6 +16,109 @@ from src.app.tools.plotly_analytics import get_object_map, get_plot_area, get_tr
 from src.data.utils import CLASS_IDS, CLASS_IDS_REVERSED
 
 
+def calculate_thickness_contour(
+    mask: np.array,
+):
+    # Находим контуры
+    contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    if not contours:
+        return 0
+
+    # Берем самый большой контур
+    contour = max(contours, key=cv2.contourArea)
+
+    # Находим центр масс
+    M = cv2.moments(contour)
+    if M["m00"] == 0:
+        return 0
+    cx = int(M["m10"] / M["m00"])
+    cy = int(M["m01"] / M["m00"])
+
+    # Рассчитываем расстояния от центра до всех точек контура
+    distances = [np.sqrt((point[0][0] - cx) ** 2 + (point[0][1] - cy) ** 2) for point in contour]
+
+    return {
+        'median': np.median(distances),
+        'min': np.min(distances),
+        'max': np.max(distances),
+        'all_measurements': distances
+    }
+
+
+def calculate_object_thickness(mask):
+    """
+    Рассчитывает толщину объекта на бинарном изображении.
+
+    Параметры:
+    mask (numpy.ndarray): Изображение-маска (0 - фон, 255 - объект)
+
+    Возвращает:
+    dict: Словарь с медианной, минимальной, максимальной толщиной и всеми измерениями
+    """
+    # Проверка, что изображение одноканальное
+    if len(mask.shape) > 2:
+        mask = cv2.cvtColor(mask, cv2.COLOR_BGR2GRAY)
+
+    # Находим центр изображения
+    height, width = mask.shape
+    center_x, center_y = width // 2, height // 2
+
+    # Создаем массив для хранения длин радиусов
+    radii = []
+
+    # Перебираем углы от 0 до 360 градусов с шагом 1 градус
+    for angle in range(0, 360, 1):
+        # Преобразуем угол в радианы
+        rad = math.radians(angle)
+
+        # Инициализируем переменные для текущего радиуса
+        current_radius = 0
+        found_object = False
+
+        # Проверяем пиксели вдоль радиуса (максимальная длина - диагональ изображения)
+        max_radius = int(math.sqrt(width ** 2 + height ** 2)) // 2
+
+        for r in range(1, max_radius):
+            # Вычисляем координаты точки на радиусе
+            x = int(center_x + r * math.cos(rad))
+            y = int(center_y + r * math.sin(rad))
+
+            # Проверяем, находится ли точка в пределах изображения
+            if 0 <= x < width and 0 <= y < height:
+                # Если пиксель принадлежит объекту
+                if mask[y, x] == 255:
+                    current_radius = r
+                    found_object = True
+                # Если вышли из объекта (для случая, когда объект не выпуклый)
+                elif found_object:
+                    break
+            else:
+                break
+
+        if found_object:
+            radii.append(current_radius)
+
+    if not radii:
+        return {
+            'median': 0,
+            'min': 0,
+            'max': 0,
+            'all_measurements': []
+        }
+
+    # Рассчитываем статистику
+    median_thickness = np.median(radii)
+    min_thickness = np.min(radii)
+    max_thickness = np.max(radii)
+
+    return {
+        'median': median_thickness,
+        'min': min_thickness,
+        'max': max_thickness,
+        'all_measurements': radii
+    }
+
+
 def get_analysis(
     file,
     inference_type: str,
@@ -30,6 +133,8 @@ def get_analysis(
         'objects': {
             class_name: {
                 'area': [],
+                'thickness_mean': [],
+                'thickness_min': [],
                 'slice': [],
                 'object_id': [],
                 'masks': [],
@@ -75,6 +180,12 @@ def get_analysis(
                 area = np.nonzero(mask[:, :, idy - 1])
                 area = pow(len(area[0]) // data['ratio'], 0.5)
                 data['objects'][CLASS_IDS_REVERSED[idy]]['area'].append(area)
+                data['objects'][CLASS_IDS_REVERSED[idy]]['thickness_mean'].append(
+                    calculate_thickness_contour(mask[:, :, idy - 1])['median'] / data['ratio']
+                    )
+                data['objects'][CLASS_IDS_REVERSED[idy]]['thickness_min'].append(
+                    calculate_thickness_contour(mask[:, :, idy - 1])['min'] / data['ratio']
+                    )
                 buff = BytesIO()
                 Image.fromarray(mask[:, :, idy - 1]).save(buff, format='png')
                 im_b64 = base64.b64encode(buff.getvalue()).decode('utf-8')
