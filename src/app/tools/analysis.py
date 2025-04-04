@@ -182,10 +182,10 @@ def get_analysis(
                 data['objects'][CLASS_IDS_REVERSED[idy]]['area'].append(area)
                 data['objects'][CLASS_IDS_REVERSED[idy]]['thickness_mean'].append(
                     calculate_thickness_contour(mask[:, :, idy - 1])['median'] / data['ratio']
-                    )
+                )
                 data['objects'][CLASS_IDS_REVERSED[idy]]['thickness_min'].append(
                     calculate_thickness_contour(mask[:, :, idy - 1])['min'] / data['ratio']
-                    )
+                )
                 buff = BytesIO()
                 Image.fromarray(mask[:, :, idy - 1]).save(buff, format='png')
                 im_b64 = base64.b64encode(buff.getvalue()).decode('utf-8')
