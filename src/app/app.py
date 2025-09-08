@@ -18,7 +18,10 @@ def main():
             with gr.Row(variant='panel'):
                 with gr.Column(scale=1):
                     with gr.Row():
-                        input_data = gr.File(value='data/app/demo/source/IMG001', label='Source file')
+                        input_data = gr.File(
+                            value='data/app/demo/source/IMG001',
+                            label='Source file',
+                        )
                     with gr.Row():
                         analysis = gr.Button('Analysis', variant='primary')
                 with gr.Column(scale=3):
@@ -90,7 +93,7 @@ def main():
                     areas_line,
                     areas_plot,
                     metadata,
-                    work_dir
+                    work_dir,
                 ],
             )
             slider.change(
@@ -103,7 +106,7 @@ def main():
                     transparency,
                 ],
                 outputs=img_show,
-                show_progress='hidden'
+                show_progress='hidden',
             )
             classes.change(
                 get_img_show,
@@ -115,7 +118,7 @@ def main():
                     transparency,
                 ],
                 outputs=img_show,
-                show_progress='hidden'
+                show_progress='hidden',
             )
             transparency.change(
                 get_img_show,
@@ -127,7 +130,7 @@ def main():
                     transparency,
                 ],
                 outputs=img_show,
-                show_progress='hidden'
+                show_progress='hidden',
             )
             classes_trace.change(
                 get_trace_area,
@@ -136,7 +139,7 @@ def main():
                     metadata,
                 ],
                 outputs=areas_line,
-                show_progress='hidden'
+                show_progress='hidden',
             )
             classes_plot.change(
                 get_plot_area,
@@ -145,7 +148,7 @@ def main():
                     metadata,
                 ],
                 outputs=areas_plot,
-                show_progress='hidden'
+                show_progress='hidden',
             )
         # with gr.Tab(label='Inference mode'):
         #     with gr.Row(variant='panel'):
