@@ -114,14 +114,19 @@ This project leverages optimized machine learning models to automate atheroscler
   - [x] Linux
   - [x] Windows (limited testing carried out)
 - Python 3.11.x
-- Required core libraries: [environment.yaml](environment.yaml)
+- UV package manager (recommended) or Conda (legacy)
+- FFmpeg for video processing
+- Required core libraries: [pyproject.toml](pyproject.toml) (UV) or [environment.yaml](environment.yaml) (Conda legacy)
 
 <a name="installation"></a>
 ## ⚙ Installation
 
-**Step 1: Install Miniconda**
+**Step 1: Install UV Package Manager**
 
-Installation guide: https://docs.conda.io/projects/miniconda/en/latest/index.html#quick-command-line-install
+UV is a fast Python package installer and resolver. Install it using pip:
+``` bash
+pip install uv
+```
 
 **Step 2: Clone the repository and change the current working directory**
 ``` bash
@@ -131,6 +136,29 @@ cd oct_segmentation
 
 **Step 3: Set up an environment and install the necessary packages**
 ``` bash
+chmod +x make_env_uv.sh
+./make_env_uv.sh
+```
+
+**Step 4: Install system dependencies**
+
+FFmpeg is required for video processing. Install it using your system package manager:
+
+- **Ubuntu/Debian:** `sudo apt-get install ffmpeg`
+- **macOS:** `brew install ffmpeg`  
+- **Windows:** Download from [https://ffmpeg.org/download.html](https://ffmpeg.org/download.html)
+
+**Step 5: Activate the environment**
+``` bash
+source .venv/bin/activate
+```
+
+### Alternative: Using the legacy Conda setup
+
+If you prefer to use Conda (legacy method), you can still use the original setup:
+
+``` bash
+# Install Miniconda first: https://docs.conda.io/projects/miniconda/en/latest/index.html#quick-command-line-install
 chmod +x make_env.sh
 ./make_env.sh
 ```

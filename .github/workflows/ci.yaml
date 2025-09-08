@@ -21,16 +21,19 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v3
 
-    - name: Setup Python
+    - name: Setup Python and UV
       uses: actions/setup-python@v4
       id: cache
       with:
         python-version: '3.11'
-        cache: 'pip'
+
+    - name: Install UV
+      run: |
+        pip install uv
 
     - name: Setup dependencies
       run: |
-        pip install pre-commit==3.5.0
+        uv pip install --system pre-commit==3.5.0
 
     - name: Linting
       run: |
