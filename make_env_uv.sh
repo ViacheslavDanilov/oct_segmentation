@@ -35,11 +35,6 @@ echo "   - On macOS: brew install ffmpeg"
 echo "   - On Windows: Download from https://ffmpeg.org/download.html"
 echo ""
 
-# Install ffmpeg-python separately (pip package)
-echo "Installing ffmpeg-python..."
-uv pip install ffmpeg-python==0.2.0
-
-echo ""
 echo "✅ Environment setup complete!"
 echo "To activate the environment in the future, run:"
 echo "   source .venv/bin/activate"
