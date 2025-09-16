@@ -1,6 +1,6 @@
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.14478209.svg)](https://doi.org/10.5281/zenodo.14478209)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.14481678.svg)](https://doi.org/10.5281/zenodo.14481678)
-[![DOI](http://img.shields.io/badge/DOI-TO.ADD.PAPER-B31B1B)](https://TO.BE.UPDATED.SOON)
+[![DOI](http://img.shields.io/badge/DOI-10.1016/j.compbiomed.2025.111061-B31B1B)](https://doi.org/10.1016/j.compbiomed.2025.111061)
 
 <h1 align="center">Segmentation and quantification of atherosclerotic plaques in OCT images</h1>
 <br>
@@ -153,7 +153,7 @@ All essential components of the study, including the curated source code, datase
 - **Models:** [https://doi.org/10.5281/zenodo.14481678](https://doi.org/10.5281/zenodo.14481678)
 
 <a name="how-to-cite"></a>
-## 🖊️ How to Cite - TO BE UPDATED ONCE THE PAPER IS PUBLISHED
-Please cite [OUR PAPER](https://TO.BE.UPDATED.SOON) if you found our data, methods, or results helpful for your research:
+## 🖊️ How to Cite
+Please cite [our paper](https://www.sciencedirect.com/science/article/pii/S0010482525014131) if you found our data, methods, or results helpful for your research:
 
-> Danilov V.V., Laptev V.V., Klyshnikov K.Yu., Ovcharenko E.A. (**2024**). _PAPER TITLE_. **Journal Title**. DOI: [TO.BE.UPDATED.SOON](TO.BE.UPDATED.SOON)
+> Danilov V.V., Laptev V.V., Klyshnikov K.Yu., Bessonov I.S., Litvinyuk N.V., Ovcharenko E.A., Kochergin N.A. (**2025**). _Segmentation and quantification of atherosclerotic plaques in optical coherence tomography_. **Computers in Biology and Medicine**, 197, 111061. DOI: [10.1016/j.compbiomed.2025.111061](https://doi.org/10.1016/j.compbiomed.2025.111061)
