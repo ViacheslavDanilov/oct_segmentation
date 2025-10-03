@@ -1,6 +1,17 @@
 [project]
 name = 'oct_segmentation'
 version = '0.0.1'
+dependencies = [
+    "gradio>=5.48.0",
+    "imagecodecs>=2025.8.2",
+    "opencv-python>=4.12.0.88",
+    "plotly>=6.3.0",
+    "pydicom>=3.0.1",
+    "scikit-image>=0.25.2",
+    "segmentation-models-pytorch>=0.5.0",
+    "tifffile>=2025.9.30",
+    "wandb>=0.22.1",
+]
 
 [tool.setuptools.packages]
 find = {}   # Scan the project directory with the default parameters
@@ -64,3 +75,6 @@ add_ignore = 'D100, D102, D103, D104, D105, D106, D107'
 install_types = true
 no_strict_optional = true
 ignore_missing_imports = true
+
+[tool.uv]
+package = true
