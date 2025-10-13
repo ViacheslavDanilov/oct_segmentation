@@ -1,3 +1,6 @@
+import random
+from glob import glob
+
 import gradio as gr
 
 from src.app.tools.analysis import get_analysis
@@ -6,9 +9,15 @@ from src.app.tools.plotly_analytics import get_plot_area, get_trace_area
 from src.data.utils import CLASS_IDS
 
 
+def random_patient_data():
+    return random.choice(
+        glob('data/app/demo/patients/*'),
+    )
+
+
 def main():
     with gr.Blocks(title='KCC OCT analysis', theme=gr.themes.Origin(), fill_height=True) as block:
-        work_dir = gr.State()
+        # work_dir = gr.State()
         gr.Markdown(
             """
             ## KCC: OCT analysis
@@ -19,8 +28,14 @@ def main():
                 with gr.Column(scale=1):
                     with gr.Row():
                         input_data = gr.File(
-                            value='data/app/demo/source/IMG001',
+                            value='data/app/demo/patients/001.npz',
                             label='Source file',
+                        )
+                    with gr.Row():
+                        random_patient = gr.Button('Случайный пациент')
+                        random_patient.click(
+                            fn=random_patient_data,
+                            outputs=input_data,
                         )
                     with gr.Row():
                         analysis = gr.Button('Analysis', variant='primary')
@@ -79,7 +94,8 @@ def main():
                                         value=[class_name for class_name in CLASS_IDS],
                                     )
                     with gr.Row(variant='panel'):
-                        metadata = gr.JSON(label='Metadata')
+                        metadata = gr.JSON(label='Metadata', visible=False)
+                        images = gr.Gallery(visible=False, type='pil', format='JPEG')
             analysis.click(
                 fn=get_analysis,
                 inputs=[input_data, gr.State('demo')],
@@ -93,14 +109,16 @@ def main():
                     areas_line,
                     areas_plot,
                     metadata,
-                    work_dir,
+                    images,
+                    # work_dir,
                 ],
             )
             slider.change(
                 get_img_show,
                 inputs=[
                     metadata,
-                    work_dir,
+                    images,
+                    # work_dir,
                     slider,
                     classes,
                     transparency,
@@ -112,7 +130,8 @@ def main():
                 get_img_show,
                 inputs=[
                     metadata,
-                    work_dir,
+                    images,
+                    # work_dir,
                     slider,
                     classes,
                     transparency,
@@ -124,7 +143,8 @@ def main():
                 get_img_show,
                 inputs=[
                     metadata,
-                    work_dir,
+                    images,
+                    # work_dir,
                     slider,
                     classes,
                     transparency,

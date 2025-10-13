@@ -1,16 +1,11 @@
 import base64
 import math
-import os
-import uuid
-from glob import glob
 from io import BytesIO
 from typing import Any, Dict, List, cast
 
 import cv2
 import gradio as gr
 import numpy as np
-import pydicom
-import tifffile
 from PIL import Image
 
 from src.app.tools.img_viewer import get_img_show
@@ -136,9 +131,13 @@ def get_analysis(
     progress=gr.Progress(),
 ):
     # TODO: inference model (dicom file analysis)
-    study = pydicom.dcmread(file)
-    dcm = study.pixel_array
-    slices = dcm.shape[0]
+    # study = pydicom.dcmread(file)
+    # dcm = study.pixel_array
+    # slices = dcm.shape[0]
+
+    study = np.load(file)['data']
+    slices = study.shape[0]
+
     # Typed storage for analysis results
     objects: Dict[str, Dict[str, List[Any]]] = {
         class_name: {
@@ -148,42 +147,46 @@ def get_analysis(
             'slice': [],
             'object_id': [],
             'masks': [],
-            'img_name': [],
+            # 'img_name': [],
         }
         for class_name in CLASS_IDS
     }
-    ratio: int = int(dcm.shape[1] * 150 // 1000)
+    ratio: int = int(study.shape[1] * 150 // 1000)
 
     data: Dict[str, Any] = {
         'ratio': ratio,
         'objects': objects,
-        'images': [],
+        # 'images': [],
     }
-    if inference_type == 'demo':
-        work_dir = 'data/app/demo'
-    else:
-        work_dir = f'data/app/temp/{uuid.uuid4()}'
-        # TODO: run inference to populate masks into work_dir/mask
-        for slice in progress.tqdm(range(slices), desc='Processing'):
-            img = dcm[slice]
-            img = cv2.normalize(
-                img,
-                None,
-                alpha=0,
-                beta=255,
-                norm_type=cv2.NORM_MINMAX,
-                dtype=cv2.CV_8U,
-            )
-            img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    # if inference_type == 'demo':
+    #     work_dir = 'data/app/demo'
+    # else:
+    #     work_dir = f'data/app/temp/{uuid.uuid4()}'
+    # TODO: run inference to populate masks into work_dir/mask
+    # for slice in progress.tqdm(study, desc='Processing'):
+    #     img = slice[:,:,:3]
+    # img = cv2.normalize(
+    #     img,
+    #     None,
+    #     alpha=0,
+    #     beta=255,
+    #     norm_type=cv2.NORM_MINMAX,
+    #     dtype=cv2.CV_8U,
+    # )
+    # img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
     # Collect masks (may be empty if inference is not run)
-    masks = sorted(glob(f'{work_dir}/mask/*.tiff'))
+    # masks = sorted(glob(f'{work_dir}/mask/*.tiff'))
 
     # Cast CLASS_IDS_REVERSED to a typed dict for mypy
     class_ids_reversed_typed = cast(Dict[int, str], CLASS_IDS_REVERSED)
+    images = []
 
-    for idx, mask_path in enumerate(masks):
-        mask: np.ndarray = tifffile.imread(mask_path)
+    for idx, slice in enumerate(progress.tqdm(study, desc='Processing')):
+        img = slice[:, :, :3]
+        images.append(Image.fromarray(np.array(img).astype('uint8')))
+        mask: np.ndarray = slice[:, :, 3:]
+        # data['images'].append(str(img.tolist()))
         for idy in class_ids_reversed_typed:
             class_name = class_ids_reversed_typed[idy]
             if np.unique(mask[:, :, idy - 1]).shape[0] == 2:
@@ -209,19 +212,20 @@ def get_analysis(
                 Image.fromarray(mask[:, :, idy - 1]).save(buff, format='png')
                 im_b64 = base64.b64encode(buff.getvalue()).decode('utf-8')
                 obj['masks'].append(im_b64)
-                obj['img_name'].append(os.path.basename(mask_path).split('.')[0])
-        data['images'].append(os.path.basename(mask_path).split('.')[0])
+                # obj['img_name'].append(os.path.basename(mask_path).split('.')[0])
+        # data['images'].append(os.path.basename(mask_path).split('.')[0])
     return (
         get_object_map(data),
-        gr.Slider(minimum=0, maximum=len(masks), value=0, visible=True, label='Номер кадра'),
+        gr.Slider(minimum=0, maximum=slices, value=0, visible=True, label='Номер кадра'),
         gr.Plot(
             visible=True,
             value=get_img_show(
                 img_num=0,
                 classes_vis=[class_name for class_name in CLASS_IDS],
-                img_dir=f'{work_dir}/img',
+                # img_dir=f'{work_dir}/img',
                 opacity=20,
                 data=data,
+                images=images,
             ),
         ),
         gr.Markdown(
@@ -245,6 +249,8 @@ def get_analysis(
         ),
         get_trace_area(classes=[class_name for class_name in CLASS_IDS], data=data),
         get_plot_area(classes=[class_name for class_name in CLASS_IDS], data=data),
-        gr.JSON(label='Metadata', value=data),
-        f'{work_dir}/img',
+        # gr.JSON(label='Metadata', value=data),
+        data,
+        images,
+        # f'{work_dir}/img',
     )
