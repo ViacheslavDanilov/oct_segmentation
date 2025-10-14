@@ -33,12 +33,12 @@ CLASS_MAP = {
 }
 
 CLASS_COLORS_RGB = {
-    class_name: tuple(class_info["color"])
+    class_name: tuple(class_info["color"])  # type: ignore[arg-type]
     for class_name, class_info in CLASS_MAP.items()  # type: ignore
 }
 
 CLASS_COLORS_BGR = {
-    class_name: tuple(class_info["color"][::-1])
+    class_name: tuple(class_info["color"][::-1])  # type: ignore[index, arg-type]
     for class_name, class_info in CLASS_MAP.items()  # type: ignore
 }
 

@@ -14,7 +14,7 @@ from src import PROJECT_DIR
 from src.models.smp.dataset import OCTDataModule
 from src.models.smp.model import OCTSegmentationModel
 
-ssl._create_default_https_context = ssl._create_unverified_context
+ssl._create_default_https_context = ssl._create_unverified_context  # type: ignore[assignment]
 
 log = logging.getLogger(__name__)
 log.setLevel(logging.INFO)

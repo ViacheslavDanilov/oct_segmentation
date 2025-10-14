@@ -116,12 +116,13 @@ def apply_circle_crop(
     """Crop an image with a circular region defined by the crop coordinates.
 
     Args:
-    - img: Input image (numpy array).
-    - crop: List containing the crop coordinates: [[x1, y1], [x2, y2]].
-    - background: Background value to fill the cropped area with. If a tuple, it specifies the background color for each channel.
+        img: Input image (numpy array).
+        crop: List containing the crop coordinates: [[x1, y1], [x2, y2]].
+        background: Background value to fill the cropped area with. If a tuple,
+            it specifies the background color for each channel.
 
     Returns:
-    - cropped_img: Cropped and masked image.
+        Cropped and masked image.
     """
     # Extract crop coordinates
     x1, y1 = crop[0]

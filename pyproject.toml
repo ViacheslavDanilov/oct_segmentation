@@ -88,3 +88,6 @@ ignore_missing_imports = true
 install_types = true
 no_strict_optional = true
 explicit_package_bases = true
+exclude = [
+    'src/models/smp/train.py',
+]
