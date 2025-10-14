@@ -1,3 +1,4 @@
+import os
 import random
 from glob import glob
 
@@ -9,40 +10,54 @@ from src.app.tools.plotly_analytics import get_plot_area, get_trace_area
 from src.data.utils import CLASS_IDS
 
 
+def get_patient_files():
+    """Get list of available patient files."""
+    patient_dir = "data/app/demo/patients"
+    files = sorted(glob(os.path.join(patient_dir, "*.npz")))
+    return files
+
+
 def random_patient_data():
-    return random.choice(
-        glob('data/app/demo/patients/*'),
-    )
+    """Select a random patient file."""
+    return random.choice(get_patient_files())
+
+
+def load_patient_file(patient_choice):
+    """Load the selected patient file."""
+    return patient_choice
 
 
 def main():
-    with gr.Blocks(title='KCC OCT analysis', theme=gr.themes.Origin(), fill_height=True) as block:
+    with gr.Blocks(title="KCC OCT analysis", theme=gr.themes.Origin(), fill_height=True) as block:
         # work_dir = gr.State()
         gr.Markdown(
             """
             ## KCC: OCT analysis
             """,
         )
-        with gr.Tab(label='UX test'):
-            with gr.Row(variant='panel'):
+        with gr.Tab(label="UX test"):
+            with gr.Row(variant="panel"):
                 with gr.Column(scale=1):
                     with gr.Row():
-                        input_data = gr.File(
-                            value='data/app/demo/patients/001.npz',
-                            label='Source file',
+                        patient_files = get_patient_files()
+                        input_data = gr.Dropdown(
+                            choices=patient_files,
+                            value="data/app/demo/patients/001.npz",
+                            label="Source file",
+                            interactive=True,
                         )
                     with gr.Row():
-                        random_patient = gr.Button('Случайный пациент')
+                        random_patient = gr.Button("Случайный пациент")
                         random_patient.click(
                             fn=random_patient_data,
                             outputs=input_data,
                         )
                     with gr.Row():
-                        analysis = gr.Button('Analysis', variant='primary')
+                        analysis = gr.Button("Analysis", variant="primary")
                 with gr.Column(scale=3):
                     graph = gr.Plot()
             with gr.Row():
-                with gr.Column(variant='panel'):
+                with gr.Column(variant="panel"):
                     with gr.Row():
                         slider = gr.Slider(visible=False)
                     with gr.Row():
@@ -61,7 +76,7 @@ def main():
                                     transparency = gr.Slider(
                                         visible=False,
                                     )
-                    with gr.Row(variant='panel'):
+                    with gr.Row(variant="panel"):
                         with gr.Column(scale=5):
                             areas_line = gr.Plot()
                         with gr.Column(scale=1):
@@ -73,11 +88,11 @@ def main():
                                 )
                                 with gr.Row():
                                     classes_trace = gr.Checkboxgroup(
-                                        label='Objects',
+                                        label="Objects",
                                         choices=[class_name for class_name in CLASS_IDS],
                                         value=[class_name for class_name in CLASS_IDS],
                                     )
-                    with gr.Row(variant='panel'):
+                    with gr.Row(variant="panel"):
                         with gr.Column(scale=5):
                             areas_plot = gr.Plot()
                         with gr.Column(scale=1):
@@ -89,16 +104,16 @@ def main():
                                 )
                                 with gr.Row():
                                     classes_plot = gr.Checkboxgroup(
-                                        label='Objects',
+                                        label="Objects",
                                         choices=[class_name for class_name in CLASS_IDS],
                                         value=[class_name for class_name in CLASS_IDS],
                                     )
-                    with gr.Row(variant='panel'):
-                        metadata = gr.JSON(label='Metadata', visible=False)
-                        images = gr.Gallery(visible=False, type='pil', format='JPEG')
+                    with gr.Row(variant="panel"):
+                        metadata = gr.JSON(label="Metadata", visible=False)
+                        images = gr.Gallery(visible=False, type="pil", format="JPEG")
             analysis.click(
                 fn=get_analysis,
-                inputs=[input_data, gr.State('demo')],
+                inputs=[input_data, gr.State("demo")],
                 outputs=[
                     graph,
                     slider,
@@ -124,7 +139,7 @@ def main():
                     transparency,
                 ],
                 outputs=img_show,
-                show_progress='hidden',
+                show_progress="hidden",
             )
             classes.change(
                 get_img_show,
@@ -137,7 +152,7 @@ def main():
                     transparency,
                 ],
                 outputs=img_show,
-                show_progress='hidden',
+                show_progress="hidden",
             )
             transparency.change(
                 get_img_show,
@@ -150,7 +165,7 @@ def main():
                     transparency,
                 ],
                 outputs=img_show,
-                show_progress='hidden',
+                show_progress="hidden",
             )
             classes_trace.change(
                 get_trace_area,
@@ -159,7 +174,7 @@ def main():
                     metadata,
                 ],
                 outputs=areas_line,
-                show_progress='hidden',
+                show_progress="hidden",
             )
             classes_plot.change(
                 get_plot_area,
@@ -168,7 +183,7 @@ def main():
                     metadata,
                 ],
                 outputs=areas_plot,
-                show_progress='hidden',
+                show_progress="hidden",
             )
         # with gr.Tab(label='Inference mode'):
         #     with gr.Row(variant='panel'):
@@ -199,12 +214,12 @@ def main():
         # )
 
     block.launch(
-        server_name='0.0.0.0',
+        server_name="0.0.0.0",
         server_port=7883,
-        favicon_path='data/app/logo.ico',
+        favicon_path="data/app/logo.ico",
         share=False,
     )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
