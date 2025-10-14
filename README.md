@@ -1,6 +1,6 @@
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.14478209.svg)](https://doi.org/10.5281/zenodo.14478209)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.14481678.svg)](https://doi.org/10.5281/zenodo.14481678)
-[![DOI](http://img.shields.io/badge/DOI-10.1016/j.compbiomed.2025.111061-B31B1B)](https://doi.org/10.1016/j.compbiomed.2025.111061)
+[![DOI](http://img.shields.io/badge/DOI-TO.ADD.PAPER-B31B1B)](https://TO.BE.UPDATED.SOON)
 
 <h1 align="center">Segmentation and quantification of atherosclerotic plaques in OCT images</h1>
 <br>
@@ -114,26 +114,44 @@ This project leverages optimized machine learning models to automate atheroscler
   - [x] Linux
   - [x] Windows (limited testing carried out)
 - Python 3.11.x
-- Required core libraries: [environment.yaml](environment.yaml)
+- Required core libraries: [pyproject.toml](pyproject.toml)
 
 <a name="installation"></a>
 ## ⚙ Installation
 
-**Step 1: Install Miniconda**
-
-Installation guide: https://docs.conda.io/projects/miniconda/en/latest/index.html#quick-command-line-install
-
-**Step 2: Clone the repository and change the current working directory**
+**Step 1: Clone the repository and change the current working directory**
 ``` bash
 git clone https://github.com/ViacheslavDanilov/oct_segmentation.git
 cd oct_segmentation
 ```
 
-**Step 3: Set up an environment and install the necessary packages**
-``` bash
-chmod +x make_env.sh
-./make_env.sh
+**Step 2: Install UV (Python package manager)**
+
+Choose the installation method for your operating system:
+
+**macOS/Linux:**
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
+
+**Windows (PowerShell):**
+```powershell
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+```
+
+**Alternative (pip):**
+```bash
+pip install uv
+```
+
+For more installation options, see: https://docs.astral.sh/uv/getting-started/installation/
+
+**Step 3: Set up environment and install dependencies**
+```bash
+uv sync
+```
+
+_Note: project dependencies are defined in the [pyproject.toml](pyproject.toml) file, while [uv.lock](uv.lock) is a cross-platform lockfile that contains exact, resolved versions of the project's dependencies. [uv.lock](uv.lock) is a human-readable TOML file but is managed by uv and should not be edited manually._
 
 <a name="how-to-run"></a>
 ## 🚀 How to Run
@@ -142,7 +160,7 @@ Specify the `data_dir` and `save_dir` parameters in the [predict.yaml](configs/p
 
 To run the pipeline, execute [predict.py](src/predict.py) from your IDE or command prompt with:
 ``` bash
-python src/predict.py
+uv run python src/predict.py
 ```
 
 <a name="data-access"></a>
@@ -153,7 +171,8 @@ All essential components of the study, including the curated source code, datase
 - **Models:** [https://doi.org/10.5281/zenodo.14481678](https://doi.org/10.5281/zenodo.14481678)
 
 <a name="how-to-cite"></a>
-## 🖊️ How to Cite
-Please cite [our paper](https://www.sciencedirect.com/science/article/pii/S0010482525014131) if you found our data, methods, or results helpful for your research:
+## 🖊️ How to Cite - TO BE UPDATED ONCE THE PAPER IS PUBLISHED
+Please cite [OUR PAPER](https://TO.BE.UPDATED.SOON) if you found our data, methods, or results helpful for your research:
 
-> Danilov V.V., Laptev V.V., Klyshnikov K.Yu., Bessonov I.S., Litvinyuk N.V., Ovcharenko E.A., Kochergin N.A. (**2025**). _Segmentation and quantification of atherosclerotic plaques in optical coherence tomography_. **Computers in Biology and Medicine**, 197, 111061. DOI: [10.1016/j.compbiomed.2025.111061](https://doi.org/10.1016/j.compbiomed.2025.111061)
+> Danilov V.V., Laptev V.V., Klyshnikov K.Yu., Ovcharenko E.A. (**2024**). _PAPER TITLE_. **Journal Title**. DOI: [TO.BE.UPDATED.SOON](TO.BE.UPDATED.SOON)
+

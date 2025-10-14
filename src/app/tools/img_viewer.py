@@ -12,16 +12,20 @@ from src.data.utils import CLASS_COLORS_RGB, CLASS_IDS_REVERSED
 
 def get_img_show(
     data,
-    img_dir: str,
+    images,
+    # img_dir: str,
     img_num: int = 0,
     classes_vis: List[str] = None,
     opacity: float = 20,
 ):
     opacity *= 0.01
     opacity = 1 - opacity
-    img = Image.open(
-        f"{img_dir}/{data['images'][img_num]}.png",
-    )
+    # img = Image.open(
+    #     f"{img_dir}/{data['images'][img_num]}.png",
+    # )
+    # img = Image.fromarray(np.array(data['images'][img_num], dtype='float32'))
+    # img = Image.fromarray(np.array(eval(data['images'][img_num])).astype(np.uint8))
+    img = images[img_num][0] if type(images[img_num]) is tuple else images[img_num]
     new_img = Image.new('RGB', (img.size[0] * 2, img.size[1]))
     color_mask = Image.new('RGB', size=img.size, color=(128, 128, 128))
     new_img.paste(img, (0, 0))
