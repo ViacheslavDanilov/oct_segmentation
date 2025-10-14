@@ -1,5 +1,4 @@
 import os
-import random
 from glob import glob
 
 import gradio as gr
@@ -17,25 +16,14 @@ def get_patient_files():
     return files
 
 
-def random_patient_data():
-    """Select a random patient file."""
-    return random.choice(get_patient_files())
-
-
-def load_patient_file(patient_choice):
-    """Load the selected patient file."""
-    return patient_choice
-
-
 def main():
-    with gr.Blocks(title="KCC OCT analysis", theme=gr.themes.Origin(), fill_height=True) as block:
-        # work_dir = gr.State()
+    with gr.Blocks(title="OCT Analysis", theme=gr.themes.Origin(), fill_height=True) as block:
         gr.Markdown(
             """
-            ## KCC: OCT analysis
+            ## Analysis of Optical Coherence Tomography
             """,
         )
-        with gr.Tab(label="UX test"):
+        with gr.Tab(label="Analysis mode"):
             with gr.Row(variant="panel"):
                 with gr.Column(scale=1):
                     with gr.Row():
@@ -47,15 +35,7 @@ def main():
                             interactive=True,
                         )
                     with gr.Row():
-                        random_patient = gr.Button("Случайный пациент")
-                        random_patient.click(
-                            fn=random_patient_data,
-                            outputs=input_data,
-                        )
-                    with gr.Row():
                         analysis = gr.Button("Analysis", variant="primary")
-                with gr.Column(scale=3):
-                    graph = gr.Plot()
             with gr.Row():
                 with gr.Column(variant="panel"):
                     with gr.Row():
@@ -115,7 +95,6 @@ def main():
                 fn=get_analysis,
                 inputs=[input_data, gr.State("demo")],
                 outputs=[
-                    graph,
                     slider,
                     img_show,
                     params_mark,
@@ -125,7 +104,6 @@ def main():
                     areas_plot,
                     metadata,
                     images,
-                    # work_dir,
                 ],
             )
             slider.change(
