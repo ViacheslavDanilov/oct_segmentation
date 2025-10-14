@@ -19,7 +19,7 @@ def get_metrics(
     tp, fp, fn, tn = smp.metrics.get_stats(
         pred_mask.long(),
         mask.long(),
-        mode='multilabel',
+        mode="multilabel",
     )
     iou = smp.metrics.iou_score(tp, fp, fn, tn, zero_division=eps)
     dice = 2 * iou.cpu().numpy() / (iou.cpu().numpy() + 1)
@@ -27,12 +27,12 @@ def get_metrics(
     precision = smp.metrics.precision(tp, fp, fn, tn, zero_division=eps)
     recall = smp.metrics.sensitivity(tp, fp, fn, tn, zero_division=eps)
     return {
-        'loss': loss.detach().cpu().numpy(),
-        'iou': iou.cpu().numpy(),
-        'dice': dice,
-        'recall': recall.cpu().numpy(),
-        'precision': precision.cpu().numpy(),
-        'f1': f1.cpu().numpy(),
+        "loss": loss.detach().cpu().numpy(),
+        "iou": iou.cpu().numpy(),
+        "dice": dice,
+        "recall": recall.cpu().numpy(),
+        "precision": precision.cpu().numpy(),
+        "f1": f1.cpu().numpy(),
     }
 
 
@@ -45,7 +45,7 @@ def save_metrics_on_epoch(
     best_metrics: dict = None,
 ) -> dict:
     header_w = False
-    if not os.path.exists(f'models/{model_name}/metrics.csv'):
+    if not os.path.exists(f"models/{model_name}/metrics.csv"):
         header_w = True
 
     metrics_name = metrics_epoch[0].keys()
@@ -73,48 +73,48 @@ def save_metrics_on_epoch(
                     )
 
     metrics_log = {
-        f'{split}/loss': metrics['loss'],
-        f'{split}/iou': metrics['iou'].mean(),
-        f'{split}/dice': metrics['dice'].mean(),
-        f'{split}/precision': metrics['precision'].mean(),
-        f'{split}/recall': metrics['recall'].mean(),
-        f'{split}/f1': metrics['f1'].mean(),
+        f"{split}/loss": metrics["loss"],
+        f"{split}/iou": metrics["iou"].mean(),
+        f"{split}/dice": metrics["dice"].mean(),
+        f"{split}/precision": metrics["precision"].mean(),
+        f"{split}/recall": metrics["recall"].mean(),
+        f"{split}/f1": metrics["f1"].mean(),
     }
 
     # best metrics
     if best_metrics is not None:
-        for metric_name in ['iou', 'dice', 'precision', 'recall']:
+        for metric_name in ["iou", "dice", "precision", "recall"]:
             if metric_name not in best_metrics:
                 best_metrics[metric_name] = {
-                    'value': metrics_log[f'{split}/{metric_name}'],
-                    'epoch': epoch,
+                    "value": metrics_log[f"{split}/{metric_name}"],
+                    "epoch": epoch,
                 }
-                wandb.run.summary[f'best_{metric_name}'] = metrics_log[f'{split}/{metric_name}']
-                wandb.run.summary[f'best_{metric_name}_epoch'] = epoch
+                wandb.run.summary[f"best_{metric_name}"] = metrics_log[f"{split}/{metric_name}"]
+                wandb.run.summary[f"best_{metric_name}_epoch"] = epoch
             else:
-                if metrics_log[f'{split}/{metric_name}'] > best_metrics[metric_name]['value']:
+                if metrics_log[f"{split}/{metric_name}"] > best_metrics[metric_name]["value"]:
                     best_metrics[metric_name] = {
-                        'value': metrics_log[f'{split}/{metric_name}'],
-                        'epoch': epoch,
+                        "value": metrics_log[f"{split}/{metric_name}"],
+                        "epoch": epoch,
                     }
-                    wandb.run.summary[f'best_{metric_name}'] = metrics_log[f'{split}/{metric_name}']
-                    wandb.run.summary[f'best_{metric_name}_epoch'] = epoch
+                    wandb.run.summary[f"best_{metric_name}"] = metrics_log[f"{split}/{metric_name}"]
+                    wandb.run.summary[f"best_{metric_name}_epoch"] = epoch
 
     metrics_l = metrics_log.copy()
-    metrics_l['epoch'] = epoch
+    metrics_l["epoch"] = epoch
     wandb.log(metrics_l, step=epoch)  # type: ignore
 
-    with open(f'models/{model_name}/metrics.csv', 'a', newline='') as f_object:
+    with open(f"models/{model_name}/metrics.csv", "a", newline="") as f_object:
         fieldnames = [
-            'Epoch',
-            'Loss',
-            'IoU',
-            'Dice',
-            'Precision',
-            'Recall',
-            'F1',
-            'Split',
-            'Class',
+            "Epoch",
+            "Loss",
+            "IoU",
+            "Dice",
+            "Precision",
+            "Recall",
+            "F1",
+            "Split",
+            "Class",
         ]
         writer = DictWriter(f_object, fieldnames=fieldnames)
         if header_w:
@@ -122,44 +122,44 @@ def save_metrics_on_epoch(
 
         for num, cl in enumerate(classes):
             for metric_name in [
-                'iou',
-                'dice',
-                'precision',
-                'recall',
-                'f1',
+                "iou",
+                "dice",
+                "precision",
+                "recall",
+                "f1",
             ]:
-                metrics_log[f'{split}/{metric_name} ({cl})'] = (
+                metrics_log[f"{split}/{metric_name} ({cl})"] = (
                     metrics[metric_name][num] if len(classes) > 1 else metrics[metric_name]
                 )
-                metrics_log[f'{metric_name} {split}/{cl}'] = (
+                metrics_log[f"{metric_name} {split}/{cl}"] = (
                     metrics[metric_name][num] if len(classes) > 1 else metrics[metric_name]
                 )
             writer.writerow(
                 {
-                    'Epoch': epoch,
-                    'Loss': metrics['loss'],
-                    'IoU': metrics['iou'][num] if len(classes) > 1 else metrics['iou'],
-                    'Dice': metrics['dice'][num] if len(classes) > 1 else metrics['dice'],
-                    'Precision': (
-                        metrics['precision'][num] if len(classes) > 1 else metrics['precision']
+                    "Epoch": epoch,
+                    "Loss": metrics["loss"],
+                    "IoU": metrics["iou"][num] if len(classes) > 1 else metrics["iou"],
+                    "Dice": metrics["dice"][num] if len(classes) > 1 else metrics["dice"],
+                    "Precision": (
+                        metrics["precision"][num] if len(classes) > 1 else metrics["precision"]
                     ),
-                    'Recall': metrics['recall'][num] if len(classes) > 1 else metrics['recall'],
-                    'F1': metrics['f1'][num] if len(classes) > 1 else metrics['f1'],
-                    'Split': split,
-                    'Class': cl,
+                    "Recall": metrics["recall"][num] if len(classes) > 1 else metrics["recall"],
+                    "F1": metrics["f1"][num] if len(classes) > 1 else metrics["f1"],
+                    "Split": split,
+                    "Class": cl,
                 },
             )
         writer.writerow(
             {
-                'Epoch': epoch,
-                'Loss': metrics['loss'],
-                'IoU': metrics['iou'].mean(),
-                'Dice': metrics['dice'].mean(),
-                'Precision': metrics['precision'].mean(),
-                'Recall': metrics['recall'].mean(),
-                'F1': metrics['f1'].mean(),
-                'Split': split,
-                'Class': 'Mean',
+                "Epoch": epoch,
+                "Loss": metrics["loss"],
+                "IoU": metrics["iou"].mean(),
+                "Dice": metrics["dice"].mean(),
+                "Precision": metrics["precision"].mean(),
+                "Recall": metrics["recall"].mean(),
+                "F1": metrics["f1"].mean(),
+                "Split": split,
+                "Class": "Mean",
             },
         )
         f_object.close()
@@ -190,9 +190,9 @@ def get_img_mask_union(
     color: Tuple[int, int, int],
 ) -> np.ndarray:
     return cv2.addWeighted(
-        np.array(img_0).astype('uint8'),
+        np.array(img_0).astype("uint8"),
         alpha_0,
-        (cv2.cvtColor(np.array(img_1).astype('uint8'), cv2.COLOR_GRAY2RGB) * color).astype(
+        (cv2.cvtColor(np.array(img_1).astype("uint8"), cv2.COLOR_GRAY2RGB) * color).astype(
             np.uint8,
         ),
         alpha_1,
@@ -208,8 +208,8 @@ def get_img_mask_union_pil(
 ):
     mask = mask * alpha
     mask = mask * 255
-    class_img = Image.new('RGB', size=img.size, color=color)
-    img.paste(class_img, (0, 0), Image.fromarray(mask.astype('uint8')))
+    class_img = Image.new("RGB", size=img.size, color=color)
+    img.paste(class_img, (0, 0), Image.fromarray(mask.astype("uint8")))
     return img
 
 
@@ -221,9 +221,9 @@ def get_img_color_mask(
     color: Tuple[int, int, int],
 ) -> np.ndarray:
     return cv2.addWeighted(
-        np.array(img_0).astype('uint8'),
+        np.array(img_0).astype("uint8"),
         alpha_0,
-        (cv2.cvtColor(np.array(img_1).astype('uint8'), cv2.COLOR_GRAY2BGR) * color).astype(
+        (cv2.cvtColor(np.array(img_1).astype("uint8"), cv2.COLOR_GRAY2BGR) * color).astype(
             np.uint8,
         ),
         alpha_1,
@@ -234,7 +234,7 @@ def get_img_color_mask(
 def to_tensor(
     x: np.ndarray,
 ) -> np.ndarray:
-    return x.transpose([2, 0, 1]).astype('float32')
+    return x.transpose([2, 0, 1]).astype("float32")
 
 
 def preprocessing_img(
@@ -258,9 +258,9 @@ def pick_device(
     Returns:
         str: Selected device.
     """
-    if option == 'auto':
-        return 'cuda' if torch.cuda.is_available() else 'cpu'
-    elif option in ['cpu', 'cuda']:
+    if option == "auto":
+        return "cuda" if torch.cuda.is_available() else "cpu"
+    elif option in ["cpu", "cuda"]:
         return option
     else:
         raise ValueError("Invalid device option. Please specify 'cpu', 'cuda', or 'auto'.")

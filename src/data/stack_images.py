@@ -29,7 +29,7 @@ def process_single_series(
 ):
     series_name = Path(series_dirs[0]).parts[-1]
     study_name = Path(series_dirs[0]).parts[-2]
-    if output_type == 'video':
+    if output_type == "video":
         save_dir_video = os.path.join(save_dir, study_name)
         os.makedirs(save_dir_video, exist_ok=True)
     else:
@@ -40,19 +40,19 @@ def process_single_series(
     for img_dir in series_dirs:
         img_list_ = get_file_list(
             src_dirs=img_dir,
-            ext_list='.png',
+            ext_list=".png",
         )
         img_list.append(img_list_)
 
     # Create video writer
-    if output_type == 'video':
+    if output_type == "video":
         video_path_temp = os.path.join(
             save_dir_video,
-            f'{study_name}_{series_name}_temp.mp4',
+            f"{study_name}_{series_name}_temp.mp4",
         )
         video = cv2.VideoWriter(
             video_path_temp,
-            cv2.VideoWriter_fourcc(*'mp4v'),
+            cv2.VideoWriter_fourcc(*"mp4v"),
             fps,
             (
                 len(img_list) * img_width,
@@ -70,38 +70,38 @@ def process_single_series(
             img_out = np.hstack([img_out, img])
         img_out = np.delete(img_out, 0, 1)
 
-        if output_type == 'image':
-            img_name = f'{study_name}_{series_name}_{slice + 1:03d}.png'
+        if output_type == "image":
+            img_name = f"{study_name}_{series_name}_{slice + 1:03d}.png"
             img_save_path = os.path.join(save_dir_img, img_name)
             cv2.imwrite(img_save_path, img_out)
-        elif output_type == 'video':
+        elif output_type == "video":
             video.write(img_out)
         else:
-            raise ValueError(f'Unknown output_type value: {output_type}')
+            raise ValueError(f"Unknown output_type value: {output_type}")
 
-    video.release() if output_type == 'video' else False
+    video.release() if output_type == "video" else False
 
     # Replace OpenCV videos with FFmpeg ones
-    if output_type == 'video':
-        video_path = os.path.join(save_dir_video, f'{study_name}_{series_name}.mp4')
+    if output_type == "video":
+        video_path = os.path.join(save_dir_video, f"{study_name}_{series_name}.mp4")
         stream = ffmpeg.input(video_path_temp)
-        stream = ffmpeg.output(stream, video_path, vcodec='libx264', video_bitrate='10M')
+        stream = ffmpeg.output(stream, video_path, vcodec="libx264", video_bitrate="10M")
         ffmpeg.run(stream, quiet=True, overwrite_output=True)
         os.remove(video_path_temp)
 
-    if output_type == 'video':
-        log.info(f'Series {study_name}/{series_name} converted and saved to {video_path}')
+    if output_type == "video":
+        log.info(f"Series {study_name}/{series_name} converted and saved to {video_path}")
     else:
-        log.info(f'Series {study_name}/{series_name} converted and saved to {save_dir_img}')
+        log.info(f"Series {study_name}/{series_name} converted and saved to {save_dir_img}")
 
 
 @hydra.main(
-    config_path=os.path.join(os.getcwd(), 'configs'),
-    config_name='stack_images',
+    config_path=os.path.join(os.getcwd(), "configs"),
+    config_name="stack_images",
     version_base=None,
 )
 def main(cfg: DictConfig) -> None:
-    log.info(f'Config:\n\n{OmegaConf.to_yaml(cfg)}')
+    log.info(f"Config:\n\n{OmegaConf.to_yaml(cfg)}")
 
     # Get list of RGB and grayscale studies
     study_list_rgb = get_dir_list(
@@ -110,7 +110,7 @@ def main(cfg: DictConfig) -> None:
         exclude_dirs=cfg.exclude_dirs,
     )
     series_dirs_ = [
-        glob(study_list_rgb[idx] + '*/', recursive=True) for idx in range(len(study_list_rgb))
+        glob(study_list_rgb[idx] + "*/", recursive=True) for idx in range(len(study_list_rgb))
     ]
     series_dirs_rgb: List[str] = sum(series_dirs_, [])
 
@@ -120,16 +120,16 @@ def main(cfg: DictConfig) -> None:
         exclude_dirs=cfg.exclude_dirs,
     )
     series_dirs_ = [
-        glob(study_list_gray[idx] + '*/', recursive=True) for idx in range(len(study_list_gray))
+        glob(study_list_gray[idx] + "*/", recursive=True) for idx in range(len(study_list_gray))
     ]
     series_dirs_gray: List[str] = sum(series_dirs_, [])
 
     # Get paired study list
-    assert len(study_list_rgb) == len(study_list_gray), 'Mismatch number of studies'
-    assert len(study_list_rgb) == len(study_list_gray), 'Mismatch number of series'
+    assert len(study_list_rgb) == len(study_list_gray), "Mismatch number of studies"
+    assert len(study_list_rgb) == len(study_list_gray), "Mismatch number of series"
     series_list = [[series_dirs_rgb[i], series_dirs_gray[i]] for i in range(len(series_dirs_rgb))]
 
-    Parallel(n_jobs=-1, backend='threading')(
+    Parallel(n_jobs=-1, backend="threading")(
         delayed(process_single_series)(
             series_dirs=series_dirs,
             img_height=cfg.output_size[0],
@@ -138,11 +138,11 @@ def main(cfg: DictConfig) -> None:
             fps=cfg.fps,
             save_dir=cfg.save_dir,
         )
-        for series_dirs in tqdm(series_list, desc='Stacking series', unit=' series')
+        for series_dirs in tqdm(series_list, desc="Stacking series", unit=" series")
     )
 
-    log.info('Complete')
+    log.info("Complete")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

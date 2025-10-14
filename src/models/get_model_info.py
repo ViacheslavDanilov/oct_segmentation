@@ -13,12 +13,12 @@ log.setLevel(logging.INFO)
 
 
 @hydra.main(
-    config_path=os.path.join(PROJECT_DIR, 'configs'),
-    config_name='get_model_info',
+    config_path=os.path.join(PROJECT_DIR, "configs"),
+    config_name="get_model_info",
     version_base=None,
 )
 def main(cfg: DictConfig) -> None:
-    log.info(f'Config:\n\n{OmegaConf.to_yaml(cfg)}')
+    log.info(f"Config:\n\n{OmegaConf.to_yaml(cfg)}")
 
     model = smp.create_model(
         arch=cfg.model_name,
@@ -35,9 +35,9 @@ def main(cfg: DictConfig) -> None:
         verbose=False,
         output_precision=1,
     )
-    log.info(f'Number of parameters: {params}')
-    log.info(f'Computational complexity: {flops}')
+    log.info(f"Number of parameters: {params}")
+    log.info(f"Computational complexity: {flops}")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

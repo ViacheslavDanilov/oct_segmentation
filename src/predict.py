@@ -21,10 +21,10 @@ log.setLevel(logging.INFO)
 
 # Model metadata
 MODELS_META = {
-    'Lumen': {'model_dir': 'LM', 'index': 0},
-    'Lipid core': {'model_dir': 'FC_LC', 'index': 0},
-    'Fibrous cap': {'model_dir': 'FC_LC', 'index': 1},
-    'Vasa vasorum': {'model_dir': 'VV', 'index': 0},
+    "Lumen": {"model_dir": "LM", "index": 0},
+    "Lipid core": {"model_dir": "FC_LC", "index": 0},
+    "Fibrous cap": {"model_dir": "FC_LC", "index": 1},
+    "Vasa vasorum": {"model_dir": "VV", "index": 0},
 }
 
 
@@ -33,18 +33,18 @@ def load_model(
     device: str,
 ) -> Tuple[OCTSegmentationModel, Dict]:
     """Load a segmentation model from checkpoint."""
-    with open(f'{model_dir}/config.json', 'r') as file:
+    with open(f"{model_dir}/config.json", "r") as file:
         model_cfg = json.load(file)
-    model_weights = f'{model_dir}/weights.ckpt'
+    model_weights = f"{model_dir}/weights.ckpt"
     model = OCTSegmentationModel.load_from_checkpoint(
         checkpoint_path=model_weights,
         encoder_weights=None,
-        arch=model_cfg['architecture'],
-        encoder_name=model_cfg['encoder'],
-        model_name=model_cfg['model_name'],
+        arch=model_cfg["architecture"],
+        encoder_name=model_cfg["encoder"],
+        model_name=model_cfg["model_name"],
         in_channels=3,
-        classes=model_cfg['classes'],
-        map_location='cuda:0' if device == 'cuda' else device,
+        classes=model_cfg["classes"],
+        map_location="cuda:0" if device == "cuda" else device,
     )
     model.eval()
     return model, model_cfg
@@ -69,7 +69,7 @@ def segment(
     """Perform segmentation for given images using specified models."""
     for class_name in classes:
         class_meta = MODELS_META[class_name]
-        model_dir = os.path.join(models_dir, str(class_meta['model_dir']))
+        model_dir = os.path.join(models_dir, str(class_meta["model_dir"]))
 
         # Load model once per class
         start_load = time.time()
@@ -79,14 +79,14 @@ def segment(
         )
 
         # Preprocess all images in one batch
-        processed_images = preprocess_images(images, model_cfg['input_size'])
+        processed_images = preprocess_images(images, model_cfg["input_size"])
 
         # Predict segmentation masks
         for i, (img, mask) in tqdm(
             enumerate(zip(processed_images, masks)),
             total=len(images),
-            desc=f'Segmentation of {class_name}',
-            unit='image',
+            desc=f"Segmentation of {class_name}",
+            unit="image",
         ):
             predict_mask = model.predict(images=np.array([img]), device=device)[0]
             resized_mask = cv2.resize(
@@ -95,20 +95,20 @@ def segment(
                 interpolation=cv2.INTER_NEAREST,
             )
             if resized_mask.ndim > 2:
-                resized_mask = resized_mask[:, :, class_meta['index']]
+                resized_mask = resized_mask[:, :, class_meta["index"]]
             class_idx = CLASS_IDS[class_name] - 1  # type: ignore
             mask[:, :, class_idx] = resized_mask
     return masks
 
 
 @hydra.main(
-    config_path=os.path.join(PROJECT_DIR, 'configs'),
-    config_name='predict',
+    config_path=os.path.join(PROJECT_DIR, "configs"),
+    config_name="predict",
     version_base=None,
 )
 def main(cfg: DictConfig) -> None:
     """Main function to perform histology image segmentation prediction."""
-    log.info(f'Config:\n\n{OmegaConf.to_yaml(cfg)}')
+    log.info(f"Config:\n\n{OmegaConf.to_yaml(cfg)}")
 
     # Setup paths and device
     device = pick_device(option=cfg.device)
@@ -123,7 +123,7 @@ def main(cfg: DictConfig) -> None:
         save_dir=save_dir,
         output_size=cfg.output_size,
     )
-    log.info(f'Number of images: {len(images_name)}')
+    log.info(f"Number of images: {len(images_name)}")
 
     # Perform inference
     start_inference = time.time()
@@ -135,7 +135,7 @@ def main(cfg: DictConfig) -> None:
         models_dir=models_dir,
         device=device,
     )
-    log.info(f'Prediction time: {time.time() - start_inference:.1f} s')
+    log.info(f"Prediction time: {time.time() - start_inference:.1f} s")
 
     # Save results
     save_results(
@@ -145,9 +145,9 @@ def main(cfg: DictConfig) -> None:
         classes=cfg.classes,
         save_dir=save_dir,
     )
-    log.info(f'Overall computation time: {time.time() - start:.1f} s')
-    log.info('Complete')
+    log.info(f"Overall computation time: {time.time() - start:.1f} s")
+    log.info("Complete")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
