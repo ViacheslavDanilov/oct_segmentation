@@ -114,26 +114,44 @@ This project leverages optimized machine learning models to automate atheroscler
   - [x] Linux
   - [x] Windows (limited testing carried out)
 - Python 3.11.x
-- Required core libraries: [environment.yaml](environment.yaml)
+- Required core libraries: [pyproject.toml](pyproject.toml)
 
 <a name="installation"></a>
 ## ⚙ Installation
 
-**Step 1: Install Miniconda**
-
-Installation guide: https://docs.conda.io/projects/miniconda/en/latest/index.html#quick-command-line-install
-
-**Step 2: Clone the repository and change the current working directory**
+**Step 1: Clone the repository and change the current working directory**
 ``` bash
 git clone https://github.com/ViacheslavDanilov/oct_segmentation.git
 cd oct_segmentation
 ```
 
-**Step 3: Set up an environment and install the necessary packages**
-``` bash
-chmod +x make_env.sh
-./make_env.sh
+**Step 2: Install UV (Python package manager)**
+
+Choose the installation method for your operating system:
+
+**macOS/Linux:**
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
+
+**Windows (PowerShell):**
+```powershell
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+```
+
+**Alternative (pip):**
+```bash
+pip install uv
+```
+
+For more installation options, see: https://docs.astral.sh/uv/getting-started/installation/
+
+**Step 3: Set up environment and install dependencies**
+```bash
+uv sync
+```
+
+_Note: project dependencies are defined in the [pyproject.toml](pyproject.toml) file, while [uv.lock](uv.lock) is a cross-platform lockfile that contains exact, resolved versions of the project's dependencies. [uv.lock](uv.lock) is a human-readable TOML file but is managed by uv and should not be edited manually._
 
 <a name="how-to-run"></a>
 ## 🚀 How to Run
@@ -142,7 +160,7 @@ Specify the `data_dir` and `save_dir` parameters in the [predict.yaml](configs/p
 
 To run the pipeline, execute [predict.py](src/predict.py) from your IDE or command prompt with:
 ``` bash
-python src/predict.py
+uv run python src/predict.py
 ```
 
 <a name="data-access"></a>
