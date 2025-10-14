@@ -1,11 +1,25 @@
 [project]
 name = 'oct_segmentation'
 version = '0.0.1'
-dependencies = [
+description = 'OCT segmentation using deep learning'
+readme = 'README.md'
+requires-python = ">=3.12, <3.13"
+dependencies = []
+
+[tool.uv]
+package = true
+default-groups = ["app", "dev"]
+
+[dependency-groups]
+app = [
+    # Web app dependencies
+]
+dev = [
     "gradio>=5.48.0",
     "imagecodecs>=2025.8.2",
     "opencv-python>=4.12.0.88",
     "plotly>=6.3.0",
+    "pre-commit>=4.3.0",
     "pydicom>=3.0.1",
     "scikit-image>=0.25.2",
     "segmentation-models-pytorch>=0.5.0",
@@ -14,12 +28,7 @@ dependencies = [
 ]
 
 [tool.setuptools.packages]
-find = {}   # Scan the project directory with the default parameters
-
-[tool.black]
-line_length = 100
-skip_string_normalization = true
-verbose = true
+find = {}
 
 [tool.pycln]
 all = true
@@ -34,7 +43,18 @@ ensure_newline_before_comments = true
 
 [tool.ruff]
 line-length = 100
-# Exclude a variety of commonly ignored directories
+
+[tool.ruff.format]
+docstring-code-format = true
+docstring-code-line-length = 'dynamic'
+quote-style = 'double'
+indent-style = 'space'
+skip-magic-trailing-comma = false
+
+[tool.ruff.lint]
+select = ['D']
+ignore = ['D100', 'D102', 'D103', 'D104', 'D105', 'D106', 'D107', 'D206', 'D300']
+dummy-variable-rgx = '^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$'
 exclude = [
     '.bzr',
     '.direnv',
@@ -50,8 +70,6 @@ exclude = [
     '.svn',
     '.tox',
     '.venv',
-    '__pypackages__',
-    '_build',
     'buck-out',
     'build',
     'dist',
@@ -59,22 +77,14 @@ exclude = [
     'venv',
 ]
 
-[tool.ruff.lint]
-select = ['E', 'F']
-ignore = ['E501']
-dummy-variable-rgx = '^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$'
-
 [tool.ruff.lint.mccabe]
-max-complexity = 10
+max-complexity = 5
 
-[tool.pydocstyle]
+[tool.ruff.lint.pydocstyle]
 convention = 'google'
-add_ignore = 'D100, D102, D103, D104, D105, D106, D107'
 
 [tool.mypy]
+ignore_missing_imports = true
 install_types = true
 no_strict_optional = true
-ignore_missing_imports = true
-
-[tool.uv]
-package = true
+explicit_package_bases = true
