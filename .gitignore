@@ -174,3 +174,6 @@ data/cv*/*.zip
 
 # W&B
 /wandb/
+
+# Ignore large demo assets
+data/app/demo/source/**
