@@ -38,7 +38,7 @@ Annotations were performed by cardiologists using [Supervisely](https://supervis
 </p>
 
 <p align="left">
-    <em><strong>Figure 1.</strong> Annotation methodology for optical coherence tomography images depicting plaque morphological features associated with atherosclerotic plaque development. The feature annotations delineated with segmentation masks include the lumen (pink), fibrous cap (blue), lipid core (blue), and vasa vasorum (red).</em>
+    <em><strong>Figure 1.</strong> Annotation methodology for optical coherence tomography images depicting plaque morphological features associated with atherosclerotic plaque development. The feature annotations delineated with segmentation masks include the lumen (pink), fibrous cap (blue), lipid core (green), and vasa vasorum (red).</em>
 </p>
 
 <a name="methods"></a>
