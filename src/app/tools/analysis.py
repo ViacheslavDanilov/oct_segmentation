@@ -266,7 +266,7 @@ def get_analysis(
         f'">'
         f'<div style="font-size: 22px; font-weight: 600; color: #E41EC7;">Lumen</div>'
         f'<div style="font-size: 48px; font-weight: 800; color: #2E86DE; margin: 8px 0;">{int(np.mean(data["objects"]["Lumen"]["area"]))} ± {int(np.std((data["objects"]["Lumen"]["area"])))} мкм</div>'
-        f'<div style="font-size: 16px; color: #666;">Средняя площадь</div>'
+        f'<div style="font-size: 16px; color: #666;">Площадь</div>'
         f"</div>"
         f"",
         f""
@@ -280,7 +280,8 @@ def get_analysis(
         f"box-shadow: 0 2px 5px rgba(0,0,0,0.05);"
         f'">'
         f'<div style="font-size: 22px; font-weight: 600; color: #7BABE2;">Fibrous cap</div>'
-        f'<div style="font-size: 48px; font-weight: 800; color: #2E86DE; margin: 8px 0;">{round(np.min(data["objects"]["Fibrous cap"]["thickness_mean"]), 2)} ± {round(np.std(data["objects"]["Fibrous cap"]["thickness_min"]), 2)} мкм</div>'
+        # f'<div style="font-size: 48px; font-weight: 800; color: #2E86DE; margin: 8px 0;">{round(np.min(data["objects"]["Fibrous cap"]["thickness_mean"]), 2)} ± {round(np.std(data["objects"]["Fibrous cap"]["thickness_min"]), 2)} мкм</div>'
+        f'<div style="font-size: 48px; font-weight: 800; color: #2E86DE; margin: 8px 0;">{round(np.min(data["objects"]["Fibrous cap"]["thickness_mean"]), 2)} мкм</div>'
         f'<div style="font-size: 16px; color: #666;">Минимальная толщина</div>'
         f"</div>"
         f"",
@@ -296,7 +297,8 @@ def get_analysis(
         f'">'
         f'<div style="font-size: 22px; font-weight: 600; color: #7BABE2;">Fibrous cap</div>'
         f'<div style="font-size: 48px; font-weight: 800; color: #2E86DE; margin: 8px 0;">{round(np.mean(data["objects"]["Fibrous cap"]["thickness_mean"]), 2)} ± {round(np.std(data["objects"]["Fibrous cap"]["thickness_mean"]), 2)} мкм</div>'
-        f'<div style="font-size: 16px; color: #666;">Минимальная толщина</div>'
+        # f'<div style="font-size: 48px; font-weight: 800; color: #2E86DE; margin: 8px 0;">{round(np.mean(data["objects"]["Fibrous cap"]["thickness_mean"]), 2)} мкм</div>'
+        f'<div style="font-size: 16px; color: #666;">Толщина</div>'
         f"</div>"
         f"",
         f""
