@@ -1,5 +1,6 @@
 import base64
 import math
+from collections import Counter
 from io import BytesIO
 from typing import Any, Dict, List, cast
 
@@ -214,6 +215,8 @@ def get_analysis(
                 obj["masks"].append(im_b64)
                 # obj['img_name'].append(os.path.basename(mask_path).split('.')[0])
         # data['images'].append(os.path.basename(mask_path).split('.')[0])
+    fc_count = Counter(data["objects"]["Fibrous cap"]["object_id"])
+    fc_unique_obj = [num for num, c in fc_count.items() if c >= 3]
     return (
         gr.Slider(minimum=0, maximum=slices, value=0, visible=True, label="Номер кадра"),
         gr.Plot(
@@ -251,5 +254,79 @@ def get_analysis(
         # gr.JSON(label='Metadata', value=data),
         data,
         images,
+        f""
+        f'<div style="'
+        f"border: 1px solid #ddd;"
+        f"border-radius: 12px;"
+        f"padding: 20px;"
+        f"width: 100%;"
+        f"height: 100%;"
+        f"text-align: center;"
+        f"box-shadow: 0 2px 5px rgba(0,0,0,0.05);"
+        f'">'
+        f'<div style="font-size: 22px; font-weight: 600; color: #E41EC7;">Lumen</div>'
+        f'<div style="font-size: 48px; font-weight: 800; color: #2E86DE; margin: 8px 0;">{int(np.mean(data["objects"]["Lumen"]["area"]))} ± {int(np.std((data["objects"]["Lumen"]["area"])))} мкм</div>'
+        f'<div style="font-size: 16px; color: #666;">Средняя площадь</div>'
+        f"</div>"
+        f"",
+        f""
+        f'<div style="'
+        f"border: 1px solid #ddd;"
+        f"border-radius: 12px;"
+        f"padding: 20px;"
+        f"width: 100%;"
+        f"height: 100%;"
+        f"text-align: center;"
+        f"box-shadow: 0 2px 5px rgba(0,0,0,0.05);"
+        f'">'
+        f'<div style="font-size: 22px; font-weight: 600; color: #7BABE2;">Fibrous cap</div>'
+        f'<div style="font-size: 48px; font-weight: 800; color: #2E86DE; margin: 8px 0;">{round(np.min(data["objects"]["Fibrous cap"]["thickness_mean"]), 2)} ± {round(np.std(data["objects"]["Fibrous cap"]["thickness_min"]), 2)} мкм</div>'
+        f'<div style="font-size: 16px; color: #666;">Минимальная толщина</div>'
+        f"</div>"
+        f"",
+        f""
+        f'<div style="'
+        f"border: 1px solid #ddd;"
+        f"border-radius: 12px;"
+        f"padding: 20px;"
+        f"width: 100%;"
+        f"height: 100%;"
+        f"text-align: center;"
+        f"box-shadow: 0 2px 5px rgba(0,0,0,0.05);"
+        f'">'
+        f'<div style="font-size: 22px; font-weight: 600; color: #7BABE2;">Fibrous cap</div>'
+        f'<div style="font-size: 48px; font-weight: 800; color: #2E86DE; margin: 8px 0;">{round(np.mean(data["objects"]["Fibrous cap"]["thickness_mean"]), 2)} ± {round(np.std(data["objects"]["Fibrous cap"]["thickness_mean"]), 2)} мкм</div>'
+        f'<div style="font-size: 16px; color: #666;">Минимальная толщина</div>'
+        f"</div>"
+        f"",
+        f""
+        f'<div style="'
+        f"border: 1px solid #ddd;"
+        f"border-radius: 12px;"
+        f"padding: 20px;"
+        f"width: 100%;"
+        f"height: 100%;"
+        f"text-align: center;"
+        f"box-shadow: 0 2px 5px rgba(0,0,0,0.05);"
+        f'">'
+        f'<div style="font-size: 22px; font-weight: 600; color: #7BABE2;">Fibrous cap</div>'
+        f'<div style="font-size: 48px; font-weight: 800; color: #2E86DE; margin: 8px 0;">{len(np.unique(fc_unique_obj))}</div>'
+        f'<div style="font-size: 16px; color: #666;">Количество объектов</div>'
+        f"</div>"
+        f"",
+        # f'<div style="text-align:center; font-size:48px; font-weight:bold; color:#2E86DE;">'
+        # f'{np.mean(data["objects"]["Lumen"]["area"])}<br><span style="font-size:20px; color:gray;">Lumen: Средняя площадь</span>'
+        # f'</div>'
+        # f'',
+        # f''
+        # f'<div style="text-align:center; font-size:48px; font-weight:bold; color:#2E86DE;">'
+        # f'{np.min(data['objects']['Fibrous cap']['thickness_mean'])}<br><span style="font-size:20px; color:gray;">Fibrous cap: Минимальная толщина</span>'
+        # f'</div>'
+        # f'',
+        # f''
+        # f'<div style="text-align:center; font-size:48px; font-weight:bold; color:#2E86DE;">'
+        # f'{len(data['objects']['Fibrous cap']['thickness_mean'])}<br><span style="font-size:20px; color:gray;">Fibrous cap: Количество объектов</span>'
+        # f'</div>'
+        # f'',
         # f'{work_dir}/img',
     )

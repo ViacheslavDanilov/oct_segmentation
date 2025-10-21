@@ -19,13 +19,23 @@ def main():
                 with gr.Column(scale=1):
                     with gr.Row():
                         input_data = gr.File(
-                            value="data/app/demo/source/IMG001",
+                            value="data/app/demo/patients/001.npz",
                             label="Source file",
                         )
                     with gr.Row():
                         analysis = gr.Button("Analysis", variant="primary")
                 with gr.Column(scale=3):
-                    graph = gr.Plot()
+                    with gr.Row():
+                        with gr.Column(scale=1):
+                            mean_area_lumen = gr.HTML()
+                        with gr.Column(scale=1):
+                            min_size_FC = gr.HTML()
+                        with gr.Column(scale=1):
+                            mean_size_FC = gr.HTML()
+                        with gr.Column(scale=1):
+                            counter_FC = gr.HTML()
+
+                #     graph = gr.Plot()
             with gr.Row():
                 with gr.Column(variant="panel"):
                     with gr.Row():
@@ -79,12 +89,13 @@ def main():
                                         value=[class_name for class_name in CLASS_IDS],
                                     )
                     with gr.Row(variant="panel"):
-                        metadata = gr.JSON(label="Metadata")
+                        metadata = gr.JSON(label="Metadata", visible=False)
+                        images_ = gr.Gallery(visible=False, type="pil")
             analysis.click(
                 fn=get_analysis,
                 inputs=[input_data, gr.State("demo")],
                 outputs=[
-                    graph,
+                    # graph,
                     slider,
                     img_show,
                     params_mark,
@@ -93,14 +104,19 @@ def main():
                     areas_line,
                     areas_plot,
                     metadata,
-                    work_dir,
+                    images_,
+                    mean_area_lumen,
+                    min_size_FC,
+                    mean_size_FC,
+                    counter_FC,
+                    # work_dir,
                 ],
             )
             slider.change(
                 get_img_show,
                 inputs=[
                     metadata,
-                    work_dir,
+                    images_,
                     slider,
                     classes,
                     transparency,
@@ -112,7 +128,8 @@ def main():
                 get_img_show,
                 inputs=[
                     metadata,
-                    work_dir,
+                    # work_dir,
+                    images_,
                     slider,
                     classes,
                     transparency,
@@ -124,7 +141,8 @@ def main():
                 get_img_show,
                 inputs=[
                     metadata,
-                    work_dir,
+                    # work_dir,
+                    images_,
                     slider,
                     classes,
                     transparency,
