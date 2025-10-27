@@ -17,25 +17,36 @@ def get_patient_files():
 
 
 def main():
-    with gr.Blocks(title="OCT Analysis", theme=gr.themes.Origin(), fill_height=True) as block:
+    with gr.Blocks(title="ОКТ Анализ", theme=gr.themes.Origin(), fill_height=True) as block:
         gr.Markdown(
             """
-            ## Analysis of Optical Coherence Tomography
+            ## Анализ оптической когерентной томографии
             """,
         )
-        with gr.Tab(label="Analysis mode"):
+        with gr.Tab(label="UX test"):
             with gr.Row(variant="panel"):
                 with gr.Column(scale=1):
                     with gr.Row():
-                        patient_files = get_patient_files()
                         input_data = gr.Dropdown(
-                            choices=patient_files,
+                            choices=get_patient_files(),
                             value="data/app/demo/patients/001.npz",
-                            label="Source file",
+                            label="Исходные данные",
                             interactive=True,
                         )
                     with gr.Row():
-                        analysis = gr.Button("Analysis", variant="primary")
+                        analysis = gr.Button("Анализ", variant="primary")
+                with gr.Column(scale=3):
+                    with gr.Row():
+                        with gr.Column(scale=1):
+                            mean_area_lumen = gr.HTML()
+                        with gr.Column(scale=1):
+                            min_size_FC = gr.HTML()
+                        with gr.Column(scale=1):
+                            mean_size_FC = gr.HTML()
+                        with gr.Column(scale=1):
+                            counter_FC = gr.HTML()
+
+                #     graph = gr.Plot()
             with gr.Row():
                 with gr.Column(variant="panel"):
                     with gr.Row():
@@ -63,12 +74,12 @@ def main():
                             with gr.Group():
                                 gr.Markdown(
                                     """
-                                      # Options
+                                      # Параметры
                                     """,
                                 )
                                 with gr.Row():
                                     classes_trace = gr.Checkboxgroup(
-                                        label="Objects",
+                                        label="Объекты",
                                         choices=[class_name for class_name in CLASS_IDS],
                                         value=[class_name for class_name in CLASS_IDS],
                                     )
@@ -79,18 +90,18 @@ def main():
                             with gr.Group():
                                 gr.Markdown(
                                     """
-                                      # Options
+                                      # Параметры
                                     """,
                                 )
                                 with gr.Row():
                                     classes_plot = gr.Checkboxgroup(
-                                        label="Objects",
+                                        label="Объекты",
                                         choices=[class_name for class_name in CLASS_IDS],
                                         value=[class_name for class_name in CLASS_IDS],
                                     )
                     with gr.Row(variant="panel"):
                         metadata = gr.JSON(label="Metadata", visible=False)
-                        images = gr.Gallery(visible=False, type="pil", format="JPEG")
+                        images_ = gr.Gallery(visible=False, type="pil")
             analysis.click(
                 fn=get_analysis,
                 inputs=[input_data, gr.State("demo")],
@@ -103,15 +114,18 @@ def main():
                     areas_line,
                     areas_plot,
                     metadata,
-                    images,
+                    images_,
+                    mean_area_lumen,
+                    min_size_FC,
+                    mean_size_FC,
+                    counter_FC,
                 ],
             )
             slider.change(
                 get_img_show,
                 inputs=[
                     metadata,
-                    images,
-                    # work_dir,
+                    images_,
                     slider,
                     classes,
                     transparency,
@@ -123,8 +137,7 @@ def main():
                 get_img_show,
                 inputs=[
                     metadata,
-                    images,
-                    # work_dir,
+                    images_,
                     slider,
                     classes,
                     transparency,
@@ -136,8 +149,7 @@ def main():
                 get_img_show,
                 inputs=[
                     metadata,
-                    images,
-                    # work_dir,
+                    images_,
                     slider,
                     classes,
                     transparency,
@@ -163,34 +175,6 @@ def main():
                 outputs=areas_plot,
                 show_progress="hidden",
             )
-        # with gr.Tab(label='Inference mode'):
-        #     with gr.Row(variant='panel'):
-        #         with gr.Column(scale=1):
-        #             with gr.Row():
-        #                 input_data = gr.File()
-        #             with gr.Row():
-        #                 analysis = gr.Button('Провести анализ', variant='primary')
-        #         with gr.Column(scale=3):
-        #             graph = gr.Plot()
-        #     with gr.Row():
-        #         slider = gr.Slider(minimum=0, maximum=len(os.listdir('data/demo_2/input')))
-        #     with gr.Row():
-        #         img_show = gr.Image()
-        #     # with gr.Row():
-        #
-        #     with gr.Row():
-        #         run = gr.Button()  # noqa: F841
-        #     slider.change(
-        #         get_img_show,
-        #         inputs=slider,
-        #         outputs=img_show,
-        #     )
-        # run.click(
-        #     get_analysis,
-        #     inputs=None,
-        #     outputs=graph,
-        # )
-
     block.launch(
         server_name="0.0.0.0",
         server_port=7883,

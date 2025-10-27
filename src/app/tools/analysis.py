@@ -126,16 +126,31 @@ def calculate_object_thickness(mask: np.ndarray) -> Dict[str, Any]:
     }
 
 
+def get_info_panel(name: str, value: str, description: str):
+    return (
+        f""
+        f'<div style="'
+        f"border: 1px solid #ddd;"
+        f"border-radius: 12px;"
+        f"padding: 20px;"
+        f"width: 100%;"
+        f"height: 100%;"
+        f"text-align: center;"
+        f"box-shadow: 0 2px 5px rgba(0,0,0,0.05);"
+        f'">'
+        f'<div style="font-size: 22px; font-weight: 600; color: #E41EC7;">{name}</div>'
+        f'<div style="font-size: 36px; font-weight: 700; color: #2E86DE; margin: 8px 0;">{value}</div>'
+        f'<div style="font-size: 16px; color: #666;">{description}</div>'
+        f"</div>"
+        f""
+    )
+
+
 def get_analysis(
     file,
     inference_type: str,
     progress=gr.Progress(),
 ):
-    # TODO: inference model (dicom file analysis)
-    # study = pydicom.dcmread(file)
-    # dcm = study.pixel_array
-    # slices = dcm.shape[0]
-
     study = np.load(file)["data"]
     slices = study.shape[0]
 
@@ -148,7 +163,6 @@ def get_analysis(
             "slice": [],
             "object_id": [],
             "masks": [],
-            # 'img_name': [],
         }
         for class_name in CLASS_IDS
     }
@@ -157,29 +171,8 @@ def get_analysis(
     data: Dict[str, Any] = {
         "ratio": ratio,
         "objects": objects,
-        # 'images': [],
     }
-    # if inference_type == 'demo':
-    #     work_dir = 'data/app/demo'
-    # else:
-    #     work_dir = f'data/app/temp/{uuid.uuid4()}'
-    # TODO: run inference to populate masks into work_dir/mask
-    # for slice in progress.tqdm(study, desc='Processing'):
-    #     img = slice[:,:,:3]
-    # img = cv2.normalize(
-    #     img,
-    #     None,
-    #     alpha=0,
-    #     beta=255,
-    #     norm_type=cv2.NORM_MINMAX,
-    #     dtype=cv2.CV_8U,
-    # )
-    # img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
-    # Collect masks (may be empty if inference is not run)
-    # masks = sorted(glob(f'{work_dir}/mask/*.tiff'))
-
-    # Cast CLASS_IDS_REVERSED to a typed dict for mypy
     class_ids_reversed_typed = cast(Dict[int, str], CLASS_IDS_REVERSED)
     images = []
 
@@ -187,7 +180,6 @@ def get_analysis(
         img = slice[:, :, :3]
         images.append(Image.fromarray(np.array(img).astype("uint8")))
         mask: np.ndarray = slice[:, :, 3:]
-        # data['images'].append(str(img.tolist()))
         for idy in class_ids_reversed_typed:
             class_name = class_ids_reversed_typed[idy]
             if np.unique(mask[:, :, idy - 1]).shape[0] == 2:
@@ -213,8 +205,6 @@ def get_analysis(
                 Image.fromarray(mask[:, :, idy - 1]).save(buff, format="png")
                 im_b64 = base64.b64encode(buff.getvalue()).decode("utf-8")
                 obj["masks"].append(im_b64)
-                # obj['img_name'].append(os.path.basename(mask_path).split('.')[0])
-        # data['images'].append(os.path.basename(mask_path).split('.')[0])
     fc_count = Counter(data["objects"]["Fibrous cap"]["object_id"])
     fc_unique_obj = [num for num, c in fc_count.items() if c >= 3]
     return (
@@ -224,7 +214,6 @@ def get_analysis(
             value=get_img_show(
                 img_num=0,
                 classes_vis=[class_name for class_name in CLASS_IDS],
-                # img_dir=f'{work_dir}/img',
                 opacity=20,
                 data=data,
                 images=images,
@@ -251,84 +240,26 @@ def get_analysis(
         ),
         get_trace_area(classes=[class_name for class_name in CLASS_IDS], data=data),
         get_plot_area(classes=[class_name for class_name in CLASS_IDS], data=data),
-        # gr.JSON(label='Metadata', value=data),
         data,
         images,
-        f""
-        f'<div style="'
-        f"border: 1px solid #ddd;"
-        f"border-radius: 12px;"
-        f"padding: 20px;"
-        f"width: 100%;"
-        f"height: 100%;"
-        f"text-align: center;"
-        f"box-shadow: 0 2px 5px rgba(0,0,0,0.05);"
-        f'">'
-        f'<div style="font-size: 22px; font-weight: 600; color: #E41EC7;">Lumen</div>'
-        f'<div style="font-size: 48px; font-weight: 800; color: #2E86DE; margin: 8px 0;">{int(np.mean(data["objects"]["Lumen"]["area"]))} ± {int(np.std((data["objects"]["Lumen"]["area"])))} мкм</div>'
-        f'<div style="font-size: 16px; color: #666;">Площадь</div>'
-        f"</div>"
-        f"",
-        f""
-        f'<div style="'
-        f"border: 1px solid #ddd;"
-        f"border-radius: 12px;"
-        f"padding: 20px;"
-        f"width: 100%;"
-        f"height: 100%;"
-        f"text-align: center;"
-        f"box-shadow: 0 2px 5px rgba(0,0,0,0.05);"
-        f'">'
-        f'<div style="font-size: 22px; font-weight: 600; color: #7BABE2;">Fibrous cap</div>'
-        # f'<div style="font-size: 48px; font-weight: 800; color: #2E86DE; margin: 8px 0;">{round(np.min(data["objects"]["Fibrous cap"]["thickness_mean"]), 2)} ± {round(np.std(data["objects"]["Fibrous cap"]["thickness_min"]), 2)} мкм</div>'
-        f'<div style="font-size: 48px; font-weight: 800; color: #2E86DE; margin: 8px 0;">{round(np.min(data["objects"]["Fibrous cap"]["thickness_mean"]), 2)} мкм</div>'
-        f'<div style="font-size: 16px; color: #666;">Минимальная толщина</div>'
-        f"</div>"
-        f"",
-        f""
-        f'<div style="'
-        f"border: 1px solid #ddd;"
-        f"border-radius: 12px;"
-        f"padding: 20px;"
-        f"width: 100%;"
-        f"height: 100%;"
-        f"text-align: center;"
-        f"box-shadow: 0 2px 5px rgba(0,0,0,0.05);"
-        f'">'
-        f'<div style="font-size: 22px; font-weight: 600; color: #7BABE2;">Fibrous cap</div>'
-        f'<div style="font-size: 48px; font-weight: 800; color: #2E86DE; margin: 8px 0;">{round(np.mean(data["objects"]["Fibrous cap"]["thickness_mean"]), 2)} ± {round(np.std(data["objects"]["Fibrous cap"]["thickness_mean"]), 2)} мкм</div>'
-        # f'<div style="font-size: 48px; font-weight: 800; color: #2E86DE; margin: 8px 0;">{round(np.mean(data["objects"]["Fibrous cap"]["thickness_mean"]), 2)} мкм</div>'
-        f'<div style="font-size: 16px; color: #666;">Толщина</div>'
-        f"</div>"
-        f"",
-        f""
-        f'<div style="'
-        f"border: 1px solid #ddd;"
-        f"border-radius: 12px;"
-        f"padding: 20px;"
-        f"width: 100%;"
-        f"height: 100%;"
-        f"text-align: center;"
-        f"box-shadow: 0 2px 5px rgba(0,0,0,0.05);"
-        f'">'
-        f'<div style="font-size: 22px; font-weight: 600; color: #7BABE2;">Fibrous cap</div>'
-        f'<div style="font-size: 48px; font-weight: 800; color: #2E86DE; margin: 8px 0;">{len(np.unique(fc_unique_obj))}</div>'
-        f'<div style="font-size: 16px; color: #666;">Количество объектов</div>'
-        f"</div>"
-        f"",
-        # f'<div style="text-align:center; font-size:48px; font-weight:bold; color:#2E86DE;">'
-        # f'{np.mean(data["objects"]["Lumen"]["area"])}<br><span style="font-size:20px; color:gray;">Lumen: Средняя площадь</span>'
-        # f'</div>'
-        # f'',
-        # f''
-        # f'<div style="text-align:center; font-size:48px; font-weight:bold; color:#2E86DE;">'
-        # f'{np.min(data['objects']['Fibrous cap']['thickness_mean'])}<br><span style="font-size:20px; color:gray;">Fibrous cap: Минимальная толщина</span>'
-        # f'</div>'
-        # f'',
-        # f''
-        # f'<div style="text-align:center; font-size:48px; font-weight:bold; color:#2E86DE;">'
-        # f'{len(data['objects']['Fibrous cap']['thickness_mean'])}<br><span style="font-size:20px; color:gray;">Fibrous cap: Количество объектов</span>'
-        # f'</div>'
-        # f'',
-        # f'{work_dir}/img',
+        get_info_panel(
+            "Lumen",
+            f"{int(np.mean(data['objects']['Lumen']['area']))} ± {int(np.std((data['objects']['Lumen']['area'])))} мкм",
+            "Площадь",
+        ),
+        get_info_panel(
+            "Fibrous cap",
+            f"{round(np.min(data['objects']['Fibrous cap']['thickness_mean']), 2)} мкм"
+            if len(data["objects"]["Fibrous cap"]["thickness_mean"]) > 0
+            else "-",
+            "Минимальная толщина",
+        ),
+        get_info_panel(
+            "Fibrous cap",
+            f"{round(np.mean(data['objects']['Fibrous cap']['thickness_mean']), 2)} ± {round(np.std(data['objects']['Fibrous cap']['thickness_mean']), 2)} мкм"
+            if len(data["objects"]["Fibrous cap"]["thickness_mean"]) > 0
+            else "-",
+            "Толщина",
+        ),
+        get_info_panel("Fibrous cap", f"{len(np.unique(fc_unique_obj))}", "Количество объектов"),
     )
