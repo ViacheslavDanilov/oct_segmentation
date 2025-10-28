@@ -26,7 +26,7 @@ def get_info_metric(name: str, value: str, description: str):
         border-radius: 16px;
         padding: 24px;
         text-align: center;
-        box-shadow: 0 8px 16px rgba(102, 126, 234, 0.3);
+        box-shadow: 0 4px 4px rgba(102, 126, 234, 0.2);
         height: 100%;
         color: white;
         transition: transform 0.3s ease;
@@ -54,7 +54,7 @@ def main():
     """Main Streamlit application."""
     # Page configuration
     st.set_page_config(
-        page_title="ОКТ Анализ",
+        page_title="OCT Analysis",
         page_icon="🔬",
         layout="wide",
         initial_sidebar_state="expanded",
@@ -121,7 +121,7 @@ def main():
         }
         .stPlotlyChart {
             border-radius: 16px;
-            box-shadow: 0 8px 16px rgba(102, 126, 234, 0.3);
+            box-shadow: 0 2px 16px rgba(102, 126, 234, 0.15);
             background: white;
             padding: 20px;
             border: 1px solid rgba(102, 126, 234, 0.2);
@@ -148,43 +148,43 @@ def main():
     initialize_session_state()
 
     # Header
-    st.markdown("# 🔬 Анализ оптической когерентной томографии")
+    st.markdown("# 🔬 Optical Coherence Tomography Analysis")
 
     # Sidebar for controls
     with st.sidebar:
-        st.markdown("## 🎛️ Панель управления")
+        st.markdown("## 🎛️ Control Panel")
         
         # Patient file selection
         patient_files = get_patient_files()
         if patient_files:
             selected_file = st.selectbox(
-                "📂 Исходные данные",
+                "📂 Patient Data",
                 options=patient_files,
                 index=0,
-                help="Выберите файл пациента для анализа",
+                help="Select patient file for analysis",
             )
         else:
-            st.error("❌ Файлы пациентов не найдены")
+            st.error("❌ Patient files not found")
             st.stop()
 
         st.markdown("---")
 
         # Analysis button
-        if st.button("🚀 Запустить анализ", use_container_width=True):
-            with st.spinner("🔄 Обработка данных... Пожалуйста, подождите"):
+        if st.button("🚀 Run Analysis", use_container_width=True):
+            with st.spinner("🔄 Processing data... Please wait"):
                 try:
                     # Run analysis
                     progress_bar = st.progress(0)
                     status_text = st.empty()
                     
                     # Load and process data
-                    status_text.text("Загрузка данных...")
+                    status_text.text("Loading data...")
                     progress_bar.progress(20)
                     
                     result = get_analysis(selected_file, "demo")
                     
                     progress_bar.progress(100)
-                    status_text.text("Анализ завершен!")
+                    status_text.text("Analysis complete!")
                     
                     # Store results in session state
                     st.session_state.slices = result[0].maximum
@@ -196,62 +196,62 @@ def main():
                     st.session_state.mean_size_fc = result[11]
                     st.session_state.counter_fc = result[12]
                     
-                    st.success("✅ Анализ успешно завершен!")
+                    st.success("✅ Analysis completed successfully!")
                     progress_bar.empty()
                     status_text.empty()
                     st.rerun()
                     
                 except Exception as e:
-                    st.error(f"❌ Ошибка при анализе: {str(e)}")
+                    st.error(f"❌ Analysis error: {str(e)}")
                     st.stop()
 
         st.markdown("---")
 
         # Visualization controls (only show after analysis)
         if st.session_state.analysis_done:
-            st.markdown("### 🎨 Параметры визуализации")
+            st.markdown("### 🎨 Visualization Settings")
             
             # Frame selector
             frame_num = st.slider(
-                "🎞️ Номер кадра",
+                "🎞️ Frame Number",
                 min_value=0,
                 max_value=st.session_state.slices,
                 value=0,
-                help="Выберите кадр для просмотра",
+                help="Select frame to view",
             )
             
             # Class selection
             selected_classes = st.multiselect(
-                "🎯 Объекты",
+                "🎯 Objects",
                 options=list(CLASS_IDS.keys()),
                 default=list(CLASS_IDS.keys()),
-                help="Выберите объекты для отображения",
+                help="Select objects to display",
             )
             
             # Transparency control
             transparency = st.slider(
-                "👁️ Прозрачность, %",
+                "👁️ Transparency, %",
                 min_value=0,
                 max_value=100,
                 value=20,
-                help="Настройте прозрачность масок",
+                help="Adjust mask transparency",
             )
             
             # Chart class selection
             st.markdown("---")
-            st.markdown("### 📊 Параметры графиков")
+            st.markdown("### 📊 Chart Settings")
             
             classes_for_charts = st.multiselect(
-                "📈 Объекты для графиков",
+                "📈 Objects for Charts",
                 options=list(CLASS_IDS.keys()),
                 default=list(CLASS_IDS.keys()),
-                help="Выберите объекты для отображения на графиках",
+                help="Select objects to display in charts",
             )
 
     # Main content area
     if st.session_state.analysis_done:
         # Metrics section
-        st.markdown("## 📊 Ключевые показатели")
+        st.markdown("## 📊 Key Metrics")
         col1, col2, col3, col4 = st.columns(4)
         
         with col1:
@@ -266,7 +266,7 @@ def main():
         st.markdown("---")
 
         # Image viewer section
-        st.markdown("## 🖼️ Визуализация изображения")
+        st.markdown("## 🖼️ Image Visualization")
         
         # Display image with masks
         if st.session_state.data and st.session_state.images:
@@ -285,7 +285,7 @@ def main():
         col_chart1, col_chart2 = st.columns(2, gap="medium")
         
         with col_chart1:
-            st.markdown("### 📈 Динамика площади")
+            st.markdown("### 📈 Area Dynamics")
             if st.session_state.data:
                 fig_trace = get_trace_area(
                     classes=classes_for_charts,
@@ -294,7 +294,7 @@ def main():
                 st.plotly_chart(fig_trace, use_container_width=True)
         
         with col_chart2:
-            st.markdown("### 📊 Распределение площади")
+            st.markdown("### 📊 Area Distribution")
             if st.session_state.data:
                 fig_box = get_plot_area(
                     classes=classes_for_charts,
@@ -316,16 +316,16 @@ def main():
                 margin: 40px 0;
             ">
                 <h2 style="color: white; font-size: 42px; margin-bottom: 20px;">
-                    👋 Добро пожаловать в систему анализа ОКТ
+                    👋 Welcome to OCT Analysis System
                 </h2>
                 <p style="font-size: 20px; opacity: 0.95; max-width: 700px; margin: 0 auto; line-height: 1.6;">
-                    Выберите файл пациента на боковой панели и нажмите <strong>"Запустить анализ"</strong>, 
-                    чтобы начать обработку данных оптической когерентной томографии.
+                    Select a patient file from the sidebar and click <strong>"Run Analysis"</strong> 
+                    to begin processing optical coherence tomography data.
                 </p>
                 <div style="margin-top: 40px; font-size: 16px; opacity: 0.9;">
-                    <p>🔬 Анализ тканевых структур</p>
-                    <p>📊 Детальная визуализация и статистика</p>
-                    <p>🎯 Высокоточная сегментация объектов</p>
+                    <p>🔬 Tissue structure analysis</p>
+                    <p>📊 Detailed visualization and statistics</p>
+                    <p>🎯 High-precision object segmentation</p>
                 </div>
             </div>
             """,
@@ -338,7 +338,7 @@ def main():
         """
         <div style="text-align: center; color: #666; padding: 20px;">
             <p style="margin: 0; font-size: 14px;">
-                🔬 Система анализа оптической когерентной томографии
+                🔬 Optical Coherence Tomography Analysis System | Powered by Streamlit
             </p>
         </div>
         """,

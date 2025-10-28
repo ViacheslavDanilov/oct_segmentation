@@ -244,22 +244,22 @@ def get_analysis(
         images,
         get_info_panel(
             "Lumen",
-            f"{int(np.mean(data['objects']['Lumen']['area']))} ± {int(np.std((data['objects']['Lumen']['area'])))} мкм",
-            "Площадь",
+            f"{int(np.mean(data['objects']['Lumen']['area']))} ± {int(np.std((data['objects']['Lumen']['area'])))} μm",
+            "Area",
         ),
         get_info_panel(
             "Fibrous cap",
-            f"{round(np.min(data['objects']['Fibrous cap']['thickness_mean']), 2)} мкм"
+            f"{round(np.min(data['objects']['Fibrous cap']['thickness_mean']), 2)} μm"
             if len(data["objects"]["Fibrous cap"]["thickness_mean"]) > 0
             else "-",
-            "Минимальная толщина",
+            "Minimum Thickness",
         ),
         get_info_panel(
             "Fibrous cap",
-            f"{round(np.mean(data['objects']['Fibrous cap']['thickness_mean']), 2)} ± {round(np.std(data['objects']['Fibrous cap']['thickness_mean']), 2)} мкм"
+            f"{round(np.mean(data['objects']['Fibrous cap']['thickness_mean']), 2)} ± {round(np.std(data['objects']['Fibrous cap']['thickness_mean']), 2)} μm"
             if len(data["objects"]["Fibrous cap"]["thickness_mean"]) > 0
             else "-",
-            "Толщина",
+            "Thickness",
         ),
-        get_info_panel("Fibrous cap", f"{len(np.unique(fc_unique_obj))}", "Количество объектов"),
+        get_info_panel("Fibrous cap", f"{len(np.unique(fc_unique_obj))}", "Number of Objects"),
     )
