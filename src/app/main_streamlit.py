@@ -1,8 +1,6 @@
-"""Streamlit application for OCT Analysis."""
 import os
 from glob import glob
 
-import numpy as np
 import streamlit as st
 
 from src.app.tools.analysis import get_analysis
@@ -153,7 +151,7 @@ def main():
     # Sidebar for controls
     with st.sidebar:
         st.markdown("## 🎛️ Control Panel")
-        
+
         # Patient file selection
         patient_files = get_patient_files()
         if patient_files:
@@ -176,16 +174,16 @@ def main():
                     # Run analysis
                     progress_bar = st.progress(0)
                     status_text = st.empty()
-                    
+
                     # Load and process data
                     status_text.text("Loading data...")
                     progress_bar.progress(20)
-                    
+
                     result = get_analysis(selected_file, "demo")
-                    
+
                     progress_bar.progress(100)
                     status_text.text("Analysis complete!")
-                    
+
                     # Store results in session state
                     st.session_state.slices = result[0].maximum
                     st.session_state.data = result[7]
@@ -195,12 +193,12 @@ def main():
                     st.session_state.min_size_fc = result[10]
                     st.session_state.mean_size_fc = result[11]
                     st.session_state.counter_fc = result[12]
-                    
+
                     st.success("✅ Analysis completed successfully!")
                     progress_bar.empty()
                     status_text.empty()
                     st.rerun()
-                    
+
                 except Exception as e:
                     st.error(f"❌ Analysis error: {str(e)}")
                     st.stop()
@@ -210,7 +208,7 @@ def main():
         # Visualization controls (only show after analysis)
         if st.session_state.analysis_done:
             st.markdown("### 🎨 Visualization Settings")
-            
+
             # Frame selector
             frame_num = st.slider(
                 "🎞️ Frame Number",
@@ -219,7 +217,7 @@ def main():
                 value=0,
                 help="Select frame to view",
             )
-            
+
             # Class selection
             selected_classes = st.multiselect(
                 "🎯 Objects",
@@ -227,7 +225,7 @@ def main():
                 default=list(CLASS_IDS.keys()),
                 help="Select objects to display",
             )
-            
+
             # Transparency control
             transparency = st.slider(
                 "👁️ Transparency, %",
@@ -236,11 +234,11 @@ def main():
                 value=20,
                 help="Adjust mask transparency",
             )
-            
+
             # Chart class selection
             st.markdown("---")
             st.markdown("### 📊 Chart Settings")
-            
+
             classes_for_charts = st.multiselect(
                 "📈 Objects for Charts",
                 options=list(CLASS_IDS.keys()),
@@ -253,7 +251,7 @@ def main():
         # Metrics section
         st.markdown("## 📊 Key Metrics")
         col1, col2, col3, col4 = st.columns(4)
-        
+
         with col1:
             st.markdown(st.session_state.mean_area_lumen, unsafe_allow_html=True)
         with col2:
@@ -267,7 +265,7 @@ def main():
 
         # Image viewer section
         st.markdown("## 🖼️ Image Visualization")
-        
+
         # Display image with masks
         if st.session_state.data and st.session_state.images:
             fig = get_img_show(
@@ -283,7 +281,7 @@ def main():
 
         # Charts section
         col_chart1, col_chart2 = st.columns(2, gap="medium")
-        
+
         with col_chart1:
             st.markdown("### 📈 Area Dynamics")
             if st.session_state.data:
@@ -292,7 +290,7 @@ def main():
                     data=st.session_state.data,
                 )
                 st.plotly_chart(fig_trace, use_container_width=True)
-        
+
         with col_chart2:
             st.markdown("### 📊 Area Distribution")
             if st.session_state.data:
@@ -319,7 +317,7 @@ def main():
                     👋 Welcome to OCT Analysis System
                 </h2>
                 <p style="font-size: 20px; opacity: 0.95; max-width: 700px; margin: 0 auto; line-height: 1.6;">
-                    Select a patient file from the sidebar and click <strong>"Run Analysis"</strong> 
+                    Select a patient file from the sidebar and click <strong>"Run Analysis"</strong>
                     to begin processing optical coherence tomography data.
                 </p>
                 <div style="margin-top: 40px; font-size: 16px; opacity: 0.9;">
