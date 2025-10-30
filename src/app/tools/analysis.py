@@ -126,7 +126,7 @@ def calculate_object_thickness(mask: np.ndarray) -> Dict[str, Any]:
     }
 
 
-def get_info_panel(name: str, value: str, description: str):
+def get_info_panel(name: str, value: str, description: str, color: str = "#E41EC7") -> str:
     return (
         f""
         f'<div style="'
@@ -138,7 +138,7 @@ def get_info_panel(name: str, value: str, description: str):
         f"text-align: center;"
         f"box-shadow: 0 2px 5px rgba(0,0,0,0.05);"
         f'">'
-        f'<div style="font-size: 22px; font-weight: 600; color: #E41EC7;">{name}</div>'
+        f'<div style="font-size: 22px; font-weight: 600; color: {color};">{name}</div>'
         f'<div style="font-size: 36px; font-weight: 700; color: #2E86DE; margin: 8px 0;">{value}</div>'
         f'<div style="font-size: 16px; color: #666;">{description}</div>'
         f"</div>"
@@ -245,21 +245,28 @@ def get_analysis(
         get_info_panel(
             "Lumen",
             f"{int(np.mean(data['objects']['Lumen']['area']))} ± {int(np.std((data['objects']['Lumen']['area'])))} μm",
-            "Area",
+            description="Area",
         ),
         get_info_panel(
             "Fibrous cap",
             f"{round(np.min(data['objects']['Fibrous cap']['thickness_mean']), 2)} μm"
             if len(data["objects"]["Fibrous cap"]["thickness_mean"]) > 0
             else "-",
-            "Minimum Thickness",
+            description="Minimum Thickness",
+            color="#7babe2",
         ),
         get_info_panel(
             "Fibrous cap",
             f"{round(np.mean(data['objects']['Fibrous cap']['thickness_mean']), 2)} ± {round(np.std(data['objects']['Fibrous cap']['thickness_mean']), 2)} μm"
             if len(data["objects"]["Fibrous cap"]["thickness_mean"]) > 0
             else "-",
-            "Thickness",
+            description="Thickness",
+            color="#7babe2",
         ),
-        get_info_panel("Fibrous cap", f"{len(np.unique(fc_unique_obj))}", "Number of Objects"),
+        get_info_panel(
+            "Fibrous cap",
+            f"{len(np.unique(fc_unique_obj))}",
+            description="Number of Objects",
+            color="#7babe2",
+        ),
     )
