@@ -325,48 +325,56 @@ def get_gpt_analysis(
         gpt_answer.choices[0].message.content.replace("json", "")
         gpt_answer = json.loads(gpt_answer.choices[0].message.content)
 
-        risk_classification_rus = None
+        risk_classification_eng = None
         match gpt_answer["risk_classification"]:
             case "low":
-                risk_classification_rus = "Низкий"
-                color = "#C8E6C9"
+                risk_classification_eng = "Low"
+                gradient = "linear-gradient(135deg, #27ae60 0%, #229954 100%)"
+                shadow_color = "rgba(39, 174, 96, 0.2)"
             case "medium":
-                risk_classification_rus = "Умеренный"
-                color = "#FFF9C4"
+                risk_classification_eng = "Medium"
+                gradient = "linear-gradient(135deg, #f39c12 0%, #e67e22 100%)"
+                shadow_color = "rgba(243, 156, 18, 0.2)"
             case _:
-                risk_classification_rus = "Высокий"
-                color = "#FFCDD2"
+                risk_classification_eng = "High"
+                gradient = "linear-gradient(135deg, #e74c3c 0%, #c0392b 100%)"
+                shadow_color = "rgba(231, 76, 60, 0.2)"
 
         info_panel = (
             f""
             f'<div style="'
-            f"border: 1px solid #ddd;"
-            f"border-radius: 12px;"
-            f"padding: 20px;"
-            f"width: 100%;"
-            f"height: 100%;"
+            f"background: {gradient};"
+            f"border-radius: 16px;"
+            f"padding: 24px;"
             f"text-align: center;"
-            f"box-shadow: 0 2px 5px rgba(0,0,0,0.05);"
+            f"box-shadow: 0 4px 4px {shadow_color};"
+            f"height: 100%;"
+            f"color: white;"
+            f"transition: transform 0.3s ease;"
             f'">'
-            f'<div style="font-size: 22px; font-weight: 600; color: {color};">Риск</div>'
-            f'<div style="font-size: 36px; font-weight: 700; color: {color}; margin: 8px 0;">{risk_classification_rus}</div>'
+            f'<div style="font-size: 16px; font-weight: 500; opacity: 0.95; margin-bottom: 8px;">Risk</div>'
+            f'<div style="font-size: 32px; font-weight: 700; margin: 12px 0; letter-spacing: -0.5px;">{risk_classification_eng}</div>'
             f"</div>"
             f""
         )
 
         return gpt_answer["description"], info_panel
-    except:
+    except Exception as e:
+        print(f"Error in get_gpt_analysis: {e}")
         info_panel = (
             f""
             f'<div style="'
-            f"border: 1px solid #ddd;"
-            f"border-radius: 12px;"
-            f"padding: 20px;"
-            f"width: 100%;"
-            f"height: 100%;"
+            f"background: linear-gradient(135deg, #95a5a6 0%, #7f8c8d 100%);"
+            f"border-radius: 16px;"
+            f"padding: 24px;"
             f"text-align: center;"
-            f"box-shadow: 0 2px 5px rgba(0,0,0,0.05);"
+            f"box-shadow: 0 4px 4px rgba(127, 140, 141, 0.2);"
+            f"height: 100%;"
+            f"color: white;"
             f'">'
+            f'<div style="font-size: 16px; font-weight: 500; opacity: 0.95; margin-bottom: 8px;">Risk</div>'
+            f'<div style="font-size: 32px; font-weight: 700; margin: 12px 0;">—</div>'
+            f'<div style="font-size: 14px; opacity: 0.9;">Unavailable</div>'
             f"</div>"
             f""
         )

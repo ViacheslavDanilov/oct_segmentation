@@ -3,7 +3,7 @@ from glob import glob
 
 import streamlit as st
 
-from src.app.tools.analysis import get_analysis
+from src.app.tools.analysis import get_analysis, get_gpt_analysis
 from src.app.tools.img_viewer import get_img_show
 from src.app.tools.plotly_analytics import get_plot_area, get_trace_area
 from src.data.utils import CLASS_IDS
@@ -46,6 +46,10 @@ def initialize_session_state():
         st.session_state.slices = 0
     if "analysis_done" not in st.session_state:
         st.session_state.analysis_done = False
+    if "analysis_summary" not in st.session_state:
+        st.session_state.analysis_summary = ""
+    if "risk_panel" not in st.session_state:
+        st.session_state.risk_panel = ""
 
 
 def main():
@@ -194,6 +198,15 @@ def main():
                     st.session_state.mean_size_fc = result[11]
                     st.session_state.counter_fc = result[12]
 
+                    try:
+                        summary, risk_panel = get_gpt_analysis(st.session_state.data)
+                        st.session_state.analysis_summary = summary
+                        st.session_state.risk_panel = risk_panel
+                    except Exception as err:  # pragma: no cover - defensive guard
+                        st.session_state.analysis_summary = ""
+                        st.session_state.risk_panel = ""
+                        st.warning(f"Risk analysis unavailable: {err}")
+
                     st.success("✅ Analysis completed successfully!")
                     progress_bar.empty()
                     status_text.empty()
@@ -248,6 +261,71 @@ def main():
 
     # Main content area
     if st.session_state.analysis_done:
+        st.markdown("## 🩺 Risk & Insight")
+        
+        # Create custom HTML/CSS for proper column spanning
+        risk_html = st.session_state.risk_panel if st.session_state.risk_panel else """
+            <div style="
+                background: linear-gradient(135deg, #95a5a6 0%, #7f8c8d 100%);
+                border-radius: 16px;
+                padding: 24px;
+                text-align: center;
+                box-shadow: 0 4px 4px rgba(127, 140, 141, 0.2);
+                height: 100%;
+                color: white;
+            ">
+                <div style="font-size: 16px; font-weight: 500; opacity: 0.95; margin-bottom: 8px;">Risk</div>
+                <div style="font-size: 32px; font-weight: 700; margin: 12px 0;">—</div>
+                <div style="font-size: 14px; opacity: 0.9;">Unavailable</div>
+            </div>
+        """
+        
+        if st.session_state.analysis_summary:
+            summary_html = f"""
+                <div style="
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    border-radius: 16px;
+                    padding: 24px;
+                    box-shadow: 0 4px 4px rgba(102, 126, 234, 0.2);
+                    height: 100%;
+                    color: white;
+                ">
+                    <div style="font-size: 16px; font-weight: 500; opacity: 0.95; margin-bottom: 12px;">Analysis Result</div>
+                    <div style="font-size: 14px; line-height: 1.6; opacity: 0.95; max-height: 180px; overflow-y: auto;">
+                        {st.session_state.analysis_summary}
+                    </div>
+                </div>
+            """
+        else:
+            summary_html = """
+                <div style="
+                    background: linear-gradient(135deg, #95a5a6 0%, #7f8c8d 100%);
+                    border-radius: 16px;
+                    padding: 24px;
+                    box-shadow: 0 4px 4px rgba(127, 140, 141, 0.2);
+                    height: 100%;
+                    color: white;
+                ">
+                    <div style="font-size: 16px; font-weight: 500; opacity: 0.95; margin-bottom: 12px;">Analysis Result</div>
+                    <div style="font-size: 14px; line-height: 1.6; opacity: 0.95;">
+                        Processing...
+                    </div>
+                </div>
+            """
+        
+        # Use CSS Grid to create the layout: 1 column for risk, 3 columns for summary
+        st.markdown(
+            f"""
+            <div style="display: grid; grid-template-columns: 1fr 3fr; gap: 16px; margin-bottom: 20px;">
+                <div>{risk_html}</div>
+                <div>{summary_html}</div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+        st.markdown("---")
+
         # Metrics section
         st.markdown("## 📊 Key Metrics")
         col1, col2, col3, col4 = st.columns(4)
