@@ -262,9 +262,12 @@ def main():
     # Main content area
     if st.session_state.analysis_done:
         st.markdown("## 🩺 Risk & Insight")
-        
+
         # Create custom HTML/CSS for proper column spanning
-        risk_html = st.session_state.risk_panel if st.session_state.risk_panel else """
+        risk_html = (
+            st.session_state.risk_panel
+            if st.session_state.risk_panel
+            else """
             <div style="
                 background: linear-gradient(135deg, #95a5a6 0%, #7f8c8d 100%);
                 border-radius: 16px;
@@ -279,7 +282,8 @@ def main():
                 <div style="font-size: 14px; opacity: 0.9;">Unavailable</div>
             </div>
         """
-        
+        )
+
         if st.session_state.analysis_summary:
             summary_html = f"""
                 <div style="
@@ -312,7 +316,7 @@ def main():
                     </div>
                 </div>
             """
-        
+
         # Use CSS Grid to create the layout: 1 column for risk, 3 columns for summary
         st.markdown(
             f"""
