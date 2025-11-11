@@ -4,7 +4,10 @@ version = '0.0.1'
 description = 'OCT segmentation using deep learning'
 readme = 'README.md'
 requires-python = ">=3.12, <3.13"
-dependencies = []
+dependencies = [
+    "gigachat>=0.1.42.post2",
+    "python-dotenv>=1.2.1",
+]
 
 [tool.uv]
 package = true

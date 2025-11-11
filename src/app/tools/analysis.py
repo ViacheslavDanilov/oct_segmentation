@@ -1,4 +1,5 @@
 import base64
+import json
 import math
 from collections import Counter
 from io import BytesIO
@@ -12,6 +13,7 @@ from PIL import Image
 from src.app.tools.img_viewer import get_img_show
 from src.app.tools.plotly_analytics import get_plot_area, get_trace_area
 from src.data.utils import CLASS_IDS, CLASS_IDS_REVERSED
+from src.giga_api.app import gigachat
 
 
 def calculate_thickness_contour(
@@ -257,7 +259,7 @@ def get_analysis(
         ),
         get_info_panel(
             "Fibrous cap",
-            f"{round(np.mean(data['objects']['Fibrous cap']['thickness_mean']), 2)} ± {round(np.std(data['objects']['Fibrous cap']['thickness_mean']), 2)} μm"
+            f"{round(np.mean(data['objects']['Fibrous cap']['thickness_mean']), 2)} ± {round(np.std(data['objects']['Fibrous cap']['thickness_min'] * 2), 2)} μm"
             if len(data["objects"]["Fibrous cap"]["thickness_mean"]) > 0
             else "-",
             description="Thickness",
@@ -270,3 +272,102 @@ def get_analysis(
             color="#7babe2",
         ),
     )
+
+
+def get_gpt_analysis(
+    data,
+) -> tuple[str, str]:
+    prompt = f"""
+        OCT images: {len(data["objects"]["Lumen"]["object_id"])}
+        Lumen: (
+            area: {np.mean(data["objects"]["Lumen"]["area"])} ± {np.std(data["objects"]["Lumen"]["area"])} μm,
+        )
+    """
+    if len(data["objects"]["Fibrous cap"]["thickness_mean"]) > 0:
+        count = Counter(data["objects"]["Fibrous cap"]["object_id"])
+        unique_obj = [num for num, c in count.items() if c >= 3]
+        prompt += f"""
+            , Fibrous cap: (
+                'minimum thickness': {np.mean(data["objects"]["Fibrous cap"]["thickness_min"])} μm,
+                'mean thickness': {np.mean(data["objects"]["Fibrous cap"]["thickness_mean"])} ± {np.std(data["objects"]["Fibrous cap"]["thickness_min"])} μm,
+                'number of objects': {len(np.unique(unique_obj))},
+                'median area': {np.median(data["objects"]["Fibrous cap"]["area"])} μm
+            )
+        """
+    if len(data["objects"]["Lipid core"]["thickness_mean"]) > 0:
+        count = Counter(data["objects"]["Lipid core"]["object_id"])
+        unique_obj = [num for num, c in count.items() if c >= 3]
+        prompt += f"""
+            , Lipid core: (
+                'mean thickness': {np.mean(data["objects"]["Lipid core"]["thickness_mean"])} μm,
+                'median area': {np.median(data["objects"]["Lipid core"]["area"])} μm,
+                'number of objects': {len(np.unique(unique_obj))},
+            )
+        """
+    if len(data["objects"]["Vasa vasorum"]["thickness_mean"]) > 0:
+        count = Counter(data["objects"]["Vasa vasorum"]["object_id"])
+        unique_obj = [num for num, c in count.items() if c >= 3]
+        prompt += f"""
+            Vasa vasorum: (
+                'median area': {np.median(data["objects"]["Vasa vasorum"]["area"])} μm
+                'number of objects': {len(np.unique(unique_obj))},
+            )
+        """
+
+    gpt_answer = gigachat.get_img_chat_message(
+        prompt=prompt,
+        image=None,
+    )
+    print(gpt_answer)
+    print(gpt_answer.choices[0].message.content)
+    try:
+        gpt_answer.choices[0].message.content.replace("```", "")
+        gpt_answer.choices[0].message.content.replace("json", "")
+        gpt_answer = json.loads(gpt_answer.choices[0].message.content)
+
+        risk_classification_rus = None
+        match gpt_answer["risk_classification"]:
+            case "low":
+                risk_classification_rus = "Низкий"
+                color = "#C8E6C9"
+            case "medium":
+                risk_classification_rus = "Умеренный"
+                color = "#FFF9C4"
+            case _:
+                risk_classification_rus = "Высокий"
+                color = "#FFCDD2"
+
+        info_panel = (
+            f""
+            f'<div style="'
+            f"border: 1px solid #ddd;"
+            f"border-radius: 12px;"
+            f"padding: 20px;"
+            f"width: 100%;"
+            f"height: 100%;"
+            f"text-align: center;"
+            f"box-shadow: 0 2px 5px rgba(0,0,0,0.05);"
+            f'">'
+            f'<div style="font-size: 22px; font-weight: 600; color: {color};">Риск</div>'
+            f'<div style="font-size: 36px; font-weight: 700; color: {color}; margin: 8px 0;">{risk_classification_rus}</div>'
+            f"</div>"
+            f""
+        )
+
+        return gpt_answer["description"], info_panel
+    except:
+        info_panel = (
+            f""
+            f'<div style="'
+            f"border: 1px solid #ddd;"
+            f"border-radius: 12px;"
+            f"padding: 20px;"
+            f"width: 100%;"
+            f"height: 100%;"
+            f"text-align: center;"
+            f"box-shadow: 0 2px 5px rgba(0,0,0,0.05);"
+            f'">'
+            f"</div>"
+            f""
+        )
+        return "", info_panel

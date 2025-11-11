@@ -3,7 +3,7 @@ from glob import glob
 
 import gradio as gr
 
-from src.app.tools.analysis import get_analysis
+from src.app.tools.analysis import get_analysis, get_gpt_analysis
 from src.app.tools.img_viewer import get_img_show
 from src.app.tools.plotly_analytics import get_plot_area, get_trace_area
 from src.data.utils import CLASS_IDS
@@ -39,14 +39,17 @@ def main():
                     with gr.Row():
                         with gr.Column(scale=1):
                             mean_area_lumen = gr.HTML()
-                        with gr.Column(scale=1):
-                            min_size_FC = gr.HTML()
+                        # with gr.Column(scale=1):
+                        #     min_size_FC = gr.HTML()
                         with gr.Column(scale=1):
                             mean_size_FC = gr.HTML()
                         with gr.Column(scale=1):
                             counter_FC = gr.HTML()
-
-                #     graph = gr.Plot()
+                        with gr.Column(scale=1):
+                            risc_classification = gr.HTML()
+            min_size_FC = gr.HTML(visible=False)
+            with gr.Row():
+                result_analysis_text = gr.Text(label="Результат анализа", lines=12)
             with gr.Row():
                 with gr.Column(variant="panel"):
                     with gr.Row():
@@ -174,6 +177,11 @@ def main():
                 ],
                 outputs=areas_plot,
                 show_progress="hidden",
+            )
+            metadata.change(
+                fn=get_gpt_analysis,
+                inputs=[metadata],
+                outputs=[result_analysis_text, risc_classification],
             )
     block.launch(
         server_name="0.0.0.0",
