@@ -43,6 +43,7 @@ dev = [
     "scikit-image>=0.25.2",
     "seaborn>=0.13.2",
     "segmentation-models-pytorch>=0.5.0",
+    "supervisely>=6.7.15",
     "tifffile>=2025.9.30",
     "tomli>=2.3.0",
     "torch==2.2.2",
