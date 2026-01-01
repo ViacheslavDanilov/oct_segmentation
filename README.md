@@ -15,6 +15,7 @@
 - [Requirements](#requirements)
 - [Installation](#installation)
 - [How to Run](#how-to-run)
+- [Web Application](#web-application)
 - [Data Access](#data-access)
 - [How to Cite](#how-to-cite)
 
@@ -162,6 +163,33 @@ To run the pipeline, execute [predict.py](src/predict.py) from your IDE or comma
 ``` bash
 uv run python src/predict.py
 ```
+
+<a name="web-application"></a>
+## 🌐 Web Application
+
+The project includes an interactive web application for visualizing and analyzing OCT segmentation results. Built with Streamlit, it provides a user-friendly interface for exploring patient data.
+
+<p align="center">
+  <img id="figure-5" width="100%" height="100%" src=".assets/ui.png" alt="Web Application Interface">
+</p>
+
+<p align="center">
+    <em><strong>Figure 5.</strong> Web application interface for OCT analysis with segmentation visualization and metrics.</em>
+</p>
+
+**Features:**
+- 📂 Patient data selection and loading
+- 🖼️ Interactive image viewer with adjustable transparency
+- 🎯 Multi-class segmentation overlay (Lumen, Fibrous Cap, Lipid Core, Vasa Vasorum)
+- 📊 Area dynamics and distribution charts
+- 🩺 AI-powered risk assessment and analysis summary
+
+**To launch the application:**
+``` bash
+uv run streamlit run src/app/main.py
+```
+
+The app will be available at `http://localhost:8501` in your browser.
 
 <a name="data-access"></a>
 ## 🔐 Data Access
