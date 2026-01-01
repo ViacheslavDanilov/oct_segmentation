@@ -171,7 +171,7 @@ All essential components of the study, including the curated source code, datase
 - **Models:** [https://doi.org/10.5281/zenodo.14481678](https://doi.org/10.5281/zenodo.14481678)
 
 <a name="how-to-cite"></a>
-## 🖊️ How to Cite - TO BE UPDATED ONCE THE PAPER IS PUBLISHED
+## 🖊️ How to Cite
 Please cite [our paper](https://doi.org/10.1016/j.compbiomed.2025.111061) if you found our data, methods, or results helpful for your research:
 
 > Danilov V.V., Laptev V.V., Klyshnikov K.Yu., Bessonov I.S., Litvinyuk N.V., Ovcharenko E.A., Kochergin N.A. (**2025**). _Segmentation and quantification of atherosclerotic plaques in optical coherence tomography_. **Computers in Biology and Medicine**, 197, 111061. DOI: [doi.org/10.1016/j.compbiomed.2025.111061](https://doi.org/10.1016/j.compbiomed.2025.111061)
