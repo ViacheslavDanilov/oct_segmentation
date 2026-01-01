@@ -23,7 +23,7 @@ class OCTDataModule(pl.LightningDataModule):
     def __init__(
         self,
         classes: List[str],
-        data_dir: str = 'data/cv/fold_1',
+        data_dir: str = "data/cv/fold_1",
         input_size: int = 512,
         batch_size: int = 2,
         num_workers: int = 2,
@@ -37,24 +37,24 @@ class OCTDataModule(pl.LightningDataModule):
         self.num_workers = num_workers
         self.use_augmentation = use_augmentation
 
-    def setup(self, stage: str = 'fit'):
-        if stage == 'fit':
+    def setup(self, stage: str = "fit"):
+        if stage == "fit":
             self.train_dataloader_set = OCTDataset(
                 input_size=self.input_size,
-                data_dir=f'{self.data_dir}/train',
+                data_dir=f"{self.data_dir}/train",
                 classes=self.classes,
                 use_augmentation=self.use_augmentation,
             )
             self.val_dataloader_set = OCTDataset(
                 input_size=self.input_size,
-                data_dir=f'{self.data_dir}/test',
+                data_dir=f"{self.data_dir}/test",
                 classes=self.classes,
                 use_augmentation=False,
             )
-        elif stage == 'test':
+        elif stage == "test":
             raise ValueError('The "test" method is not yet implemented')
         else:
-            raise ValueError(f'Unsupported stage value: {stage}')
+            raise ValueError(f"Unsupported stage value: {stage}")
 
     def train_dataloader(self):
         return DataLoader(
@@ -88,20 +88,20 @@ class OCTDataset(Dataset):
         self.input_size = input_size
         self.use_augmentation = use_augmentation
 
-        mask_paths = glob(os.path.join(data_dir, 'mask', '*.tiff'))
+        mask_paths = glob(os.path.join(data_dir, "mask", "*.tiff"))
         num_jobs = int(os.cpu_count() * 0.5)
         pair_list = Parallel(n_jobs=num_jobs)(
             delayed(self.verify_pairs)(
-                img_dir=os.path.join(data_dir, 'img'),
+                img_dir=os.path.join(data_dir, "img"),
                 mask_path=mask_path,
                 class_ids=self.class_ids,
             )
-            for mask_path in tqdm(mask_paths, desc='Check image-mask pairs')
+            for mask_path in tqdm(mask_paths, desc="Check image-mask pairs")
         )
         pair_list = [pair for pair in pair_list if pair is not None]
         if not pair_list:
-            raise ValueError('Warning: No correct data found')
-        print(f'Number of image-mask pairs: {len(pair_list)}')
+            raise ValueError("Warning: No correct data found")
+        print(f"Number of image-mask pairs: {len(pair_list)}")
 
         self.img_paths, self.mask_paths = zip(*pair_list)
 
@@ -114,13 +114,13 @@ class OCTDataset(Dataset):
         masks = []
         for class_id in self.class_ids:
             channel_id = class_id - 1  # type: ignore
-            masks.append(np.array(mask[:, :, channel_id], dtype='bool'))
-        mask = np.stack(masks, axis=-1).astype('float')
+            masks.append(np.array(mask[:, :, channel_id], dtype="bool"))
+        mask = np.stack(masks, axis=-1).astype("float")
 
         if self.use_augmentation:
             transform = self.get_img_augmentation(input_size=self.input_size)
             sample = transform(image=img, mask=mask)
-            img, mask = sample['image'], sample['mask']
+            img, mask = sample["image"], sample["mask"]
 
         img, mask = self.to_tensor_shape(img), self.to_tensor_shape(mask)
 
@@ -137,10 +137,10 @@ class OCTDataset(Dataset):
     ) -> Union[Tuple[str, str], None]:
         mask = tifffile.imread(mask_path)
         img_name = Path(mask_path).stem
-        img_path = os.path.join(img_dir, f'{img_name}.png')
+        img_path = os.path.join(img_dir, f"{img_name}.png")
 
         if not os.path.exists(img_path):
-            logging.warning(f'Image: {img_path} does not exist')
+            logging.warning(f"Image: {img_path} does not exist")
             return None
 
         for class_id in class_ids:
@@ -155,7 +155,7 @@ class OCTDataset(Dataset):
     def to_tensor_shape(
         x: np.ndarray,
     ) -> np.ndarray:
-        return x.transpose([2, 0, 1]).astype('float32')
+        return x.transpose([2, 0, 1]).astype("float32")
 
     @staticmethod
     def get_img_augmentation(
@@ -207,13 +207,13 @@ class OCTDataset(Dataset):
         return albu.Compose(transform)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     dataset = OCTDataset(
-        data_dir='data/cv_dev/fold_1/train',
-        classes=['Lumen', 'Fibrous cap', 'Lipid core', 'Vasa vasorum'],
+        data_dir="data/cv_dev/fold_1/train",
+        classes=["Lumen", "Fibrous cap", "Lipid core", "Vasa vasorum"],
         input_size=512,
         use_augmentation=False,
     )
     for idx in range(30):
         img, mask = dataset[idx]
-    print('Complete')
+    print("Complete")

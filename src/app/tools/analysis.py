@@ -1,21 +1,19 @@
 import base64
+import json
 import math
-import os
-import uuid
-from glob import glob
+from collections import Counter
 from io import BytesIO
 from typing import Any, Dict, List, cast
 
 import cv2
 import gradio as gr
 import numpy as np
-import pydicom
-import tifffile
 from PIL import Image
 
 from src.app.tools.img_viewer import get_img_show
-from src.app.tools.plotly_analytics import get_object_map, get_plot_area, get_trace_area
+from src.app.tools.plotly_analytics import get_plot_area, get_trace_area
 from src.data.utils import CLASS_IDS, CLASS_IDS_REVERSED
+from src.giga_api.app import gigachat
 
 
 def calculate_thickness_contour(
@@ -25,10 +23,10 @@ def calculate_thickness_contour(
     contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     if not contours:
         return {
-            'median': 0,
-            'min': 0,
-            'max': 0,
-            'all_measurements': [],
+            "median": 0,
+            "min": 0,
+            "max": 0,
+            "all_measurements": [],
         }
 
     # Берем самый большой контур
@@ -36,24 +34,24 @@ def calculate_thickness_contour(
 
     # Находим центр масс
     M = cv2.moments(contour)
-    if M['m00'] == 0:
+    if M["m00"] == 0:
         return {
-            'median': 0,
-            'min': 0,
-            'max': 0,
-            'all_measurements': [],
+            "median": 0,
+            "min": 0,
+            "max": 0,
+            "all_measurements": [],
         }
-    cx = int(M['m10'] / M['m00'])
-    cy = int(M['m01'] / M['m00'])
+    cx = int(M["m10"] / M["m00"])
+    cy = int(M["m01"] / M["m00"])
 
     # Рассчитываем расстояния от центра до всех точек контура
     distances = [np.sqrt((point[0][0] - cx) ** 2 + (point[0][1] - cy) ** 2) for point in contour]
 
     return {
-        'median': np.median(distances),
-        'min': np.min(distances),
-        'max': np.max(distances),
-        'all_measurements': distances,
+        "median": np.median(distances),
+        "min": np.min(distances),
+        "max": np.max(distances),
+        "all_measurements": distances,
     }
 
 
@@ -111,10 +109,10 @@ def calculate_object_thickness(mask: np.ndarray) -> Dict[str, Any]:
 
     if not radii:
         return {
-            'median': 0,
-            'min': 0,
-            'max': 0,
-            'all_measurements': [],
+            "median": 0,
+            "min": 0,
+            "max": 0,
+            "all_measurements": [],
         }
 
     # Рассчитываем статистику
@@ -123,11 +121,31 @@ def calculate_object_thickness(mask: np.ndarray) -> Dict[str, Any]:
     max_thickness = np.max(radii)
 
     return {
-        'median': median_thickness,
-        'min': min_thickness,
-        'max': max_thickness,
-        'all_measurements': radii,
+        "median": median_thickness,
+        "min": min_thickness,
+        "max": max_thickness,
+        "all_measurements": radii,
     }
+
+
+def get_info_panel(name: str, value: str, description: str, color: str = "#E41EC7") -> str:
+    return (
+        f""
+        f'<div style="'
+        f"border: 1px solid #ddd;"
+        f"border-radius: 12px;"
+        f"padding: 20px;"
+        f"width: 100%;"
+        f"height: 100%;"
+        f"text-align: center;"
+        f"box-shadow: 0 2px 5px rgba(0,0,0,0.05);"
+        f'">'
+        f'<div style="font-size: 22px; font-weight: 600; color: {color};">{name}</div>'
+        f'<div style="font-size: 36px; font-weight: 700; color: #2E86DE; margin: 8px 0;">{value}</div>'
+        f'<div style="font-size: 16px; color: #666;">{description}</div>'
+        f"</div>"
+        f""
+    )
 
 
 def get_analysis(
@@ -135,93 +153,72 @@ def get_analysis(
     inference_type: str,
     progress=gr.Progress(),
 ):
-    # TODO: inference model (dicom file analysis)
-    study = pydicom.dcmread(file)
-    dcm = study.pixel_array
-    slices = dcm.shape[0]
+    study = np.load(file)["data"]
+    slices = study.shape[0]
+
     # Typed storage for analysis results
     objects: Dict[str, Dict[str, List[Any]]] = {
         class_name: {
-            'area': [],
-            'thickness_mean': [],
-            'thickness_min': [],
-            'slice': [],
-            'object_id': [],
-            'masks': [],
-            'img_name': [],
+            "area": [],
+            "thickness_mean": [],
+            "thickness_min": [],
+            "slice": [],
+            "object_id": [],
+            "masks": [],
         }
         for class_name in CLASS_IDS
     }
-    ratio: int = int(dcm.shape[1] * 150 // 1000)
+    ratio: int = int(study.shape[1] * 150 // 1000)
 
     data: Dict[str, Any] = {
-        'ratio': ratio,
-        'objects': objects,
-        'images': [],
+        "ratio": ratio,
+        "objects": objects,
     }
-    if inference_type == 'demo':
-        work_dir = 'data/app/demo'
-    else:
-        work_dir = f'data/app/temp/{uuid.uuid4()}'
-        # TODO: run inference to populate masks into work_dir/mask
-        for slice in progress.tqdm(range(slices), desc='Processing'):
-            img = dcm[slice]
-            img = cv2.normalize(
-                img,
-                None,
-                alpha=0,
-                beta=255,
-                norm_type=cv2.NORM_MINMAX,
-                dtype=cv2.CV_8U,
-            )
-            img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
-    # Collect masks (may be empty if inference is not run)
-    masks = sorted(glob(f'{work_dir}/mask/*.tiff'))
-
-    # Cast CLASS_IDS_REVERSED to a typed dict for mypy
     class_ids_reversed_typed = cast(Dict[int, str], CLASS_IDS_REVERSED)
+    images = []
 
-    for idx, mask_path in enumerate(masks):
-        mask: np.ndarray = tifffile.imread(mask_path)
+    for idx, slice in enumerate(progress.tqdm(study, desc="Processing")):
+        img = slice[:, :, :3]
+        images.append(Image.fromarray(np.array(img).astype("uint8")))
+        mask: np.ndarray = slice[:, :, 3:]
         for idy in class_ids_reversed_typed:
             class_name = class_ids_reversed_typed[idy]
             if np.unique(mask[:, :, idy - 1]).shape[0] == 2:
                 obj = objects[class_name]
-                if len(obj['object_id']) == 0:
-                    obj['object_id'].append(0)
+                if len(obj["object_id"]) == 0:
+                    obj["object_id"].append(0)
                 else:
-                    if idx == obj['slice'][-1] + 1:
-                        obj['object_id'].append(obj['object_id'][-1])
+                    if idx == obj["slice"][-1] + 1:
+                        obj["object_id"].append(obj["object_id"][-1])
                     else:
-                        obj['object_id'].append(obj['object_id'][-1] + 1)
-                obj['slice'].append(idx)
+                        obj["object_id"].append(obj["object_id"][-1] + 1)
+                obj["slice"].append(idx)
                 area_idx = np.nonzero(mask[:, :, idy - 1])
                 area = pow(len(area_idx[0]) // ratio, 0.5)
-                obj['area'].append(area)
-                obj['thickness_mean'].append(
-                    calculate_thickness_contour(mask[:, :, idy - 1])['median'] / ratio,
+                obj["area"].append(area)
+                obj["thickness_mean"].append(
+                    calculate_thickness_contour(mask[:, :, idy - 1])["median"] / ratio,
                 )
-                obj['thickness_min'].append(
-                    calculate_thickness_contour(mask[:, :, idy - 1])['min'] / ratio,
+                obj["thickness_min"].append(
+                    calculate_thickness_contour(mask[:, :, idy - 1])["min"] / ratio,
                 )
                 buff = BytesIO()
-                Image.fromarray(mask[:, :, idy - 1]).save(buff, format='png')
-                im_b64 = base64.b64encode(buff.getvalue()).decode('utf-8')
-                obj['masks'].append(im_b64)
-                obj['img_name'].append(os.path.basename(mask_path).split('.')[0])
-        data['images'].append(os.path.basename(mask_path).split('.')[0])
+                Image.fromarray(mask[:, :, idy - 1]).save(buff, format="png")
+                im_b64 = base64.b64encode(buff.getvalue()).decode("utf-8")
+                obj["masks"].append(im_b64)
+    fc_count = Counter(data["objects"]["Fibrous cap"]["object_id"])
+    fc_unique_obj = [num for num, c in fc_count.items() if c >= 3]
     return (
-        get_object_map(data),
-        gr.Slider(minimum=0, maximum=len(masks), value=0, visible=True, label='Номер кадра'),
+        gr.Slider(minimum=0, maximum=slices, value=0, visible=True, label="Номер кадра"),
         gr.Plot(
             visible=True,
             value=get_img_show(
                 img_num=0,
                 classes_vis=[class_name for class_name in CLASS_IDS],
-                img_dir=f'{work_dir}/img',
                 opacity=20,
                 data=data,
+                images=images,
             ),
         ),
         gr.Markdown(
@@ -231,7 +228,7 @@ def get_analysis(
             visible=True,
         ),
         gr.Checkboxgroup(
-            label='Объекты',
+            label="Объекты",
             choices=[class_name for class_name in CLASS_IDS],
             value=[class_name for class_name in CLASS_IDS],
             visible=True,
@@ -240,11 +237,145 @@ def get_analysis(
             value=20,
             minimum=0,
             maximum=100,
-            label='Прозрачность, %',
+            label="Прозрачность, %",
             visible=True,
         ),
         get_trace_area(classes=[class_name for class_name in CLASS_IDS], data=data),
         get_plot_area(classes=[class_name for class_name in CLASS_IDS], data=data),
-        gr.JSON(label='Metadata', value=data),
-        f'{work_dir}/img',
+        data,
+        images,
+        get_info_panel(
+            "Lumen",
+            f"{int(np.mean(data['objects']['Lumen']['area']))} ± {int(np.std((data['objects']['Lumen']['area'])))} μm",
+            description="Area",
+        ),
+        get_info_panel(
+            "Fibrous cap",
+            f"{round(np.min(data['objects']['Fibrous cap']['thickness_mean']), 2)} μm"
+            if len(data["objects"]["Fibrous cap"]["thickness_mean"]) > 0
+            else "-",
+            description="Minimum Thickness",
+            color="#7babe2",
+        ),
+        get_info_panel(
+            "Fibrous cap",
+            f"{round(np.mean(data['objects']['Fibrous cap']['thickness_mean']), 2)} ± {round(np.std(data['objects']['Fibrous cap']['thickness_min'] * 2), 2)} μm"
+            if len(data["objects"]["Fibrous cap"]["thickness_mean"]) > 0
+            else "-",
+            description="Thickness",
+            color="#7babe2",
+        ),
+        get_info_panel(
+            "Fibrous cap",
+            f"{len(np.unique(fc_unique_obj))}",
+            description="Number of Objects",
+            color="#7babe2",
+        ),
     )
+
+
+def get_gpt_analysis(
+    data,
+) -> tuple[str, str]:
+    prompt = f"""
+        OCT images: {len(data["objects"]["Lumen"]["object_id"])}
+        Lumen: (
+            area: {np.mean(data["objects"]["Lumen"]["area"])} ± {np.std(data["objects"]["Lumen"]["area"])} μm,
+        )
+    """
+    if len(data["objects"]["Fibrous cap"]["thickness_mean"]) > 0:
+        count = Counter(data["objects"]["Fibrous cap"]["object_id"])
+        unique_obj = [num for num, c in count.items() if c >= 3]
+        prompt += f"""
+            , Fibrous cap: (
+                'minimum thickness': {np.mean(data["objects"]["Fibrous cap"]["thickness_min"])} μm,
+                'mean thickness': {np.mean(data["objects"]["Fibrous cap"]["thickness_mean"])} ± {np.std(data["objects"]["Fibrous cap"]["thickness_min"])} μm,
+                'number of objects': {len(np.unique(unique_obj))},
+                'median area': {np.median(data["objects"]["Fibrous cap"]["area"])} μm
+            )
+        """
+    if len(data["objects"]["Lipid core"]["thickness_mean"]) > 0:
+        count = Counter(data["objects"]["Lipid core"]["object_id"])
+        unique_obj = [num for num, c in count.items() if c >= 3]
+        prompt += f"""
+            , Lipid core: (
+                'mean thickness': {np.mean(data["objects"]["Lipid core"]["thickness_mean"])} μm,
+                'median area': {np.median(data["objects"]["Lipid core"]["area"])} μm,
+                'number of objects': {len(np.unique(unique_obj))},
+            )
+        """
+    if len(data["objects"]["Vasa vasorum"]["thickness_mean"]) > 0:
+        count = Counter(data["objects"]["Vasa vasorum"]["object_id"])
+        unique_obj = [num for num, c in count.items() if c >= 3]
+        prompt += f"""
+            Vasa vasorum: (
+                'median area': {np.median(data["objects"]["Vasa vasorum"]["area"])} μm
+                'number of objects': {len(np.unique(unique_obj))},
+            )
+        """
+
+    gpt_answer = gigachat.get_img_chat_message(
+        prompt=prompt,
+        image=None,
+    )
+    print(gpt_answer)
+    print(gpt_answer.choices[0].message.content)
+    try:
+        gpt_answer.choices[0].message.content.replace("```", "")
+        gpt_answer.choices[0].message.content.replace("json", "")
+        gpt_answer = json.loads(gpt_answer.choices[0].message.content)
+
+        risk_classification_eng = None
+        match gpt_answer["risk_classification"]:
+            case "low":
+                risk_classification_eng = "Low"
+                gradient = "linear-gradient(135deg, #27ae60 0%, #229954 100%)"
+                shadow_color = "rgba(39, 174, 96, 0.2)"
+            case "medium":
+                risk_classification_eng = "Medium"
+                gradient = "linear-gradient(135deg, #f39c12 0%, #e67e22 100%)"
+                shadow_color = "rgba(243, 156, 18, 0.2)"
+            case _:
+                risk_classification_eng = "High"
+                gradient = "linear-gradient(135deg, #e74c3c 0%, #c0392b 100%)"
+                shadow_color = "rgba(231, 76, 60, 0.2)"
+
+        info_panel = (
+            f""
+            f'<div style="'
+            f"background: {gradient};"
+            f"border-radius: 16px;"
+            f"padding: 24px;"
+            f"text-align: center;"
+            f"box-shadow: 0 4px 4px {shadow_color};"
+            f"height: 100%;"
+            f"color: white;"
+            f"transition: transform 0.3s ease;"
+            f'">'
+            f'<div style="font-size: 16px; font-weight: 500; opacity: 0.95; margin-bottom: 8px;">Risk</div>'
+            f'<div style="font-size: 32px; font-weight: 700; margin: 12px 0; letter-spacing: -0.5px;">{risk_classification_eng}</div>'
+            f"</div>"
+            f""
+        )
+
+        return gpt_answer["description"], info_panel
+    except Exception as e:
+        print(f"Error in get_gpt_analysis: {e}")
+        info_panel = (
+            f""
+            f'<div style="'
+            f"background: linear-gradient(135deg, #95a5a6 0%, #7f8c8d 100%);"
+            f"border-radius: 16px;"
+            f"padding: 24px;"
+            f"text-align: center;"
+            f"box-shadow: 0 4px 4px rgba(127, 140, 141, 0.2);"
+            f"height: 100%;"
+            f"color: white;"
+            f'">'
+            f'<div style="font-size: 16px; font-weight: 500; opacity: 0.95; margin-bottom: 8px;">Risk</div>'
+            f'<div style="font-size: 32px; font-weight: 700; margin: 12px 0;">—</div>'
+            f'<div style="font-size: 14px; opacity: 0.9;">Unavailable</div>'
+            f"</div>"
+            f""
+        )
+        return "", info_panel

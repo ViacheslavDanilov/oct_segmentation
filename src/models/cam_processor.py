@@ -37,22 +37,22 @@ class CAMProcessor:
     """
 
     CAM_METHODS = {
-        'GradCAM': GradCAM,
-        'HiResCAM': HiResCAM,
-        'GradCAMElementWise': GradCAMElementWise,
-        'GradCAMPlusPlus': GradCAMPlusPlus,
-        'XGradCAM': XGradCAM,
-        'AblationCAM': AblationCAM,
-        'EigenCAM': EigenCAM,
-        'EigenGradCAM': EigenGradCAM,
-        'LayerCAM': LayerCAM,
+        "GradCAM": GradCAM,
+        "HiResCAM": HiResCAM,
+        "GradCAMElementWise": GradCAMElementWise,
+        "GradCAMPlusPlus": GradCAMPlusPlus,
+        "XGradCAM": XGradCAM,
+        "AblationCAM": AblationCAM,
+        "EigenCAM": EigenCAM,
+        "EigenGradCAM": EigenGradCAM,
+        "LayerCAM": LayerCAM,
     }
 
     def __init__(
         self,
         model,
-        device: str = 'cpu',
-        cam_method: str = 'GradCAM',
+        device: str = "cpu",
+        cam_method: str = "GradCAM",
         target_layers: List = None,
     ) -> None:
         self.model = model
@@ -62,14 +62,14 @@ class CAMProcessor:
 
     def _get_cam_method(self, cam_method):
         if cam_method not in self.CAM_METHODS:
-            raise ValueError(f'Invalid CAM method: {cam_method}')
+            raise ValueError(f"Invalid CAM method: {cam_method}")
         return self.CAM_METHODS[cam_method]
 
     def _preprocess_image(
         self,
         image: np.ndarray,
     ) -> torch.Tensor:
-        image = image.transpose([2, 0, 1]).astype('float32')
+        image = image.transpose([2, 0, 1]).astype("float32")
         input_tensor = torch.Tensor(image).to(self.device)
         return input_tensor
 
@@ -103,7 +103,7 @@ class CAMProcessor:
         mask: np.ndarray,
         image_weight: float = 0.5,
     ) -> np.ndarray:
-        img = (image / 255).astype('float32')
+        img = (image / 255).astype("float32")
         fused_img = show_cam_on_image(
             img=img,
             mask=mask,

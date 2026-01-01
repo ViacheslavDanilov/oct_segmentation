@@ -25,12 +25,12 @@ def merge_metric_dataframes(
 
 
 @hydra.main(
-    config_path=os.path.join(PROJECT_DIR, 'configs'),
-    config_name='draw_loss_plot',
+    config_path=os.path.join(PROJECT_DIR, "configs"),
+    config_name="draw_loss_plot",
     version_base=None,
 )
 def main(cfg: DictConfig) -> None:
-    log.info(f'Config:\n\n{OmegaConf.to_yaml(cfg)}')
+    log.info(f"Config:\n\n{OmegaConf.to_yaml(cfg)}")
 
     # Define absolute paths
     class_dir = str(os.path.join(PROJECT_DIR, cfg.class_dir))
@@ -40,51 +40,51 @@ def main(cfg: DictConfig) -> None:
     # Merge metric dataframes
     csv_paths = get_file_list(
         src_dirs=class_dir,
-        ext_list='.csv',
-        filename_template='metrics',
+        ext_list=".csv",
+        filename_template="metrics",
     )
     df_metrics = merge_metric_dataframes(csv_paths=csv_paths)
 
     # Get class dataframe
     class_name = os.path.basename(class_dir)
-    df_filt = df_metrics[df_metrics['Class'] == class_name]
+    df_filt = df_metrics[df_metrics["Class"] == class_name]
 
     # Plot
-    sns.set(style='whitegrid')
+    sns.set(style="whitegrid")
     plt.figure(figsize=(12, 10))
 
     # Customize color palette
-    palette = sns.color_palette('bright', 2)
+    palette = sns.color_palette("bright", 2)
 
     # Draw line plots with confidence intervals
-    train_metric = 'DSC' if cfg.train_metric == 'Dice' else cfg.train_metric
-    test_metric = 'DSC' if cfg.test_metric == 'Dice' else cfg.test_metric
+    train_metric = "DSC" if cfg.train_metric == "Dice" else cfg.train_metric
+    test_metric = "DSC" if cfg.test_metric == "Dice" else cfg.test_metric
     sns.lineplot(
-        data=df_filt[df_filt['Split'] == 'train'],
-        x='Epoch',
+        data=df_filt[df_filt["Split"] == "train"],
+        x="Epoch",
         y=cfg.train_metric,
         color=palette[0],
         linewidth=3.0,
-        label=f'{train_metric} (Train)',
-        err_style='band',
-        errorbar=('ci', 95),
+        label=f"{train_metric} (Train)",
+        err_style="band",
+        errorbar=("ci", 95),
     )
     sns.lineplot(
-        data=df_filt[df_filt['Split'] == 'test'],
-        x='Epoch',
+        data=df_filt[df_filt["Split"] == "test"],
+        x="Epoch",
         y=cfg.test_metric,
         color=palette[1],
         linewidth=3.0,
-        label=f'{test_metric} (Test)',
-        err_style='band',
-        errorbar=('ci', 95),
+        label=f"{test_metric} (Test)",
+        err_style="band",
+        errorbar=("ci", 95),
     )
 
-    plt.xlabel('Epoch', fontsize=36)
-    plt.ylabel('Metric Value', fontsize=36)
+    plt.xlabel("Epoch", fontsize=36)
+    plt.ylabel("Metric Value", fontsize=36)
     plt.xticks(np.arange(0, 176, 25), fontsize=30)
     plt.yticks(np.arange(0, 1.2, 0.2), fontsize=30)
-    plt.legend(fontsize=26, loc='upper right')
+    plt.legend(fontsize=26, loc="upper right")
     plt.grid(True)
 
     # Set coordinate axis limits
@@ -95,14 +95,14 @@ def main(cfg: DictConfig) -> None:
     # Save plot
     save_path = os.path.join(
         save_dir,
-        f'{cfg.train_metric}_{cfg.test_metric}_{class_name.replace(" ", "_")}.png',
+        f"{cfg.train_metric}_{cfg.test_metric}_{class_name.replace(' ', '_')}.png",
     )
     plt.savefig(save_path, dpi=600)
     plt.show()
-    log.info(f'{class_name} plot saved')
+    log.info(f"{class_name} plot saved")
 
-    log.info('Complete')
+    log.info("Complete")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

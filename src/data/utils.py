@@ -14,33 +14,35 @@ from tqdm import tqdm
 from src.models.smp.utils import get_img_mask_union_pil
 
 CLASS_MAP = {
-    'Lumen': {
-        'id': 1,
-        'color': [228, 30, 199],
+    "Lumen": {
+        "id": 1,
+        "color": [228, 30, 199],
     },
-    'Fibrous cap': {
-        'id': 2,
-        'color': [123, 171, 226],
+    "Fibrous cap": {
+        "id": 2,
+        "color": [123, 171, 226],
     },
-    'Lipid core': {
-        'id': 3,
-        'color': [125, 227, 127],
+    "Lipid core": {
+        "id": 3,
+        "color": [125, 227, 127],
     },
-    'Vasa vasorum': {
-        'id': 4,
-        'color': [208, 2, 27],
+    "Vasa vasorum": {
+        "id": 4,
+        "color": [208, 2, 27],
     },
 }
 
 CLASS_COLORS_RGB = {
-    class_name: tuple(class_info['color']) for class_name, class_info in CLASS_MAP.items()  # type: ignore
+    class_name: tuple(class_info["color"])  # type: ignore[arg-type]
+    for class_name, class_info in CLASS_MAP.items()  # type: ignore
 }
 
 CLASS_COLORS_BGR = {
-    class_name: tuple(class_info['color'][::-1]) for class_name, class_info in CLASS_MAP.items()  # type: ignore
+    class_name: tuple(class_info["color"][::-1])  # type: ignore[index, arg-type]
+    for class_name, class_info in CLASS_MAP.items()  # type: ignore
 }
 
-CLASS_IDS = {class_name: class_info['id'] for class_name, class_info in CLASS_MAP.items()}
+CLASS_IDS = {class_name: class_info["id"] for class_name, class_info in CLASS_MAP.items()}
 
 CLASS_IDS_REVERSED = dict((v, k) for k, v in CLASS_IDS.items())
 
@@ -48,7 +50,7 @@ CLASS_IDS_REVERSED = dict((v, k) for k, v in CLASS_IDS.items())
 def get_file_list(
     src_dirs: Union[List[str], str],
     ext_list: Union[List[str], str],
-    filename_template: str = '',
+    filename_template: str = "",
 ) -> List[str]:
     """Get a list of files in the specified directory with specific extensions.
 
@@ -80,17 +82,17 @@ def get_dir_list(
     exclude_dirs: List[str],
 ) -> List[str]:
     dir_list = []
-    _dir_list = glob(data_dir + '/*/')
+    _dir_list = glob(data_dir + "/*/")
     for series_dir in _dir_list:
         if include_dirs and Path(series_dir).name not in include_dirs:
             logging.info(
-                f'Skip {Path(series_dir).name} because it is not in the included_dirs list',
+                f"Skip {Path(series_dir).name} because it is not in the included_dirs list",
             )
             continue
 
         if exclude_dirs and Path(series_dir).name in exclude_dirs:
             logging.info(
-                f'Skip {Path(series_dir).name} because it is in the excluded_dirs list',
+                f"Skip {Path(series_dir).name} because it is in the excluded_dirs list",
             )
             continue
 
@@ -124,7 +126,7 @@ def get_series_name(
     dcm_path: str,
 ) -> str:
     dcm_name = Path(dcm_path).name
-    series_name_ = dcm_name.replace('IMG', '')
+    series_name_ = dcm_name.replace("IMG", "")
     series_name = str(int(series_name_))
     return series_name
 
@@ -152,7 +154,7 @@ def convert_base64_to_numpy(
     elif len(img_decoded.shape) == 2:
         mask = img_decoded.astype(bool)  # flat 2D mask
     else:
-        raise RuntimeError('Wrong internal mask format')
+        raise RuntimeError("Wrong internal mask format")
     return mask
 
 
@@ -175,20 +177,20 @@ def data_processing(
     if os.path.isfile(data_path):
         images_path = [data_path]
     else:
-        images_path = glob(f'{data_path}/*.[pj][np][ge]*')
+        images_path = glob(f"{data_path}/*.[pj][np][ge]*")
 
     images, masks, image_names = [], [], []
     for img_path in tqdm(
         images_path,
         total=len(images_path),
-        desc='Image processing',
-        unit='image',
+        desc="Image processing",
+        unit="image",
     ):
         img = Image.open(img_path).resize(output_size)
         mask = np.zeros((output_size[0], output_size[1], 4))
         images.append(img)
         masks.append(mask)
-        image_names.append(os.path.basename(img_path).split('.')[0])
+        image_names.append(os.path.basename(img_path).split(".")[0])
     return images, masks, image_names
 
 
@@ -202,10 +204,10 @@ def save_results(
     for img, mask, image_name in tqdm(
         zip(images, masks, images_name),
         total=len(images),
-        desc='Image & mask post-processing',
-        unit='image',
+        desc="Image & mask post-processing",
+        unit="image",
     ):
-        color_mask = Image.new('RGB', size=img.size, color=(128, 128, 128))
+        color_mask = Image.new("RGB", size=img.size, color=(128, 128, 128))
         for class_name in classes:
             m = mask[:, :, CLASS_IDS[class_name] - 1]  # type: ignore
             m = cv2.morphologyEx(
@@ -229,7 +231,7 @@ def save_results(
                 color=CLASS_COLORS_RGB[class_name],
             )
             m = mask[:, :, CLASS_IDS[class_name] - 1] * 255  # type: ignore
-            class_img = Image.new('RGB', size=img.size, color=CLASS_COLORS_RGB[class_name])
-            color_mask.paste(class_img, (0, 0), Image.fromarray(m).convert('L'))
-        color_mask.save(f'{save_dir}/{image_name}_mask.png')
-        img.save(f'{save_dir}/{image_name}_overlay.png')
+            class_img = Image.new("RGB", size=img.size, color=CLASS_COLORS_RGB[class_name])
+            color_mask.paste(class_img, (0, 0), Image.fromarray(m).convert("L"))
+        color_mask.save(f"{save_dir}/{image_name}_mask.png")
+        img.save(f"{save_dir}/{image_name}_overlay.png")

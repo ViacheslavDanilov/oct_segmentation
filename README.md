@@ -15,6 +15,7 @@
 - [Requirements](#requirements)
 - [Installation](#installation)
 - [How to Run](#how-to-run)
+- [Web Application](#web-application)
 - [Data Access](#data-access)
 - [How to Cite](#how-to-cite)
 
@@ -38,7 +39,7 @@ Annotations were performed by cardiologists using [Supervisely](https://supervis
 </p>
 
 <p align="left">
-    <em><strong>Figure 1.</strong> Annotation methodology for optical coherence tomography images depicting plaque morphological features associated with atherosclerotic plaque development. The feature annotations delineated with segmentation masks include the lumen (pink), fibrous cap (blue), lipid core (blue), and vasa vasorum (red).</em>
+    <em><strong>Figure 1.</strong> Annotation methodology for optical coherence tomography images depicting plaque morphological features associated with atherosclerotic plaque development. The feature annotations delineated with segmentation masks include the lumen (pink), fibrous cap (blue), lipid core (green), and vasa vasorum (red).</em>
 </p>
 
 <a name="methods"></a>
@@ -114,26 +115,44 @@ This project leverages optimized machine learning models to automate atheroscler
   - [x] Linux
   - [x] Windows (limited testing carried out)
 - Python 3.11.x
-- Required core libraries: [environment.yaml](environment.yaml)
+- Required core libraries: [pyproject.toml](pyproject.toml)
 
 <a name="installation"></a>
 ## ⚙ Installation
 
-**Step 1: Install Miniconda**
-
-Installation guide: https://docs.conda.io/projects/miniconda/en/latest/index.html#quick-command-line-install
-
-**Step 2: Clone the repository and change the current working directory**
+**Step 1: Clone the repository and change the current working directory**
 ``` bash
 git clone https://github.com/ViacheslavDanilov/oct_segmentation.git
 cd oct_segmentation
 ```
 
-**Step 3: Set up an environment and install the necessary packages**
-``` bash
-chmod +x make_env.sh
-./make_env.sh
+**Step 2: Install UV (Python package manager)**
+
+Choose the installation method for your operating system:
+
+**macOS/Linux:**
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
+
+**Windows (PowerShell):**
+```powershell
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+```
+
+**Alternative (pip):**
+```bash
+pip install uv
+```
+
+For more installation options, see: https://docs.astral.sh/uv/getting-started/installation/
+
+**Step 3: Set up environment and install dependencies**
+```bash
+uv sync
+```
+
+_Note: project dependencies are defined in the [pyproject.toml](pyproject.toml) file, while [uv.lock](uv.lock) is a cross-platform lockfile that contains exact, resolved versions of the project's dependencies. [uv.lock](uv.lock) is a human-readable TOML file but is managed by uv and should not be edited manually._
 
 <a name="how-to-run"></a>
 ## 🚀 How to Run
@@ -142,8 +161,35 @@ Specify the `data_dir` and `save_dir` parameters in the [predict.yaml](configs/p
 
 To run the pipeline, execute [predict.py](src/predict.py) from your IDE or command prompt with:
 ``` bash
-python src/predict.py
+uv run python src/predict.py
 ```
+
+<a name="web-application"></a>
+## 🌐 Web Application
+
+The project includes an interactive web application for visualizing and analyzing OCT segmentation results. Built with Streamlit, it provides a user-friendly interface for exploring patient data.
+
+<p align="center">
+  <img id="figure-5" width="100%" height="100%" src=".assets/ui.png" alt="Web Application Interface">
+</p>
+
+<p align="center">
+    <em><strong>Figure 5.</strong> Web application interface for OCT analysis with segmentation visualization and metrics.</em>
+</p>
+
+**Features:**
+- 📂 Patient data selection and loading
+- 🖼️ Interactive image viewer with adjustable transparency
+- 🎯 Multi-class segmentation overlay (Lumen, Fibrous Cap, Lipid Core, Vasa Vasorum)
+- 📊 Area dynamics and distribution charts
+- 🩺 AI-powered risk assessment and analysis summary
+
+**To launch the application:**
+``` bash
+uv run streamlit run src/app/main.py
+```
+
+The app will be available at `http://localhost:8501` in your browser.
 
 <a name="data-access"></a>
 ## 🔐 Data Access
@@ -154,6 +200,6 @@ All essential components of the study, including the curated source code, datase
 
 <a name="how-to-cite"></a>
 ## 🖊️ How to Cite
-Please cite [our paper](https://www.sciencedirect.com/science/article/pii/S0010482525014131) if you found our data, methods, or results helpful for your research:
+Please cite [our paper](https://doi.org/10.1016/j.compbiomed.2025.111061) if you found our data, methods, or results helpful for your research:
 
-> Danilov V.V., Laptev V.V., Klyshnikov K.Yu., Bessonov I.S., Litvinyuk N.V., Ovcharenko E.A., Kochergin N.A. (**2025**). _Segmentation and quantification of atherosclerotic plaques in optical coherence tomography_. **Computers in Biology and Medicine**, 197, 111061. DOI: [10.1016/j.compbiomed.2025.111061](https://doi.org/10.1016/j.compbiomed.2025.111061)
+> Danilov V.V., Laptev V.V., Klyshnikov K.Yu., Bessonov I.S., Litvinyuk N.V., Ovcharenko E.A., Kochergin N.A. (**2025**). _Segmentation and quantification of atherosclerotic plaques in optical coherence tomography_. **Computers in Biology and Medicine**, 197, 111061. DOI: [doi.org/10.1016/j.compbiomed.2025.111061](https://doi.org/10.1016/j.compbiomed.2025.111061)

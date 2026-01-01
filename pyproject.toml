@@ -1,14 +1,59 @@
 [project]
 name = 'oct_segmentation'
 version = '0.0.1'
+description = 'OCT segmentation using deep learning'
+readme = 'README.md'
+requires-python = ">=3.12, <3.13"
+dependencies = [
+    "gigachat>=0.1.42.post2",
+    "python-dotenv>=1.2.1",
+]
+
+[tool.uv]
+package = true
+default-groups = ["app", "dev"]
+
+[dependency-groups]
+app = [
+    "dotenv>=0.9.9",
+    "streamlit>=1.50.0",
+]
+dev = [
+    "albumentations==1.4.3",
+    "dvc==3.49.0",
+    "dvc-gdrive==3.0.1",
+    "ffmpeg-python>=0.2.0",
+    "grad-cam==1.5.0",
+    "gradio>=5.48.0",
+    "hydra-core>=1.3.2",
+    "imagecodecs>=2025.8.2",
+    "imutils>=0.5.4",
+    "joblib>=1.5.2",
+    "matplotlib>=3.10.7",
+    "numpy==1.26.4",
+    "omegaconf>=2.3.0",
+    "opencv-python==4.8.1.78",
+    "openpyxl>=3.1.5",
+    "pandas==2.3.3",
+    "pillow>=11.3.0",
+    "plotly>=6.3.0",
+    "pre-commit>=4.3.0",
+    "ptflops>=0.7.5",
+    "pydicom>=3.0.1",
+    "pytorch-lightning==2.2.1",
+    "scikit-image>=0.25.2",
+    "seaborn>=0.13.2",
+    "segmentation-models-pytorch>=0.5.0",
+    "supervisely>=6.7.15",
+    "tifffile>=2025.9.30",
+    "tomli>=2.3.0",
+    "torch==2.2.2",
+    "tqdm>=4.67.1",
+    "wandb>=0.22.1",
+]
 
 [tool.setuptools.packages]
-find = {}   # Scan the project directory with the default parameters
-
-[tool.black]
-line_length = 100
-skip_string_normalization = true
-verbose = true
+find = {}
 
 [tool.pycln]
 all = true
@@ -23,7 +68,18 @@ ensure_newline_before_comments = true
 
 [tool.ruff]
 line-length = 100
-# Exclude a variety of commonly ignored directories
+
+[tool.ruff.format]
+docstring-code-format = true
+docstring-code-line-length = 'dynamic'
+quote-style = 'double'
+indent-style = 'space'
+skip-magic-trailing-comma = false
+
+[tool.ruff.lint]
+select = ['D']
+ignore = ['D100', 'D102', 'D103', 'D104', 'D105', 'D106', 'D107', 'D206', 'D300']
+dummy-variable-rgx = '^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$'
 exclude = [
     '.bzr',
     '.direnv',
@@ -39,8 +95,6 @@ exclude = [
     '.svn',
     '.tox',
     '.venv',
-    '__pypackages__',
-    '_build',
     'buck-out',
     'build',
     'dist',
@@ -48,19 +102,17 @@ exclude = [
     'venv',
 ]
 
-[tool.ruff.lint]
-select = ['E', 'F']
-ignore = ['E501']
-dummy-variable-rgx = '^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$'
-
 [tool.ruff.lint.mccabe]
-max-complexity = 10
+max-complexity = 5
 
-[tool.pydocstyle]
+[tool.ruff.lint.pydocstyle]
 convention = 'google'
-add_ignore = 'D100, D102, D103, D104, D105, D106, D107'
 
 [tool.mypy]
+ignore_missing_imports = true
 install_types = true
 no_strict_optional = true
-ignore_missing_imports = true
+explicit_package_bases = true
+exclude = [
+    'src/models/smp/train.py',
+]

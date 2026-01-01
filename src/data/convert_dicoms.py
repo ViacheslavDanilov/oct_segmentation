@@ -34,8 +34,8 @@ def convert_single_study(
 ) -> None:
     dcm_list = get_file_list(
         src_dirs=data_dir,
-        ext_list='',
-        filename_template='IMG',
+        ext_list="",
+        filename_template="IMG",
     )
 
     for dcm_path in dcm_list:
@@ -46,7 +46,7 @@ def convert_single_study(
         # Select save_dir based on output_type
         study_name = get_study_name(dcm_path)
         series_name = get_series_name(dcm_path)
-        if output_type == 'video':
+        if output_type == "video":
             save_dir_video = os.path.join(save_dir, study_name)
             os.makedirs(save_dir_video, exist_ok=True)
         else:
@@ -54,15 +54,15 @@ def convert_single_study(
             os.makedirs(save_dir_img, exist_ok=True)
 
         # Create video writer
-        if output_type == 'video':
+        if output_type == "video":
             video_path_temp = os.path.join(
                 save_dir_video,
-                f'{study_name}_{series_name}_temp.mp4',
+                f"{study_name}_{series_name}_temp.mp4",
             )
             video_height, video_width = output_size
             video = cv2.VideoWriter(
                 video_path_temp,
-                cv2.VideoWriter_fourcc(*'mp4v'),
+                cv2.VideoWriter_fourcc(*"mp4v"),
                 fps,
                 (video_width, video_height),
             )
@@ -85,38 +85,38 @@ def convert_single_study(
             if img_size != output_size:
                 img = imutils.resize(img, height=output_size[0], inter=cv2.INTER_LINEAR)
 
-            if output_type == 'image':
-                img_name = f'{study_name}_{series_name}_{slice+1:03d}.png'
+            if output_type == "image":
+                img_name = f"{study_name}_{series_name}_{slice + 1:03d}.png"
                 img_save_path = os.path.join(save_dir_img, img_name)
                 cv2.imwrite(img_save_path, img)
-            elif output_type == 'video':
+            elif output_type == "video":
                 video.write(img)
             else:
-                raise ValueError(f'Unknown output_type value: {output_type}')
+                raise ValueError(f"Unknown output_type value: {output_type}")
 
-        video.release() if output_type == 'video' else False
+        video.release() if output_type == "video" else False
 
         # Replace OpenCV videos with FFmpeg ones
-        if output_type == 'video':
-            video_path = os.path.join(save_dir_video, f'{study_name}_{series_name}.mp4')
+        if output_type == "video":
+            video_path = os.path.join(save_dir_video, f"{study_name}_{series_name}.mp4")
             stream = ffmpeg.input(video_path_temp)
-            stream = ffmpeg.output(stream, video_path, vcodec='libx264', video_bitrate='10M')
+            stream = ffmpeg.output(stream, video_path, vcodec="libx264", video_bitrate="10M")
             ffmpeg.run(stream, quiet=True, overwrite_output=True)
             os.remove(video_path_temp)
 
-        if output_type == 'video':
-            log.info(f'DICOM {dcm_path} converted and saved to {video_path}')
+        if output_type == "video":
+            log.info(f"DICOM {dcm_path} converted and saved to {video_path}")
         else:
-            log.info(f'DICOM {dcm_path} converted and saved to {save_dir_img}')
+            log.info(f"DICOM {dcm_path} converted and saved to {save_dir_img}")
 
 
 @hydra.main(
-    config_path=os.path.join(PROJECT_DIR, 'configs'),
-    config_name='convert_dicoms',
+    config_path=os.path.join(PROJECT_DIR, "configs"),
+    config_name="convert_dicoms",
     version_base=None,
 )
 def main(cfg: DictConfig) -> None:
-    log.info(f'Config:\n\n{OmegaConf.to_yaml(cfg)}')
+    log.info(f"Config:\n\n{OmegaConf.to_yaml(cfg)}")
 
     # Define absolute paths
     data_dir = str(os.path.join(PROJECT_DIR, cfg.data_dir))
@@ -128,7 +128,7 @@ def main(cfg: DictConfig) -> None:
         exclude_dirs=cfg.exclude_dirs,
     )
 
-    Parallel(n_jobs=-1, backend='threading')(
+    Parallel(n_jobs=-1, backend="threading")(
         delayed(convert_single_study)(
             data_dir=study_dir,
             output_type=cfg.output_type,
@@ -137,11 +137,11 @@ def main(cfg: DictConfig) -> None:
             fps=cfg.fps,
             save_dir=save_dir,
         )
-        for study_dir in tqdm(study_list, desc='Convert studies', unit=' study')
+        for study_dir in tqdm(study_list, desc="Convert studies", unit=" study")
     )
 
-    log.info('Complete')
+    log.info("Complete")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

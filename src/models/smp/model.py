@@ -28,7 +28,7 @@ class OCTSegmentationModel(pl.LightningModule):
         lr: float = 0.0001,
         data_dir: str = None,
         weight_decay: float = 0.0001,
-        optimizer_name: str = 'Adam',
+        optimizer_name: str = "Adam",
         input_size: int = 512,
         img_save_interval: int | None = 1,
         save_wandb_media: bool = False,
@@ -47,8 +47,8 @@ class OCTSegmentationModel(pl.LightningModule):
         self.data_dir = data_dir
         self.epoch = 0
         params = smp.encoders.get_preprocessing_params(encoder_name)
-        self.register_buffer('std', torch.tensor(params['std']).view(1, 3, 1, 1))
-        self.register_buffer('mean', torch.tensor(params['mean']).view(1, 3, 1, 1))
+        self.register_buffer("std", torch.tensor(params["std"]).view(1, 3, 1, 1))
+        self.register_buffer("mean", torch.tensor(params["mean"]).view(1, 3, 1, 1))
         self.training_step_outputs = []  # type: ignore
         self.validation_step_outputs = []  # type: ignore
         self.validation_best_metrics = {}  # type: ignore
@@ -82,7 +82,7 @@ class OCTSegmentationModel(pl.LightningModule):
         prob_mask = logits_mask.sigmoid()  # type: ignore
         pred_mask = (prob_mask > 0.5).float()
 
-        self.log('train/loss', loss, prog_bar=True, on_epoch=True)
+        self.log("train/loss", loss, prog_bar=True, on_epoch=True)
         self.training_step_outputs.append(
             get_metrics(
                 mask=mask,
@@ -91,13 +91,13 @@ class OCTSegmentationModel(pl.LightningModule):
             ),
         )
         return {
-            'loss': loss,
+            "loss": loss,
         }
 
     def on_train_epoch_end(self):
         _ = save_metrics_on_epoch(
             metrics_epoch=self.training_step_outputs,
-            split='train',
+            split="train",
             model_name=self.model_name,
             classes=self.classes,
             epoch=self.epoch,
@@ -116,7 +116,7 @@ class OCTSegmentationModel(pl.LightningModule):
         prob_mask = logits_mask.sigmoid()
         pred_mask = (prob_mask > 0.5).float()
 
-        self.log('val/loss', loss, prog_bar=True, on_epoch=True)
+        self.log("val/loss", loss, prog_bar=True, on_epoch=True)
         self.validation_step_outputs.append(
             get_metrics(
                 mask=mask,
@@ -125,8 +125,8 @@ class OCTSegmentationModel(pl.LightningModule):
             ),
         )
         self.log(
-            'val/f1',
-            float(np.mean(self.validation_step_outputs[-1]['f1']).mean()),
+            "val/f1",
+            float(np.mean(self.validation_step_outputs[-1]["f1"]).mean()),
             prog_bar=True,
             on_epoch=True,
         )
@@ -135,7 +135,7 @@ class OCTSegmentationModel(pl.LightningModule):
         if self.epoch > 0:
             self.validation_best_metrics = save_metrics_on_epoch(
                 metrics_epoch=self.validation_step_outputs,
-                split='test',
+                split="test",
                 model_name=self.model_name,
                 classes=self.classes,
                 epoch=self.epoch,
@@ -148,37 +148,37 @@ class OCTSegmentationModel(pl.LightningModule):
         self.validation_step_outputs.clear()
 
     def configure_optimizers(self):
-        if self.optimizer == 'SGD':
+        if self.optimizer == "SGD":
             return torch.optim.SGD(
                 self.parameters(),
                 lr=self.lr,
                 weight_decay=self.weight_decay,
             )
-        elif self.optimizer == 'RMSprop':
+        elif self.optimizer == "RMSprop":
             return torch.optim.RMSprop(
                 self.parameters(),
                 lr=self.lr,
                 weight_decay=self.weight_decay,
             )
-        elif self.optimizer == 'RAdam':
+        elif self.optimizer == "RAdam":
             return torch.optim.RAdam(
                 self.parameters(),
                 lr=self.lr,
                 weight_decay=self.weight_decay,
             )
-        elif self.optimizer == 'SAdam':
+        elif self.optimizer == "SAdam":
             return torch.optim.SparseAdam(
                 self.parameters(),
                 lr=self.lr,
             )
-        elif self.optimizer == 'Adam':
+        elif self.optimizer == "Adam":
             return torch.optim.Adam(
                 self.parameters(),
                 lr=self.lr,
                 weight_decay=self.weight_decay,
             )
         else:
-            raise ValueError(f'Unknown optimizer: {self.optimizer}')
+            raise ValueError(f"Unknown optimizer: {self.optimizer}")
 
     def predict(
         self,
@@ -203,14 +203,14 @@ class OCTSegmentationModel(pl.LightningModule):
     def to_tensor_shape(
         x: np.ndarray,
     ) -> np.ndarray:
-        return x.transpose([2, 0, 1]).astype('float32')
+        return x.transpose([2, 0, 1]).astype("float32")
 
     def log_predict_model_on_epoch(
         self,
     ):
         wandb_images = []
-        if os.path.exists(f'{self.data_dir}/vis/img'):
-            for idx, img_path in enumerate(glob(f'{self.data_dir}/vis/img/*.[pj][np][ge]*')):
+        if os.path.exists(f"{self.data_dir}/vis/img"):
+            for idx, img_path in enumerate(glob(f"{self.data_dir}/vis/img/*.[pj][np][ge]*")):
                 img = cv2.imread(img_path)
                 img = cv2.resize(img, (self.input_size, self.input_size))
                 mask = tifffile.imread(f"{img_path.replace('img', 'mask').split('.')[0]}.tiff")
@@ -222,7 +222,7 @@ class OCTSegmentationModel(pl.LightningModule):
 
                 pred_mask = self.predict(
                     images=np.array([self.to_tensor_shape(img.copy())]),
-                    device='cuda',
+                    device="cuda",
                 )[0]
                 color_mask_gt = np.zeros(img.shape, dtype=np.uint8)
                 color_mask_pred = np.zeros(img.shape, dtype=np.uint8)
@@ -243,7 +243,7 @@ class OCTSegmentationModel(pl.LightningModule):
 
                 img_stem = Path(img_path).stem
                 cv2.imwrite(
-                    f'models/{self.model_name}/images_per_epoch/{img_stem}_epoch_{str(self.epoch).zfill(3)}.png',
+                    f"models/{self.model_name}/images_per_epoch/{img_stem}_epoch_{str(self.epoch).zfill(3)}.png",
                     res,
                 )
 
@@ -252,20 +252,20 @@ class OCTSegmentationModel(pl.LightningModule):
                         wandb.Image(
                             cv2.cvtColor(img, cv2.COLOR_BGR2RGB),
                             masks={
-                                'predictions': {
-                                    'mask_data': wandb_mask_inference,
-                                    'class_labels': CLASS_IDS_REVERSED,
+                                "predictions": {
+                                    "mask_data": wandb_mask_inference,
+                                    "class_labels": CLASS_IDS_REVERSED,
                                 },
-                                'ground_truth': {
-                                    'mask_data': wandb_mask_ground_truth,
-                                    'class_labels': CLASS_IDS_REVERSED,
+                                "ground_truth": {
+                                    "mask_data": wandb_mask_ground_truth,
+                                    "class_labels": CLASS_IDS_REVERSED,
                                 },
                             },
-                            caption=f'Example-{idx}',
+                            caption=f"Example-{idx}",
                         ),
                     )
             if self.save_wandb_media:
                 wandb.log(
-                    {'Examples': wandb_images},
+                    {"Examples": wandb_images},
                     step=self.epoch,
                 )
